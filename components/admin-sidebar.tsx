@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
@@ -13,32 +14,36 @@ import {
 import { SignOutButton } from "@/components/sign-out-button";
 import type { CurrentUser } from "@/lib/auth";
 
-// Structural navigation only. Every item below points at a route that a
-// later phase builds. None of them are feature pages yet.
-const NAV_SECTIONS: Array<{ label: string; items: string[] }> = [
+// Structural navigation. Items with no href point at a route a later phase
+// builds and render disabled for now.
+const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: string }> }> = [
   {
     label: "Membership",
-    items: ["Members", "Approval queue", "Import"],
+    items: [
+      { label: "Members", href: "/admin/members" },
+      { label: "Approval queue", href: "/admin/approvals" },
+      { label: "Import" },
+    ],
   },
   {
     label: "Finance",
-    items: ["Payments", "Cash sessions", "Reports"],
+    items: [{ label: "Payments" }, { label: "Cash sessions" }, { label: "Reports" }],
   },
   {
     label: "Charity",
-    items: ["Beneficiary cases", "Disbursements", "Dashboard"],
+    items: [{ label: "Beneficiary cases" }, { label: "Disbursements" }, { label: "Dashboard" }],
   },
   {
     label: "Attendance",
-    items: ["Gatherings", "Check-in"],
+    items: [{ label: "Gatherings" }, { label: "Check-in" }],
   },
   {
     label: "Content",
-    items: ["Sermons", "Weekly books"],
+    items: [{ label: "Sermons" }, { label: "Weekly books" }],
   },
   {
     label: "System",
-    items: ["Users", "Audit log"],
+    items: [{ label: "Users" }, { label: "Audit log" }],
   },
 ];
 
@@ -56,8 +61,12 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {section.items.map((item) => (
-                  <SidebarMenuItem key={item}>
-                    <SidebarMenuButton disabled>{item}</SidebarMenuButton>
+                  <SidebarMenuItem key={item.label}>
+                    {item.href ? (
+                      <SidebarMenuButton render={<Link href={item.href}>{item.label}</Link>} />
+                    ) : (
+                      <SidebarMenuButton disabled>{item.label}</SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>

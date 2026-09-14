@@ -1,6 +1,11 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessWing, hasAnyRole } from "@/lib/authorization";
 import type { RoleName } from "@prisma/client";
+
+// Re-exported so existing callers of lib/auth can keep using these without
+// knowing they now live in lib/authorization.
+export { canAccessWing, hasAnyRole };
 
 // Server side authorisation helpers. Every one of these throws rather than
 // returning null or false, so a missing or forgotten check fails loudly
@@ -71,20 +76,13 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
 /**
  * Requires the current user to hold at least one of the given roles.
- * SUPER_ADMIN always passes, matching the "everything" row in the spec's
- * roles table. Throws AuthenticationError or AuthorizationError, and
- * returns the current user on success so callers do not need a second
- * lookup.
+ * Throws AuthenticationError or AuthorizationError, and returns the
+ * current user on success so callers do not need a second lookup.
  */
 export async function requireRole(roles: RoleName[]): Promise<CurrentUser> {
   const user = await getCurrentUser();
 
-  if (user.roles.includes("SUPER_ADMIN")) {
-    return user;
-  }
-
-  const hasRole = user.roles.some((role) => roles.includes(role));
-  if (!hasRole) {
+  if (!hasAnyRole(user, roles)) {
     throw new AuthorizationError(
       `This action requires one of the following roles: ${roles.join(", ")}`,
     );
@@ -102,11 +100,7 @@ export async function requireRole(roles: RoleName[]): Promise<CurrentUser> {
 export async function requireWingAccess(wingId: string): Promise<CurrentUser> {
   const user = await getCurrentUser();
 
-  if (user.roles.includes("SUPER_ADMIN")) {
-    return user;
-  }
-
-  if (!user.wingIds.includes(wingId)) {
+  if (!canAccessWing(user, wingId)) {
     throw new AuthorizationError("You do not have access to this wing");
   }
 

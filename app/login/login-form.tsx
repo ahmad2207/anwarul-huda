@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,12 @@ export function LoginForm() {
             {isPending ? "Signing in..." : "Sign in"}
           </Button>
         </form>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Not a member yet?{" "}
+          <Link href="/register" className="underline underline-offset-4">
+            Register here
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );

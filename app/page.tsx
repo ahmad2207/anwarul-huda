@@ -6,10 +6,12 @@ export default function Home() {
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
       <h1 className="text-2xl font-semibold">Anwar-ul-Huda League of Nigeria</h1>
       <p className="max-w-md text-sm text-muted-foreground">
-        Membership and administration system. This is the Phase 0 foundation.
-        Feature pages have not been built yet.
+        Membership and administration system.
       </p>
-      <Button render={<Link href="/login">Sign in</Link>} />
+      <div className="flex gap-3">
+        <Button render={<Link href="/register">Register</Link>} variant="outline" />
+        <Button render={<Link href="/login">Sign in</Link>} />
+      </div>
     </div>
   );
 }

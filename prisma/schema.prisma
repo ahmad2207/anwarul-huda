@@ -1,0 +1,700 @@
+// Anwar-ul-Huda League of Nigeria: membership and administration system
+// All money fields are integer kobo. All timestamps are UTC.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------
+// Organisation structure
+// ---------------------------------------------------------------
+
+enum WingCode {
+  MENS
+  WOMENS
+  YOUTH
+}
+
+model Wing {
+  id          String   @id @default(cuid())
+  code        WingCode @unique
+  name        String
+  numberLetter String  @map("number_letter") // M, W or Y for member numbers
+  minAge      Int?     @map("min_age")
+  maxAge      Int?     @map("max_age")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  members             Member[]
+  contributionPlans   ContributionPlan[]
+  gatherings          Gathering[]
+  userWingAssignments UserWingAssignment[]
+
+  @@map("wings")
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  members    Member[]
+  devices    BiometricDevice[]
+  gatherings Gathering[]
+
+  @@map("branches")
+}
+
+// ---------------------------------------------------------------
+// Users, roles and authentication
+// ---------------------------------------------------------------
+
+enum RoleName {
+  SUPER_ADMIN
+  WING_ADMIN
+  FINANCE_OFFICER
+  CHARITY_OFFICER
+  ATTENDANCE_OFFICER
+  CONTENT_EDITOR
+  MEMBER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  phone         String?   @unique
+  passwordHash  String?   @map("password_hash")
+  emailVerified DateTime? @map("email_verified")
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  memberId String? @unique @map("member_id")
+  member   Member? @relation(fields: [memberId], references: [id])
+
+  roles           UserRole[]
+  wingAssignments UserWingAssignment[]
+  auditEntries    AuditLog[]            @relation("AuditActor")
+
+  approvedMembers      Member[]        @relation("MemberApprovedBy")
+  collectedPayments    Payment[]       @relation("PaymentCollectedBy")
+  voidedPayments       Payment[]       @relation("PaymentVoidedBy")
+  openedCashSessions   CashSession[]   @relation("CashSessionOpenedBy")
+  closedCashSessions   CashSession[]   @relation("CashSessionClosedBy")
+  verifiedCases        CharityCase[]   @relation("CaseVerifiedBy")
+  recommendedCases     CharityCase[]   @relation("CaseRecommendedBy")
+  approvedCases        CharityCase[]   @relation("CaseApprovedBy")
+  disbursementsPaid    Disbursement[]  @relation("DisbursementPaidBy")
+  uploadedContent      ContentItem[]   @relation("ContentUploadedBy")
+  importBatches        ImportBatch[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id     String   @id @default(cuid())
+  userId String   @map("user_id")
+  role   RoleName
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+// Scopes a wing administrator or attendance officer to one or more wings
+model UserWingAssignment {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  wingId String @map("wing_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wing   Wing   @relation(fields: [wingId], references: [id])
+
+  @@unique([userId, wingId])
+  @@map("user_wing_assignments")
+}
+
+// ---------------------------------------------------------------
+// Members
+// ---------------------------------------------------------------
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+  OCCASIONAL
+  RELOCATED
+  HONORARY
+  INACTIVE
+  DECEASED
+  REJECTED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum ContactChannel {
+  PHONE_CALL
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum MemberSource {
+  SELF_REGISTRATION
+  ADMIN_ENTRY
+  CSV_IMPORT
+}
+
+model Member {
+  id           String  @id @default(cuid())
+  memberNumber String? @unique @map("member_number") // AHL/M/2026/0001, issued on approval
+
+  // Identity
+  title         String?
+  surname       String
+  firstName     String         @map("first_name")
+  otherNames    String?        @map("other_names")
+  dateOfBirth   DateTime?      @map("date_of_birth")
+  gender        Gender
+  maritalStatus MaritalStatus? @map("marital_status")
+  occupation    String?
+  nationality   String?
+  stateOfOrigin String?        @map("state_of_origin")
+  languages     String[]
+  photoPath     String?        @map("photo_path")
+
+  // Contact
+  phone            String
+  altPhone         String?         @map("alt_phone")
+  email            String?
+  address          String?
+  city             String?
+  state            String?
+  landmark         String?
+  preferredContact ContactChannel? @map("preferred_contact")
+
+  // Membership
+  wingId       String       @map("wing_id")
+  branchId     String?      @map("branch_id")
+  yearJoined   Int?         @map("year_joined")
+  status       MemberStatus @default(PENDING)
+  statusReason String?      @map("status_reason")
+  statusAt     DateTime?    @map("status_at")
+  officeHeld   String?      @map("office_held")
+  halaqah      String?
+
+  // Service and skills
+  islamicEducation String?  @map("islamic_education")
+  otherSkills      String?  @map("other_skills")
+  availability     String[]
+  notes            String?
+  accessNeeds      String?  @map("access_needs")
+
+  // Next of kin
+  nokName         String? @map("nok_name")
+  nokRelationship String? @map("nok_relationship")
+  nokPhone        String? @map("nok_phone")
+  nokAltPhone     String? @map("nok_alt_phone")
+
+  // Consent
+  consentRecords     Boolean @default(false) @map("consent_records")
+  consentDirectory   Boolean @default(false) @map("consent_directory")
+  consentComms       Boolean @default(false) @map("consent_comms")
+  consentBiometric   Boolean @default(false) @map("consent_biometric")
+
+  // Provenance
+  source        MemberSource @default(SELF_REGISTRATION)
+  importBatchId String?      @map("import_batch_id")
+  approvedById  String?      @map("approved_by_id")
+  approvedAt    DateTime?    @map("approved_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  wing        Wing         @relation(fields: [wingId], references: [id])
+  branch      Branch?      @relation(fields: [branchId], references: [id])
+  approvedBy  User?        @relation("MemberApprovedBy", fields: [approvedById], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  user             User?
+  household        HouseholdMember[] @relation("HouseholdOwner")
+  linkedInHousehold HouseholdMember[] @relation("HouseholdLinkedMember")
+  serviceAreas     MemberServiceArea[]
+  payments         Payment[]
+  contributions    ContributionRecord[]
+  attendance       AttendanceRecord[]
+  biometricLinks   BiometricEnrolment[]
+
+  @@index([wingId, status])
+  @@index([surname, firstName])
+  @@index([phone])
+  @@map("members")
+}
+
+model HouseholdMember {
+  id             String  @id @default(cuid())
+  memberId       String  @map("member_id")
+  fullName       String  @map("full_name")
+  age            Int?
+  relationship   String?
+  linkedMemberId String? @map("linked_member_id")
+
+  member       Member  @relation("HouseholdOwner", fields: [memberId], references: [id], onDelete: Cascade)
+  linkedMember Member? @relation("HouseholdLinkedMember", fields: [linkedMemberId], references: [id])
+
+  @@map("household_members")
+}
+
+model ServiceArea {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  isActive  Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  members MemberServiceArea[]
+
+  @@map("service_areas")
+}
+
+model MemberServiceArea {
+  memberId      String @map("member_id")
+  serviceAreaId String @map("service_area_id")
+
+  member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  serviceArea ServiceArea @relation(fields: [serviceAreaId], references: [id])
+
+  @@id([memberId, serviceAreaId])
+  @@map("member_service_areas")
+}
+
+// ---------------------------------------------------------------
+// Contributions and payments
+// ---------------------------------------------------------------
+
+enum Frequency {
+  ONE_OFF
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+model ContributionPlan {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  amountKobo  Int       @map("amount_kobo")
+  frequency   Frequency
+  wingId      String?   @map("wing_id") // null means all wings
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  wing    Wing?                @relation(fields: [wingId], references: [id])
+  records ContributionRecord[]
+  payments Payment[]
+
+  @@map("contribution_plans")
+}
+
+// One expected contribution for one member for one period
+model ContributionRecord {
+  id          String   @id @default(cuid())
+  memberId    String   @map("member_id")
+  planId      String   @map("plan_id")
+  periodLabel String   @map("period_label") // "2026-09", "2026-Q3", "2026"
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  amountDueKobo  Int   @map("amount_due_kobo")
+  amountPaidKobo Int   @default(0) @map("amount_paid_kobo")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  member  Member           @relation(fields: [memberId], references: [id])
+  plan    ContributionPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@unique([memberId, planId, periodLabel])
+  @@index([memberId])
+  @@map("contribution_records")
+}
+
+enum PaymentMethod {
+  CASH
+  POS
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  CONFIRMED
+  VOIDED
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  receiptNumber String        @unique @map("receipt_number")
+  memberId      String        @map("member_id")
+  planId        String?       @map("plan_id")
+  contributionRecordId String? @map("contribution_record_id")
+  fundId        String?       @map("fund_id") // set when the payment is a donation to a fund
+  amountKobo    Int           @map("amount_kobo")
+  method        PaymentMethod
+  reference     String? // POS terminal reference or bank transfer reference
+  narration     String?
+  status        PaymentStatus @default(CONFIRMED)
+  paidAt        DateTime      @map("paid_at")
+  collectedById String        @map("collected_by_id")
+  cashSessionId String?       @map("cash_session_id")
+
+  voidedById String?   @map("voided_by_id")
+  voidedAt   DateTime? @map("voided_at")
+  voidReason String?   @map("void_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  member             Member              @relation(fields: [memberId], references: [id])
+  plan               ContributionPlan?   @relation(fields: [planId], references: [id])
+  contributionRecord ContributionRecord? @relation(fields: [contributionRecordId], references: [id])
+  fund               Fund?               @relation(fields: [fundId], references: [id])
+  collectedBy        User                @relation("PaymentCollectedBy", fields: [collectedById], references: [id])
+  voidedBy           User?               @relation("PaymentVoidedBy", fields: [voidedById], references: [id])
+  cashSession        CashSession?        @relation(fields: [cashSessionId], references: [id])
+
+  @@index([memberId, paidAt])
+  @@index([cashSessionId])
+  @@map("payments")
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+model CashSession {
+  id               String            @id @default(cuid())
+  label            String
+  openedById       String            @map("opened_by_id")
+  openedAt         DateTime          @map("opened_at")
+  openingFloatKobo Int               @default(0) @map("opening_float_kobo")
+  closedById       String?           @map("closed_by_id")
+  closedAt         DateTime?         @map("closed_at")
+  countedCashKobo  Int?              @map("counted_cash_kobo")
+  expectedCashKobo Int?              @map("expected_cash_kobo")
+  varianceKobo     Int?              @map("variance_kobo")
+  varianceNote     String?           @map("variance_note")
+  status           CashSessionStatus @default(OPEN)
+
+  openedBy User      @relation("CashSessionOpenedBy", fields: [openedById], references: [id])
+  closedBy User?     @relation("CashSessionClosedBy", fields: [closedById], references: [id])
+  payments Payment[]
+
+  @@map("cash_sessions")
+}
+
+// ---------------------------------------------------------------
+// Charity funds
+// ---------------------------------------------------------------
+
+enum FundType {
+  ZAKAT
+  SADAQAH
+  WAQF
+  GENERAL
+  APPEAL
+}
+
+// The eight categories of zakat recipient
+enum ZakatCategory {
+  FUQARA
+  MASAKIN
+  AMILIN
+  MUALLAFAT
+  RIQAB
+  GHARIMIN
+  FI_SABILILLAH
+  IBN_SABIL
+}
+
+model Fund {
+  id          String   @id @default(cuid())
+  name        String
+  type        FundType
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  payments      Payment[]
+  disbursements Disbursement[]
+
+  @@map("funds")
+}
+
+enum CaseStatus {
+  DRAFT
+  VERIFIED
+  RECOMMENDED
+  APPROVED
+  REJECTED
+  DISBURSED
+  CLOSED
+}
+
+model CharityCase {
+  id          String  @id @default(cuid())
+  reference   String  @unique
+  beneficiaryName String @map("beneficiary_name")
+  beneficiaryPhone String? @map("beneficiary_phone")
+  beneficiaryAddress String? @map("beneficiary_address")
+  isMember    Boolean @default(false) @map("is_member")
+  linkedMemberId String? @map("linked_member_id")
+
+  needDescription String     @map("need_description")
+  zakatCategory   ZakatCategory? @map("zakat_category")
+  requestedKobo   Int        @map("requested_kobo")
+  recommendedKobo Int?       @map("recommended_kobo")
+  approvedKobo    Int?       @map("approved_kobo")
+  status          CaseStatus @default(DRAFT)
+
+  verifiedById    String?   @map("verified_by_id")
+  verifiedAt      DateTime? @map("verified_at")
+  recommendedById String?   @map("recommended_by_id")
+  recommendedAt   DateTime? @map("recommended_at")
+  approvedById    String?   @map("approved_by_id")
+  approvedAt      DateTime? @map("approved_at")
+  decisionNote    String?   @map("decision_note")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  verifiedBy    User? @relation("CaseVerifiedBy", fields: [verifiedById], references: [id])
+  recommendedBy User? @relation("CaseRecommendedBy", fields: [recommendedById], references: [id])
+  approvedBy    User? @relation("CaseApprovedBy", fields: [approvedById], references: [id])
+
+  disbursements Disbursement[]
+
+  @@index([status])
+  @@map("charity_cases")
+}
+
+model Disbursement {
+  id         String   @id @default(cuid())
+  reference  String   @unique
+  fundId     String   @map("fund_id")
+  caseId     String   @map("case_id")
+  amountKobo Int      @map("amount_kobo")
+  method     PaymentMethod
+  narration  String?
+  evidencePath String? @map("evidence_path")
+  paidById   String   @map("paid_by_id")
+  paidAt     DateTime @map("paid_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  fund   Fund        @relation(fields: [fundId], references: [id])
+  case   CharityCase @relation(fields: [caseId], references: [id])
+  paidBy User        @relation("DisbursementPaidBy", fields: [paidById], references: [id])
+
+  @@index([fundId, paidAt])
+  @@map("disbursements")
+}
+
+// ---------------------------------------------------------------
+// Attendance
+// ---------------------------------------------------------------
+
+enum GatheringType {
+  JUMUAH
+  TALEEM
+  WING_MEETING
+  GENERAL_MEETING
+  PROGRAMME
+  OTHER
+}
+
+model Gathering {
+  id        String        @id @default(cuid())
+  title     String
+  type      GatheringType
+  wingId    String?       @map("wing_id") // null means open to all wings
+  branchId  String?       @map("branch_id")
+  startsAt  DateTime      @map("starts_at")
+  endsAt    DateTime?     @map("ends_at")
+  isClosed  Boolean       @default(false) @map("is_closed")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  wing    Wing?              @relation(fields: [wingId], references: [id])
+  branch  Branch?            @relation(fields: [branchId], references: [id])
+  records AttendanceRecord[]
+
+  @@index([startsAt])
+  @@map("gatherings")
+}
+
+enum CheckInMethod {
+  MANUAL
+  QR_CODE
+  FINGERPRINT
+  FACE
+}
+
+model AttendanceRecord {
+  id          String        @id @default(cuid())
+  gatheringId String        @map("gathering_id")
+  memberId    String        @map("member_id")
+  checkedInAt DateTime      @map("checked_in_at")
+  method      CheckInMethod
+  deviceId    String?       @map("device_id")
+  recordedById String?      @map("recorded_by_id")
+
+  gathering Gathering        @relation(fields: [gatheringId], references: [id])
+  member    Member           @relation(fields: [memberId], references: [id])
+  device    BiometricDevice? @relation(fields: [deviceId], references: [id])
+
+  @@unique([gatheringId, memberId])
+  @@index([memberId, checkedInAt])
+  @@map("attendance_records")
+}
+
+enum DeviceType {
+  FINGERPRINT
+  FACE
+  HYBRID
+}
+
+model BiometricDevice {
+  id         String     @id @default(cuid())
+  name       String
+  type       DeviceType
+  serial     String     @unique
+  branchId   String?    @map("branch_id")
+  apiKeyHash String     @map("api_key_hash")
+  lastSeenAt DateTime?  @map("last_seen_at")
+  isActive   Boolean    @default(true) @map("is_active")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  branch     Branch?              @relation(fields: [branchId], references: [id])
+  enrolments BiometricEnrolment[]
+  records    AttendanceRecord[]
+
+  @@map("biometric_devices")
+}
+
+// Maps a device user ID to a member. No biometric template is ever stored here.
+model BiometricEnrolment {
+  id           String     @id @default(cuid())
+  memberId     String     @map("member_id")
+  deviceId     String     @map("device_id")
+  deviceUserId String     @map("device_user_id")
+  type         DeviceType
+  enrolledAt   DateTime   @map("enrolled_at")
+  isActive     Boolean    @default(true) @map("is_active")
+
+  member Member          @relation(fields: [memberId], references: [id])
+  device BiometricDevice @relation(fields: [deviceId], references: [id])
+
+  @@unique([deviceId, deviceUserId])
+  @@map("biometric_enrolments")
+}
+
+// ---------------------------------------------------------------
+// Content
+// ---------------------------------------------------------------
+
+enum ContentType {
+  SERMON
+  WEEKLY_BOOK
+  ARTICLE
+  ANNOUNCEMENT
+}
+
+model ContentItem {
+  id          String      @id @default(cuid())
+  type        ContentType
+  title       String
+  slug        String      @unique
+  author      String? // speaker for a sermon, author for a book
+  summary     String?
+  body        String?
+  filePath    String?     @map("file_path")
+  coverPath   String?     @map("cover_path")
+  externalUrl String?     @map("external_url")
+  tags        String[]
+  wingId      String?     @map("wing_id") // null means visible to all
+  deliveredOn DateTime?   @map("delivered_on")
+  publishAt   DateTime?   @map("publish_at")
+  isPublished Boolean     @default(false) @map("is_published")
+  downloadCount Int       @default(0) @map("download_count")
+
+  uploadedById String   @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  uploadedBy User @relation("ContentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([type, isPublished, publishAt])
+  @@map("content_items")
+}
+
+// ---------------------------------------------------------------
+// Import and audit
+// ---------------------------------------------------------------
+
+enum ImportStatus {
+  PENDING
+  PREVIEWED
+  COMMITTED
+  ROLLED_BACK
+  FAILED
+}
+
+model ImportBatch {
+  id           String       @id @default(cuid())
+  fileName     String       @map("file_name")
+  filePath     String?      @map("file_path")
+  rowCount     Int          @default(0) @map("row_count")
+  successCount Int          @default(0) @map("success_count")
+  errorCount   Int          @default(0) @map("error_count")
+  status       ImportStatus @default(PENDING)
+  errorReport  Json?        @map("error_report")
+  uploadedById String       @map("uploaded_by_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  committedAt  DateTime?    @map("committed_at")
+
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+  members    Member[]
+
+  @@map("import_batches")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?  @map("actor_id")
+  action    String // "member.approved", "payment.voided", "disbursement.created"
+  entity    String
+  entityId  String   @map("entity_id")
+  before    Json?
+  after     Json?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

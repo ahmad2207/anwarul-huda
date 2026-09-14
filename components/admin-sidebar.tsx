@@ -37,7 +37,12 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "Charity",
-    items: [{ label: "Beneficiary cases" }, { label: "Disbursements" }, { label: "Dashboard" }],
+    items: [
+      { label: "Dashboard", href: "/admin/charity" },
+      { label: "Funds", href: "/admin/charity/funds" },
+      { label: "Beneficiary cases", href: "/admin/charity/cases" },
+      { label: "Disbursements", href: "/admin/charity/disbursements/new" },
+    ],
   },
   {
     label: "Attendance",

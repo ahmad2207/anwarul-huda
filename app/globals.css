@@ -128,3 +128,13 @@
     @apply font-sans;
   }
 }
+
+/* The admin sidebar has no print:hidden of its own to reach into (it is
+   a shadcn primitive), so it is hidden by its own data-slot attribute
+   instead. Used by any admin page meant to be printed, for example the
+   charity committee report. */
+@media print {
+  [data-slot="sidebar"] {
+    display: none !important;
+  }
+}

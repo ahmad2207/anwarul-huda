@@ -27,7 +27,13 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "Finance",
-    items: [{ label: "Payments" }, { label: "Cash sessions" }, { label: "Reports" }],
+    items: [
+      { label: "Payments", href: "/admin/payments" },
+      { label: "Plans", href: "/admin/contributions/plans" },
+      { label: "Generate records", href: "/admin/contributions/generate" },
+      { label: "Cash sessions", href: "/admin/cash-sessions" },
+      { label: "Reports", href: "/admin/reports" },
+    ],
   },
   {
     label: "Charity",

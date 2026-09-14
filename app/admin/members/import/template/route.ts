@@ -1,12 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { IMPORT_FIELDS } from "@/lib/import/system-fields";
-
-function toCsvField(value: string): string {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
+import { toCsvDocument } from "@/lib/csv";
 
 // One clearly fictional example row, so the template is not just a bare
 // header line. Never real data, matching the same rule seed.ts follows.
@@ -54,9 +48,10 @@ const EXAMPLE_ROW: Record<string, string> = {
 export async function GET() {
   await requireRole(["WING_ADMIN"]);
 
-  const header = IMPORT_FIELDS.map((field) => toCsvField(field.label)).join(",");
-  const exampleRow = IMPORT_FIELDS.map((field) => toCsvField(EXAMPLE_ROW[field.key] ?? "")).join(",");
-  const csv = `${header}\n${exampleRow}\n`;
+  const csv = toCsvDocument(
+    IMPORT_FIELDS.map((field) => field.label),
+    [IMPORT_FIELDS.map((field) => EXAMPLE_ROW[field.key] ?? "")],
+  );
 
   return new Response(csv, {
     headers: {

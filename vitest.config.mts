@@ -38,6 +38,18 @@ export default defineConfig({
   test: {
     environment: "node",
     env: loadDotEnv(path.resolve(import.meta.dirname, ".env")),
+    // Many test files are integration tests sharing one real Postgres
+    // database rather than a mock. Running test files in parallel means
+    // separate processes each with their own Prisma connection pool
+    // racing the same live database. Advisory locks (lib/advisory-lock.ts)
+    // correctly serialise this in production, where every request goes
+    // through one Prisma client in one Next.js server process, but
+    // proved genuinely flaky here across truly separate processes
+    // contending for the same global sequence (a receipt number for the
+    // current real year) at once. Running files sequentially removes
+    // that cross-process race, which is a test methodology artifact, not
+    // a bug in the app.
+    fileParallelism: false,
   },
   resolve: {
     alias: {

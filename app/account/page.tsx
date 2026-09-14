@@ -1,9 +1,11 @@
-// Placeholder only, so the member shell has something to render. Feature
-// pages arrive in later phases.
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
 export default function AccountHomePage() {
   return (
-    <p className="text-sm text-muted-foreground">
-      No feature pages yet. This is the Phase 0 shell.
-    </p>
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">Welcome to your member account.</p>
+      <Button render={<Link href="/account/contributions">My contributions</Link>} className="self-start" />
+    </div>
   );
 }

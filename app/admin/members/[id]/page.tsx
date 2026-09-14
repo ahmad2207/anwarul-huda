@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { canEditMemberRecords, canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { formatNigerianPhoneForDisplay } from "@/lib/phone";
+import { generateMemberQrDataUrl } from "@/lib/qr/member-qr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { EditMemberForm } from "./edit-member-form";
 import { StatusChangeForm } from "./status-form";
 import { HouseholdSection } from "./household-section";
@@ -37,9 +40,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   const canEdit = canEditMemberRecords(user, member.wingId);
 
-  const [branches, serviceAreas] = await Promise.all([
+  const [branches, serviceAreas, qrDataUrl] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
     prisma.serviceArea.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+    member.memberNumber ? generateMemberQrDataUrl(member.memberNumber) : Promise.resolve(null),
   ]);
 
   return (
@@ -85,6 +89,30 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <HouseholdSection memberId={member.id} household={member.household} canEdit={canEdit} />
         </CardContent>
       </Card>
+
+      {member.memberNumber && qrDataUrl ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium">Attendance QR code</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a
+                small server generated data URL, not a served image asset */}
+            <img src={qrDataUrl} alt={`QR code for ${member.memberNumber}`} width={120} height={120} />
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">
+                Scanned at check-in to identify this member. Printed on their card.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                render={<Link href={`/admin/members/${member.id}/card`}>Print card</Link>}
+                className="self-start"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

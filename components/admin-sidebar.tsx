@@ -23,6 +23,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
       { label: "Members", href: "/admin/members" },
       { label: "Approval queue", href: "/admin/approvals" },
       { label: "Import", href: "/admin/members/import" },
+      { label: "Member cards", href: "/admin/members/cards" },
     ],
   },
   {
@@ -46,7 +47,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "Attendance",
-    items: [{ label: "Gatherings" }, { label: "Check-in" }],
+    items: [{ label: "Gatherings", href: "/admin/attendance" }],
   },
   {
     label: "Content",

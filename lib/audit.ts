@@ -42,6 +42,34 @@ export async function writeAudit(
   });
 }
 
+/**
+ * Same as writeAudit, but for writing many entries in one round trip, for
+ * a bulk operation such as a CSV import commit or an import batch
+ * rollback touching thousands of members. createMany does not run the
+ * same per-row hooks a series of individual creates would, but every
+ * entry here is already a plain, independent audit row, so that does not
+ * matter here.
+ */
+export async function writeAuditMany(
+  inputs: WriteAuditInput[],
+  client: PrismaClientOrTransaction = prisma,
+): Promise<void> {
+  if (inputs.length === 0) return;
+
+  await client.auditLog.createMany({
+    data: inputs.map((input) => ({
+      actorId: input.actorId,
+      action: input.action,
+      entity: input.entity,
+      entityId: input.entityId,
+      before: toJsonInput(input.before),
+      after: toJsonInput(input.after),
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    })),
+  });
+}
+
 function toJsonInput(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   if (value === undefined || value === null) {
     return Prisma.JsonNull;

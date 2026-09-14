@@ -22,7 +22,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
     items: [
       { label: "Members", href: "/admin/members" },
       { label: "Approval queue", href: "/admin/approvals" },
-      { label: "Import" },
+      { label: "Import", href: "/admin/members/import" },
     ],
   },
   {

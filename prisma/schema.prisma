@@ -669,6 +669,11 @@ model ImportBatch {
   successCount Int          @default(0) @map("success_count")
   errorCount   Int          @default(0) @map("error_count")
   status       ImportStatus @default(PENDING)
+  // Parsed rows and the confirmed column mapping, held here between
+  // upload and commit so nothing is written to Member until the import
+  // is confirmed. Cleared back to null once committed or discarded; the
+  // lasting record of what happened is errorReport, not this.
+  stagingData  Json?        @map("staging_data")
   errorReport  Json?        @map("error_report")
   uploadedById String       @map("uploaded_by_id")
   createdAt    DateTime     @default(now()) @map("created_at")

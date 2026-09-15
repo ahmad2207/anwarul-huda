@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Anwar-ul-Huda League of Nigeria">
-  <title>Placeholder logo. Replace this file with the real export: a navy roundel holding an amber crescent and a lit lantern, with small amber stars, the Arabic name and "Guiding Lights" in the full lockup version. See DESIGN.md section 1.</title>
-  <circle cx="100" cy="100" r="98" fill="#003265" stroke="#FF9700" stroke-width="4" />
-  <path d="M 128 58 A 42 42 0 1 0 128 142 A 33 33 0 1 1 128 58 Z" fill="#FF9700" />
-  <circle cx="98" cy="100" r="9" fill="#FF9700" />
-  <circle cx="68" cy="66" r="3" fill="#FF9700" />
-  <circle cx="56" cy="100" r="2.4" fill="#FF9700" />
-  <circle cx="72" cy="132" r="2" fill="#FF9700" />
-</svg>

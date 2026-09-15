@@ -19,7 +19,9 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-sm">
-      <CardHeader>
+      <CardHeader className="items-center text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
+        <img src="/logo.png" alt="Anwaru-l-Huda League of Nigeria" width={96} height={96} className="mb-2" />
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
           Use the email or phone number on your member account.

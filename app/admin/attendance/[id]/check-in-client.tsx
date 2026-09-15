@@ -262,9 +262,13 @@ export function CheckInClient({
     <div className="min-h-screen bg-navy-900 text-white" style={{ fontSize: "20px" }}>
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-semibold">{gatheringTitle}</h1>
-            <p className="text-sm text-white/70">{wingName}</p>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
+            <img src="/logo.png" alt="" width={40} height={40} className="shrink-0" />
+            <div>
+              <h1 className="text-xl font-semibold">{gatheringTitle}</h1>
+              <p className="text-sm text-white/70">{wingName}</p>
+            </div>
           </div>
           {/* Permanently visible whenever there is anything to report, never
               a toast that could be missed or dismissed: the one place

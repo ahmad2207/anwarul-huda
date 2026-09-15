@@ -79,7 +79,7 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-row items-center gap-2 px-3 py-2">
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
-        <img src="/logo-white.svg" alt="" width={28} height={28} className="shrink-0" />
+        <img src="/logo.png" alt="" width={32} height={32} className="shrink-0" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">Anwar-ul-Huda League</p>
           <p className="truncate text-xs text-sidebar-foreground/70">Administration</p>

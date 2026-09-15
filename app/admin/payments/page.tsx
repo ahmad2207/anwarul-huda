@@ -1,9 +1,15 @@
 import Link from "next/link";
+import type { Payment, ContributionPlan, Fund, Member } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatNaira } from "@/lib/money";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { Money } from "@/components/money";
+import { DataTable } from "@/components/data-table";
+import type { DataTableColumn } from "@/components/data-table";
 import { StatusTag } from "@/components/status-tag";
+
+type PaymentRow = Payment & { member: Member; plan: ContributionPlan | null; fund: Fund | null };
 
 const PAGE_SIZE = 25;
 
@@ -27,61 +33,46 @@ export default async function PaymentsPage({
   ]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  const columns: DataTableColumn<PaymentRow>[] = [
+    {
+      key: "receipt",
+      header: "Receipt",
+      cell: (payment) => (
+        <Link href={`/admin/payments/${payment.id}`} className="font-mono font-medium hover:underline">
+          {payment.receiptNumber}
+        </Link>
+      ),
+    },
+    { key: "member", header: "Member", cell: (payment) => `${payment.member.surname} ${payment.member.firstName}` },
+    { key: "for", header: "For", cell: (payment) => payment.plan?.name ?? payment.fund?.name ?? "General" },
+    { key: "amount", header: "Amount", align: "right", cell: (payment) => <Money kobo={payment.amountKobo} /> },
+    { key: "method", header: "Method", cell: (payment) => payment.method },
+    { key: "date", header: "Date", cell: (payment) => payment.paidAt.toLocaleDateString("en-NG") },
+    {
+      key: "status",
+      header: "Status",
+      cell: (payment) => (
+        <StatusTag tone={payment.status === "VOIDED" ? "alert" : "confirmed"}>
+          {payment.status === "VOIDED" ? "Voided" : "Confirmed"}
+        </StatusTag>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-semibold">Payments</h1>
-          <p className="text-sm text-muted-foreground">{total} payment{total === 1 ? "" : "s"} recorded</p>
-        </div>
-        <Button render={<Link href="/admin/payments/new">Record a payment</Link>} />
-      </div>
+      <PageHeader
+        title="Payments"
+        description={`${total} payment${total === 1 ? "" : "s"} recorded`}
+        actions={<Button render={<Link href="/admin/payments/new">Record a payment</Link>} />}
+      />
 
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
-            <tr>
-              <th className="p-2 font-medium">Receipt</th>
-              <th className="p-2 font-medium">Member</th>
-              <th className="p-2 font-medium">For</th>
-              <th className="p-2 text-right font-medium">Amount</th>
-              <th className="p-2 font-medium">Method</th>
-              <th className="p-2 font-medium">Date</th>
-              <th className="p-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((payment) => (
-              <tr key={payment.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="p-2 font-mono">
-                  <Link href={`/admin/payments/${payment.id}`} className="font-medium hover:underline">
-                    {payment.receiptNumber}
-                  </Link>
-                </td>
-                <td className="p-2">
-                  {payment.member.surname} {payment.member.firstName}
-                </td>
-                <td className="p-2">{payment.plan?.name ?? payment.fund?.name ?? "General"}</td>
-                <td className="p-2 text-right font-mono tabular-nums">{formatNaira(payment.amountKobo)}</td>
-                <td className="p-2">{payment.method}</td>
-                <td className="p-2">{payment.paidAt.toLocaleDateString("en-NG")}</td>
-                <td className="p-2">
-                  <StatusTag tone={payment.status === "VOIDED" ? "alert" : "confirmed"}>
-                    {payment.status === "VOIDED" ? "Voided" : "Confirmed"}
-                  </StatusTag>
-                </td>
-              </tr>
-            ))}
-            {payments.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="p-4 text-center text-muted-foreground">
-                  No payments recorded yet.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={payments}
+        rowKey={(payment) => payment.id}
+        emptyMessage="No payments recorded yet."
+      />
 
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm">

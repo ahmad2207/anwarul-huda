@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { MoneyError, nairaToKobo } from "@/lib/money";
 import { recordDisbursement } from "@/lib/charity/record-disbursement";
-import { saveUploadedFile } from "@/lib/local-storage";
+import { uploadFile } from "@/lib/storage";
 import { disbursementSchema } from "./schema";
 
 export interface DisbursementActionState {
@@ -43,7 +43,7 @@ export async function createDisbursementAction(
   let evidencePath: string | null = null;
   const evidenceFile = formData.get("evidence");
   if (evidenceFile instanceof File && evidenceFile.size > 0) {
-    evidencePath = await saveUploadedFile(evidenceFile, "disbursement-evidence");
+    evidencePath = await uploadFile(evidenceFile, "disbursement-evidence");
   }
 
   const result = await prisma.$transaction((tx) =>

@@ -54,7 +54,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "Content",
-    items: [{ label: "Sermons" }, { label: "Weekly books" }],
+    items: [{ label: "Upload", href: "/admin/content" }],
   },
   {
     label: "System",

@@ -6,6 +6,7 @@ export default function AccountHomePage() {
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">Welcome to your member account.</p>
       <Button render={<Link href="/account/contributions">My contributions</Link>} className="self-start" />
+      <Button render={<Link href="/library">Library</Link>} className="self-start" />
     </div>
   );
 }

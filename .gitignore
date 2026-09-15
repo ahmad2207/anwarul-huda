@@ -37,10 +37,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# local placeholder file storage (lib/local-storage.ts), until real
-# object storage is wired up
-/storage
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts

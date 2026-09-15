@@ -2,13 +2,14 @@
 
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { cn } from "cn";
 
-export function SignOutButton() {
+export function SignOutButton({ className }: { className?: string } = {}) {
   return (
     <Button
       variant="outline"
       size="sm"
-      className="w-full"
+      className={cn("w-full", className)}
       onClick={() => signOut({ redirectTo: "/login" })}
     >
       Sign out

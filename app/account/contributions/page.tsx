@@ -15,7 +15,7 @@ export default async function MyContributionsPage() {
 
   if (!user.memberId) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-base text-muted-foreground">
         This account is not linked to a member record.
       </p>
     );
@@ -42,7 +42,7 @@ export default async function MyContributionsPage() {
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-lg font-semibold">My contributions</h1>
-        <p className="text-sm text-muted-foreground">Your payment history and outstanding balance.</p>
+        <p className="text-base text-muted-foreground">Your payment history and outstanding balance.</p>
       </div>
 
       <Card>
@@ -64,10 +64,13 @@ export default async function MyContributionsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {payments.map((payment) => (
-            <div key={payment.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+            <div
+              key={payment.id}
+              className="flex min-h-11 items-center justify-between rounded-md border p-3 text-base"
+            >
               <div>
                 <p className="font-medium">{payment.plan?.name ?? payment.fund?.name ?? "General"}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {payment.receiptNumber} &middot; {payment.paidAt.toLocaleDateString("en-NG")} &middot;{" "}
                   {METHOD_LABELS[payment.method] ?? payment.method}
                   {payment.status === "VOIDED" ? (
@@ -84,7 +87,7 @@ export default async function MyContributionsPage() {
             </div>
           ))}
           {payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
+            <p className="text-base text-muted-foreground">No payments recorded yet.</p>
           ) : null}
         </CardContent>
       </Card>

@@ -38,10 +38,10 @@ export function FileButton({ contentId, filePath }: { contentId: string; filePat
 
   return (
     <div className="flex flex-col gap-2">
-      <Button type="button" onClick={handleClick} disabled={isPending} className="self-start">
+      <Button type="button" onClick={handleClick} disabled={isPending} className="h-11 self-start px-5 text-base">
         {isPending ? "Loading..." : isAudio ? "Play" : "Download"}
       </Button>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-base text-destructive">{error}</p> : null}
       {url ? (
         // Streams directly from the signed URL, range requests included,
         // so seeking does not require downloading the whole file first.

@@ -26,7 +26,7 @@ export default async function LibraryPage({
 
   if (!user.memberId) {
     return (
-      <p className="text-sm text-muted-foreground">This account is not linked to a member record.</p>
+      <p className="text-base text-muted-foreground">This account is not linked to a member record.</p>
     );
   }
 
@@ -107,19 +107,23 @@ export default async function LibraryPage({
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-lg font-semibold">Library</h1>
-        <p className="text-sm text-muted-foreground">Sermons, weekly books and articles.</p>
+        <p className="text-base text-muted-foreground">Sermons, weekly books and articles.</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
             <div className="flex min-w-40 flex-1 flex-col gap-1">
-              <Label className="text-xs">Search</Label>
-              <Input name="q" defaultValue={q} placeholder="Title or summary..." />
+              <Label className="text-sm">Search</Label>
+              <Input name="q" defaultValue={q} placeholder="Title or summary..." className="h-11 text-base" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Type</Label>
-              <select name="type" defaultValue={typeParam} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
+              <Label className="text-sm">Type</Label>
+              <select
+                name="type"
+                defaultValue={typeParam}
+                className="h-11 rounded-md border border-input bg-background px-2 text-base"
+              >
                 <option value="">All types</option>
                 {CONTENT_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -129,22 +133,34 @@ export default async function LibraryPage({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Speaker or author</Label>
-              <Input name="speaker" defaultValue={speaker} />
+              <Label className="text-sm">Speaker or author</Label>
+              <Input name="speaker" defaultValue={speaker} className="h-11 text-base" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Tag</Label>
-              <Input name="tag" defaultValue={tag} />
+              <Label className="text-sm">Tag</Label>
+              <Input name="tag" defaultValue={tag} className="h-11 text-base" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">From</Label>
-              <Input type="date" name="from" defaultValue={typeof params.from === "string" ? params.from : ""} />
+              <Label className="text-sm">From</Label>
+              <Input
+                type="date"
+                name="from"
+                defaultValue={typeof params.from === "string" ? params.from : ""}
+                className="h-11 text-base"
+              />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">To</Label>
-              <Input type="date" name="to" defaultValue={typeof params.to === "string" ? params.to : ""} />
+              <Label className="text-sm">To</Label>
+              <Input
+                type="date"
+                name="to"
+                defaultValue={typeof params.to === "string" ? params.to : ""}
+                className="h-11 text-base"
+              />
             </div>
-            <Button type="submit">Filter</Button>
+            <Button type="submit" className="h-11 px-5 text-base">
+              Filter
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -155,29 +171,29 @@ export default async function LibraryPage({
           <Link
             key={item.id}
             href={`/library/${item.slug}`}
-            className="flex flex-col gap-1 rounded-md border p-3 text-sm hover:bg-muted/30"
+            className="flex min-h-11 flex-col gap-1 rounded-md border p-4 text-base hover:bg-muted/30"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium">{item.title}</span>
-              <span className="text-xs text-muted-foreground">{TYPE_LABELS[item.type] ?? item.type}</span>
+              <span className="text-sm text-muted-foreground">{TYPE_LABELS[item.type] ?? item.type}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {item.author ?? "Unknown"}
               {item.deliveredOn ? ` · ${item.deliveredOn.toLocaleDateString("en-NG")}` : ""}
             </p>
             {item.summary ? <p className="text-muted-foreground">{item.summary}</p> : null}
             {item.tags.length > 0 ? (
-              <p className="text-xs text-muted-foreground">{item.tags.join(", ")}</p>
+              <p className="text-sm text-muted-foreground">{item.tags.join(", ")}</p>
             ) : null}
           </Link>
         ))}
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing matches this search.</p>
+          <p className="text-base text-muted-foreground">Nothing matches this search.</p>
         ) : null}
       </div>
 
       {totalPages > 1 ? (
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-base">
           <span className="text-muted-foreground">
             Page {page} of {totalPages}
           </span>
@@ -185,11 +201,13 @@ export default async function LibraryPage({
             <Button
               variant="outline"
               disabled={page <= 1}
+              className="h-11 px-5 text-base"
               render={<Link href={pageHref(Math.max(1, page - 1))}>Previous</Link>}
             />
             <Button
               variant="outline"
               disabled={page >= totalPages}
+              className="h-11 px-5 text-base"
               render={<Link href={pageHref(Math.min(totalPages, page + 1))}>Next</Link>}
             />
           </div>

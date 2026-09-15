@@ -19,7 +19,7 @@ const COVER_URL_EXPIRY_SECONDS = 300;
 export default async function ContentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await getCurrentUser();
   if (!user.memberId) {
-    return <p className="text-sm text-muted-foreground">This account is not linked to a member record.</p>;
+    return <p className="text-base text-muted-foreground">This account is not linked to a member record.</p>;
   }
 
   const { slug } = await params;
@@ -41,9 +41,9 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-xs text-muted-foreground">{TYPE_LABELS[item.type] ?? item.type}</p>
-        <h1 className="text-lg font-semibold">{item.title}</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">{TYPE_LABELS[item.type] ?? item.type}</p>
+        <h1 className="text-xl font-semibold">{item.title}</h1>
+        <p className="text-base text-muted-foreground">
           {item.author ?? "Unknown"}
           {item.deliveredOn ? ` · ${item.deliveredOn.toLocaleDateString("en-NG")}` : ""}
         </p>
@@ -54,15 +54,20 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
         <img src={coverUrl} alt="" className="max-h-64 w-auto rounded-md border object-contain" />
       ) : null}
 
-      {item.summary ? <p className="text-sm">{item.summary}</p> : null}
-      {item.body ? <p className="whitespace-pre-wrap text-sm">{item.body}</p> : null}
+      {item.summary ? <p className="text-base">{item.summary}</p> : null}
+      {item.body ? <p className="whitespace-pre-wrap text-base">{item.body}</p> : null}
 
-      {item.tags.length > 0 ? <p className="text-xs text-muted-foreground">{item.tags.join(", ")}</p> : null}
+      {item.tags.length > 0 ? <p className="text-sm text-muted-foreground">{item.tags.join(", ")}</p> : null}
 
       {item.filePath ? <FileButton contentId={item.id} filePath={item.filePath} /> : null}
 
       {item.externalUrl ? (
-        <a href={item.externalUrl} target="_blank" rel="noreferrer" className="self-start text-sm font-medium underline">
+        <a
+          href={item.externalUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-11 items-center self-start text-base font-medium underline"
+        >
           Watch video
         </a>
       ) : null}

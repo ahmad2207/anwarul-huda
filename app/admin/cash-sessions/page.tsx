@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { OpenSessionForm, SessionRow } from "./session-views";
 
 export default async function CashSessionsPage() {
@@ -14,13 +16,10 @@ export default async function CashSessionsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Cash sessions</h1>
-        <p className="text-sm text-muted-foreground">
-          Open a session before recording cash payments. Close it by counting the cash. A closed session
-          cannot be reopened.
-        </p>
-      </div>
+      <PageHeader
+        title="Cash sessions"
+        description="Open a session before recording cash payments. Close it by counting the cash. A closed session cannot be reopened."
+      />
 
       <OpenSessionForm />
 
@@ -32,9 +31,7 @@ export default async function CashSessionsPage() {
           {sessions.map((session) => (
             <SessionRow key={session.id} session={session} />
           ))}
-          {sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No sessions yet.</p>
-          ) : null}
+          {sessions.length === 0 ? <EmptyState message="No sessions yet." /> : null}
         </CardContent>
       </Card>
     </div>

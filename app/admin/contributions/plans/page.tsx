@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { PlanRow } from "./plan-row";
 import { PlanForm } from "./plan-form";
 
@@ -14,13 +16,10 @@ export default async function ContributionPlansPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Contribution plans</h1>
-        <p className="text-sm text-muted-foreground">
-          Monthly dues, building fund, Eid levy and so on. Each plan has an amount, a frequency and a
-          scope.
-        </p>
-      </div>
+      <PageHeader
+        title="Contribution plans"
+        description="Monthly dues, building fund, Eid levy and so on. Each plan has an amount, a frequency and a scope."
+      />
 
       <Card>
         <CardHeader>
@@ -30,9 +29,7 @@ export default async function ContributionPlansPage() {
           {plans.map((plan) => (
             <PlanRow key={plan.id} plan={plan} wings={wings} />
           ))}
-          {plans.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No plans yet.</p>
-          ) : null}
+          {plans.length === 0 ? <EmptyState message="No plans yet." /> : null}
         </CardContent>
       </Card>
 

@@ -4,9 +4,17 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { registrationSchema, registrationFormDataToRaw } from "./schema";
 
 const PASSWORD_HASH_ROUNDS = 12;
+
+// Registration is a rarer, more deliberate action than a login attempt,
+// so a tighter limit over a longer window is enough to blunt an
+// automated flood of fake sign-ups without getting in the way of a real
+// household registering more than one member from the same connection.
+const REGISTRATION_LIMIT = 6;
+const REGISTRATION_WINDOW_SECONDS = 60 * 60;
 
 export interface RegistrationState {
   error?: string;
@@ -18,6 +26,13 @@ export async function submitRegistration(
   _previousState: RegistrationState,
   formData: FormData,
 ): Promise<RegistrationState> {
+  const ip = await getClientIp();
+  const rateLimit = checkRateLimit(`register:${ip}`, REGISTRATION_LIMIT, REGISTRATION_WINDOW_SECONDS);
+  if (!rateLimit.allowed) {
+    const minutes = Math.ceil((rateLimit.retryAfterSeconds ?? REGISTRATION_WINDOW_SECONDS) / 60);
+    return { error: `Too many attempts from this connection. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.` };
+  }
+
   const parsed = registrationSchema.safeParse(registrationFormDataToRaw(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the form and try again." };

@@ -41,7 +41,7 @@ export async function createGathering(
     }
   }
 
-  await prisma.gathering.create({
+  const created = await prisma.gathering.create({
     data: {
       title: parsed.data.title,
       type: parsed.data.type,
@@ -50,6 +50,15 @@ export async function createGathering(
       startsAt,
       endsAt: parsed.data.endsAt ?? null,
     },
+  });
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "gathering.created",
+    entity: "Gathering",
+    entityId: created.id,
+    before: null,
+    after: created,
   });
 
   revalidatePath("/admin/attendance");

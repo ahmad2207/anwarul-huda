@@ -56,13 +56,19 @@ export async function approveMember(formData: FormData): Promise<void> {
       // with no password set, which fails safe: lib/auth.ts's authorize()
       // already refuses a null password hash rather than letting anyone
       // in until a password is set some other way.
+      let userId: string;
+      let userAuditAction: string;
+      let userBefore: { isActive: boolean } | null;
       if (member.user) {
-        await tx.user.update({
+        const updatedUser = await tx.user.update({
           where: { id: member.user.id },
           data: { isActive: true },
         });
+        userId = updatedUser.id;
+        userAuditAction = "user.activated";
+        userBefore = { isActive: member.user.isActive };
       } else {
-        await tx.user.create({
+        const createdUser = await tx.user.create({
           data: {
             email: member.email,
             phone: member.phone,
@@ -70,6 +76,9 @@ export async function approveMember(formData: FormData): Promise<void> {
             memberId: member.id,
           },
         });
+        userId = createdUser.id;
+        userAuditAction = "user.created";
+        userBefore = null;
       }
 
       await writeAudit(
@@ -80,6 +89,22 @@ export async function approveMember(formData: FormData): Promise<void> {
           entityId: member.id,
           before: { status: member.status },
           after: { status: updated.status, memberNumber: updated.memberNumber },
+        },
+        tx,
+      );
+
+      // A separate entry for the User write itself (CLAUDE.md domain rule
+      // 7 names "users" as its own audited entity, distinct from the
+      // member record), so filtering the audit log by entity "User" shows
+      // this, not only an entry filed under "Member".
+      await writeAudit(
+        {
+          actorId: actor.id,
+          action: userAuditAction,
+          entity: "User",
+          entityId: userId,
+          before: userBefore,
+          after: { isActive: true },
         },
         tx,
       );

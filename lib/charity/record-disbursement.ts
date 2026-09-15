@@ -68,6 +68,23 @@ export async function recordDisbursement(
 
   if (charityCase.status === "APPROVED") {
     await tx.charityCase.update({ where: { id: charityCase.id }, data: { status: "DISBURSED" } });
+    // Every other CharityCase status transition (verify, recommend,
+    // approve, reject, close) is audited on its own in
+    // lib/charity/case-workflow.ts; this one is a side effect of
+    // recording a disbursement rather than its own action, but it is
+    // still a state change worth its own trail entry, not just implied
+    // by the Disbursement row below.
+    await writeAudit(
+      {
+        actorId: input.actorId,
+        action: "charity_case.disbursed",
+        entity: "CharityCase",
+        entityId: charityCase.id,
+        before: { status: charityCase.status },
+        after: { status: "DISBURSED" },
+      },
+      tx,
+    );
   }
 
   await writeAudit(

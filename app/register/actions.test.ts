@@ -1,6 +1,7 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { resetRateLimitForTests } from "@/lib/rate-limit";
 import { submitRegistration } from "./actions";
 
 // Integration test against the real local Postgres database (see
@@ -39,6 +40,14 @@ function buildFormData(overrides: Record<string, string> = {}): FormData {
 }
 
 describe("submitRegistration", () => {
+  // Rate limiting keys on the caller's IP, which falls back to a fixed
+  // "unknown" value outside a real request (see lib/rate-limit.ts's
+  // getClientIp). Reset between tests so this file's own test count
+  // never runs into the limit meant for a real, abusive client.
+  beforeEach(() => {
+    resetRateLimitForTests();
+  });
+
   afterAll(async () => {
     // Delete the User rows explicitly. Deleting the Member alone only
     // nulls User.memberId (it is a nullable foreign key), it does not

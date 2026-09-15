@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -50,6 +50,10 @@ export default defineConfig({
     // that cross-process race, which is a test methodology artifact, not
     // a bug in the app.
     fileParallelism: false,
+    // e2e/*.spec.ts also matches vitest's own default *.spec.ts pattern,
+    // but those files use Playwright's test runner, not vitest's, and
+    // are run separately with `pnpm test:e2e`.
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
   resolve: {
     alias: {

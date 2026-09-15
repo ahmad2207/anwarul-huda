@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { canEditMemberRecords } from "@/lib/authorization";
 import { writeAudit } from "@/lib/audit";
+import { applyMemberStatusChange } from "@/lib/members/status-change";
 import {
   householdMemberSchema,
   memberEditSchema,
@@ -138,28 +139,14 @@ export async function changeMemberStatus(
     return { error: error instanceof Error ? error.message : "Not allowed." };
   }
 
-  await prisma.$transaction(async (tx) => {
-    const updated = await tx.member.update({
-      where: { id: memberId },
-      data: {
-        status: parsed.data.status,
-        statusReason: parsed.data.reason,
-        statusAt: parsed.data.effectiveDate ?? new Date(),
-      },
-    });
-
-    await writeAudit(
-      {
-        actorId: actor.id,
-        action: "member.status_changed",
-        entity: "Member",
-        entityId: memberId,
-        before: { status: before.status, statusReason: before.statusReason },
-        after: { status: updated.status, statusReason: updated.statusReason, statusAt: updated.statusAt },
-      },
-      tx,
-    );
-  });
+  await prisma.$transaction((tx) =>
+    applyMemberStatusChange(tx, before, {
+      newStatus: parsed.data.status,
+      reason: parsed.data.reason,
+      effectiveDate: parsed.data.effectiveDate ?? new Date(),
+      actorId: actor.id,
+    }),
+  );
 
   revalidatePath(`/admin/members/${memberId}`);
   return {};

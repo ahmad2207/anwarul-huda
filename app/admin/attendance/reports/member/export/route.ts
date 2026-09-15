@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { requireRole } from "@/lib/auth";
 import { toCsvDocument } from "@/lib/csv";
 import { getMemberAttendanceHistory } from "@/lib/attendance/reports";
 import { loadReportMember } from "../actions";
@@ -13,6 +14,13 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  // Checked here, first, same as every other route handler, rather than
+  // only relying on the check inside loadReportMember below: a request
+  // with no memberId should still never get past authorization before
+  // anything else runs, even though nothing was actually exposed on that
+  // path before this.
+  await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
+
   const params = request.nextUrl.searchParams;
   const memberId = params.get("memberId");
   if (!memberId) {

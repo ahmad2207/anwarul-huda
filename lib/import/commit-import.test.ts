@@ -167,7 +167,7 @@ describe("commitImportRows and rollbackImportBatch", () => {
     expect(count).toBe(2);
   });
 
-  it("rolls back a batch with no activity, removing every member it created", async () => {
+  it("rolls back a batch with no activity by setting every member it created to inactive, never deleting them", async () => {
     const csv = [
       "Surname,First Name,Gender,Phone,Wing",
       `${FIXTURE_SURNAME}Rollback,Amina,Female,08011119005,Women's wing`,
@@ -179,15 +179,20 @@ describe("commitImportRows and rollbackImportBatch", () => {
     const batch = await makeBatch(actorId);
     await prisma.$transaction((tx) => commitImportRows(tx, batch.id, groups, {}, actorId, wings));
 
-    const before = await prisma.member.count({ where: { importBatchId: batch.id } });
+    const before = await prisma.member.count({ where: { importBatchId: batch.id, status: "ACTIVE" } });
     expect(before).toBe(1);
 
     const result = await prisma.$transaction((tx) => rollbackImportBatch(tx, batch.id, actorId));
 
     expect(result.blockers).toBeUndefined();
-    expect(result.removedCount).toBe(1);
-    const after = await prisma.member.count({ where: { importBatchId: batch.id } });
-    expect(after).toBe(0);
+    expect(result.deactivatedCount).toBe(1);
+
+    // Still there, never hard deleted (CLAUDE.md domain rule 1), just no
+    // longer active, with a reason recorded.
+    const members = await prisma.member.findMany({ where: { importBatchId: batch.id } });
+    expect(members).toHaveLength(1);
+    expect(members[0].status).toBe("INACTIVE");
+    expect(members[0].statusReason).toBe("Import batch rolled back");
   });
 
   it("refuses to roll back a batch whose member has a payment recorded", async () => {
@@ -222,12 +227,13 @@ describe("commitImportRows and rollbackImportBatch", () => {
 
     const result = await prisma.$transaction((tx) => rollbackImportBatch(tx, batch.id, actorId));
 
-    expect(result.removedCount).toBeUndefined();
+    expect(result.deactivatedCount).toBeUndefined();
     expect(result.blockers).toHaveLength(1);
     expect(result.blockers?.[0].reason).toBe("payments");
 
     const stillThere = await prisma.member.findUnique({ where: { id: member.id } });
     expect(stillThere).not.toBeNull();
+    expect(stillThere?.status).toBe("ACTIVE"); // blocked: nothing changed, not even the status
 
     await prisma.payment.deleteMany({ where: { memberId: member.id } });
   });

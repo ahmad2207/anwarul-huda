@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { canViewAllWings } from "@/lib/authorization";
+import { writeAudit } from "@/lib/audit";
 import { checkInMember } from "@/lib/attendance/check-in";
 
 async function requireGatheringAccess(gatheringId: string) {
@@ -92,9 +93,26 @@ export async function checkInAction(
     return { error: "This member cannot be checked in." };
   }
 
-  const result = await prisma.$transaction((tx) =>
-    checkInMember(tx, { gatheringId, memberId, method, recordedById: actor.id }),
-  );
+  const result = await prisma.$transaction(async (tx) => {
+    const outcome = await checkInMember(tx, { gatheringId, memberId, method, recordedById: actor.id });
+    // Only a genuinely new check-in is audited, not a re-scan of someone
+    // already checked in: that case changes nothing, so there is nothing
+    // to record.
+    if (!outcome.alreadyCheckedIn) {
+      await writeAudit(
+        {
+          actorId: actor.id,
+          action: "attendance.checked_in",
+          entity: "AttendanceRecord",
+          entityId: outcome.record.id,
+          before: null,
+          after: outcome.record,
+        },
+        tx,
+      );
+    }
+    return outcome;
+  });
 
   revalidatePath(`/admin/attendance/${gatheringId}`);
 
@@ -124,13 +142,27 @@ export async function checkInByMemberNumber(
 }
 
 export async function undoCheckIn(gatheringId: string, recordId: string): Promise<void> {
-  await requireGatheringAccess(gatheringId);
+  const { actor } = await requireGatheringAccess(gatheringId);
 
   const record = await prisma.attendanceRecord.findUnique({ where: { id: recordId } });
   if (!record || record.gatheringId !== gatheringId) {
     throw new Error("This check-in no longer exists.");
   }
 
-  await prisma.attendanceRecord.delete({ where: { id: recordId } });
+  await prisma.$transaction(async (tx) => {
+    await tx.attendanceRecord.delete({ where: { id: recordId } });
+    await writeAudit(
+      {
+        actorId: actor.id,
+        action: "attendance.check_in_undone",
+        entity: "AttendanceRecord",
+        entityId: recordId,
+        before: record,
+        after: null,
+      },
+      tx,
+    );
+  });
+
   revalidatePath(`/admin/attendance/${gatheringId}`);
 }

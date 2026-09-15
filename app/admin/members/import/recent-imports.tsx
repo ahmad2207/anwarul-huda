@@ -70,7 +70,7 @@ function BatchRow({ batch }: { batch: RecentImportBatch }) {
         return;
       }
       setStatus("ROLLED_BACK");
-      setMessage(`Rolled back. ${result.removedCount ?? 0} member(s) removed.`);
+      setMessage(`Rolled back. ${result.deactivatedCount ?? 0} member(s) set to inactive.`);
     });
   }
 

@@ -36,6 +36,8 @@ export default async function CharityPrintReportPage({
         </p>
       </div>
 
+      {rows.length === 0 ? <p className="text-center text-sm text-muted-foreground">No funds yet.</p> : null}
+
       {rows.map(({ fund, current, previous, zakatBreakdown }) => (
         <div key={fund.id} className="flex flex-col gap-2 border-t pt-4">
           <h2 className="text-base font-semibold">

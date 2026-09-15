@@ -10,17 +10,24 @@ export interface RollbackBlocker {
 }
 
 export interface RollbackResult {
-  /** Present, and nothing removed, when at least one member cannot be safely undone. */
+  /** Present, and nothing changed, when at least one member cannot be safely undone. */
   blockers?: RollbackBlocker[];
-  removedCount?: number;
+  deactivatedCount?: number;
 }
 
 /**
- * Undoes a committed import batch in full: every member it created is
- * removed, as long as none of them have a payment or an attendance record
- * against them. If any do, nothing is removed and the caller gets back
- * exactly which members are blocking it, so this refuses loudly rather
- * than silently doing a partial rollback.
+ * Undoes a committed import batch: every member it created is set to
+ * INACTIVE, with a reason and a date, as long as none of them have a
+ * payment or an attendance record against them. If any do, nothing is
+ * changed and the caller gets back exactly which members are blocking it,
+ * so this refuses loudly rather than silently doing a partial rollback.
+ *
+ * This never deletes a Member row. CLAUDE.md domain rule 1 is
+ * unconditional: member records are never hard deleted, only status
+ * changed, and a mistaken bulk import is not an exception to that. An
+ * earlier version of this function did delete the rows outright; that was
+ * a real gap, caught and corrected in the Phase 7 security pass, not a
+ * deliberate design.
  */
 export async function rollbackImportBatch(
   tx: Prisma.TransactionClient,
@@ -54,30 +61,32 @@ export async function rollbackImportBatch(
   }
 
   if (members.length === 0) {
-    return { removedCount: 0 };
+    return { deactivatedCount: 0 };
   }
 
-  const memberIds = members.map((member) => member.id);
+  const now = new Date();
+  const auditEntries: Parameters<typeof writeAuditMany>[0] = [];
 
-  // Household rows are auxiliary to the member being undone here, so they
-  // are removed along with it. They are not one of the two things that
-  // block a rollback, above, because they carry no independent activity
-  // of their own the way a payment or an attendance record does.
-  await tx.householdMember.deleteMany({ where: { memberId: { in: memberIds } } });
-
-  await writeAuditMany(
-    members.map((member) => ({
+  for (const member of members) {
+    const updated = await tx.member.update({
+      where: { id: member.id },
+      data: {
+        status: "INACTIVE",
+        statusReason: "Import batch rolled back",
+        statusAt: now,
+      },
+    });
+    auditEntries.push({
       actorId,
-      action: "member.removed_via_import_rollback",
+      action: "member.deactivated_via_import_rollback",
       entity: "Member",
       entityId: member.id,
-      before: member,
-      after: null,
-    })),
-    tx,
-  );
+      before: { status: member.status },
+      after: { status: updated.status, statusReason: updated.statusReason, statusAt: updated.statusAt },
+    });
+  }
 
-  await tx.member.deleteMany({ where: { id: { in: memberIds } } });
+  await writeAuditMany(auditEntries, tx);
 
-  return { removedCount: memberIds.length };
+  return { deactivatedCount: members.length };
 }

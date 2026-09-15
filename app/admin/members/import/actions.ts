@@ -231,7 +231,7 @@ export async function discardImport(batchId: string): Promise<DiscardResult> {
 export interface RollbackResultForUi {
   error?: string;
   blockers?: RollbackBlocker[];
-  removedCount?: number;
+  deactivatedCount?: number;
 }
 
 export async function rollbackImportAction(batchId: string): Promise<RollbackResultForUi> {
@@ -262,9 +262,9 @@ export async function rollbackImportAction(batchId: string): Promise<RollbackRes
     entity: "ImportBatch",
     entityId: batch.id,
     before: { status: batch.status },
-    after: { status: "ROLLED_BACK", removedCount: result.removedCount },
+    after: { status: "ROLLED_BACK", deactivatedCount: result.deactivatedCount },
   });
 
   revalidatePath("/admin/members/import");
-  return { removedCount: result.removedCount };
+  return { deactivatedCount: result.deactivatedCount };
 }

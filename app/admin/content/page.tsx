@@ -4,10 +4,13 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { FormField } from "@/components/form-field";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
+import { DataTable } from "@/components/data-table";
+import type { DataTableColumn } from "@/components/data-table";
 import { ContentForm } from "./content-form";
 import { CONTENT_TYPES } from "./schema";
 
@@ -90,12 +93,34 @@ export default async function ContentAdminPage({
     return `/admin/content?${next.toString()}`;
   }
 
+  const columns: DataTableColumn<ContentItem>[] = [
+    {
+      key: "title",
+      header: "Title",
+      cell: (item) => (
+        <>
+          <p className="font-medium">{item.title}</p>
+          {item.author ? <p className="text-xs text-muted-foreground">{item.author}</p> : null}
+        </>
+      ),
+    },
+    { key: "type", header: "Type", cell: (item) => TYPE_LABELS[item.type] ?? item.type },
+    {
+      key: "wing",
+      header: "Wing",
+      cell: (item) => (item.wingId ? wingNames.get(item.wingId) ?? "Unknown wing" : "All wings"),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (item) => <StatusTag tone={statusTone(item)}>{statusLabel(item)}</StatusTag>,
+    },
+    { key: "downloads", header: "Downloads", cell: (item) => item.downloadCount },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Content</h1>
-        <p className="text-sm text-muted-foreground">Sermons, weekly books, articles and announcements.</p>
-      </div>
+      <PageHeader title="Content" description="Sermons, weekly books, articles and announcements." />
 
       <Card>
         <CardHeader>
@@ -109,13 +134,12 @@ export default async function ContentAdminPage({
       <Card>
         <CardContent className="pt-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex min-w-48 flex-1 flex-col gap-1">
-              <Label className="text-xs">Title or author</Label>
-              <Input name="q" defaultValue={q} placeholder="Search..." autoFocus />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Type</Label>
+            <FormField label="Title or author" htmlFor="q" className="min-w-48 flex-1">
+              <Input id="q" name="q" defaultValue={q} placeholder="Search..." autoFocus />
+            </FormField>
+            <FormField label="Type" htmlFor="type">
               <select
+                id="type"
                 name="type"
                 defaultValue={typeParam}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -127,48 +151,13 @@ export default async function ContentAdminPage({
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
             <Button type="submit">Filter</Button>
           </form>
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
-            <tr>
-              <th className="p-2 font-medium">Title</th>
-              <th className="p-2 font-medium">Type</th>
-              <th className="p-2 font-medium">Wing</th>
-              <th className="p-2 font-medium">Status</th>
-              <th className="p-2 font-medium">Downloads</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-b last:border-0">
-                <td className="p-2">
-                  <p className="font-medium">{item.title}</p>
-                  {item.author ? <p className="text-xs text-muted-foreground">{item.author}</p> : null}
-                </td>
-                <td className="p-2">{TYPE_LABELS[item.type] ?? item.type}</td>
-                <td className="p-2">{item.wingId ? wingNames.get(item.wingId) ?? "Unknown wing" : "All wings"}</td>
-                <td className="p-2">
-                  <StatusTag tone={statusTone(item)}>{statusLabel(item)}</StatusTag>
-                </td>
-                <td className="p-2">{item.downloadCount}</td>
-              </tr>
-            ))}
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                  Nothing uploaded yet.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DataTable columns={columns} rows={items} rowKey={(item) => item.id} emptyMessage="Nothing uploaded yet." />
 
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm">

@@ -3,11 +3,15 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { groupCollections, loadCollectionsPayments } from "@/lib/reports/collections";
-import type { CollectionsGroupBy } from "@/lib/reports/collections";
+import type { CollectionsGroupBy, CollectionsRow } from "@/lib/reports/collections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/page-header";
+import { FormField } from "@/components/form-field";
+import { Money } from "@/components/money";
+import { DataTable } from "@/components/data-table";
+import type { DataTableColumn } from "@/components/data-table";
 
 const GROUP_OPTIONS: Array<{ value: CollectionsGroupBy; label: string }> = [
   { value: "period", label: "Period" },
@@ -63,21 +67,25 @@ export default async function CollectionsReportPage({
   if (planId) exportParams.set("planId", planId);
   if (method) exportParams.set("method", method);
 
+  const columns: DataTableColumn<CollectionsRow>[] = [
+    { key: "label", header: GROUP_OPTIONS.find((o) => o.value === groupBy)?.label, cell: (row) => row.label },
+    { key: "count", header: "Payments", cell: (row) => row.count },
+    { key: "total", header: "Total", align: "right", cell: (row) => <Money kobo={row.totalKobo} /> },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Collections report</h1>
-        <p className="text-sm text-muted-foreground">
-          Confirmed payments, grouped by period, plan, wing, officer or method.
-        </p>
-      </div>
+      <PageHeader
+        title="Collections report"
+        description="Confirmed payments, grouped by period, plan, wing, officer or method."
+      />
 
       <Card>
         <CardContent className="pt-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Group by</Label>
+            <FormField label="Group by" htmlFor="groupBy">
               <select
+                id="groupBy"
                 name="groupBy"
                 defaultValue={groupBy}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -88,18 +96,21 @@ export default async function CollectionsReportPage({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">From</Label>
-              <Input type="date" name="from" defaultValue={typeof params.from === "string" ? params.from : ""} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">To</Label>
-              <Input type="date" name="to" defaultValue={typeof params.to === "string" ? params.to : ""} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Wing</Label>
+            </FormField>
+            <FormField label="From" htmlFor="from">
+              <Input
+                id="from"
+                type="date"
+                name="from"
+                defaultValue={typeof params.from === "string" ? params.from : ""}
+              />
+            </FormField>
+            <FormField label="To" htmlFor="to">
+              <Input id="to" type="date" name="to" defaultValue={typeof params.to === "string" ? params.to : ""} />
+            </FormField>
+            <FormField label="Wing" htmlFor="wingId">
               <select
+                id="wingId"
                 name="wingId"
                 defaultValue={wingId}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -111,10 +122,10 @@ export default async function CollectionsReportPage({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Plan</Label>
+            </FormField>
+            <FormField label="Plan" htmlFor="planId">
               <select
+                id="planId"
                 name="planId"
                 defaultValue={planId}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -126,10 +137,10 @@ export default async function CollectionsReportPage({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Method</Label>
+            </FormField>
+            <FormField label="Method" htmlFor="method">
               <select
+                id="method"
                 name="method"
                 defaultValue={method}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -139,7 +150,7 @@ export default async function CollectionsReportPage({
                 <option value="POS">POS</option>
                 <option value="BANK_TRANSFER">Bank transfer</option>
               </select>
-            </div>
+            </FormField>
             <Button type="submit">Apply</Button>
           </form>
         </CardContent>
@@ -155,33 +166,12 @@ export default async function CollectionsReportPage({
         />
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
-            <tr>
-              <th className="p-2 font-medium">{GROUP_OPTIONS.find((o) => o.value === groupBy)?.label}</th>
-              <th className="p-2 font-medium">Payments</th>
-              <th className="p-2 text-right font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.key} className="border-b last:border-0">
-                <td className="p-2">{row.label}</td>
-                <td className="p-2">{row.count}</td>
-                <td className="p-2 text-right font-mono tabular-nums">{formatNaira(row.totalKobo)}</td>
-              </tr>
-            ))}
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="p-4 text-center text-muted-foreground">
-                  No confirmed payments match this filter.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.key}
+        emptyMessage="No confirmed payments match this filter."
+      />
     </div>
   );
 }

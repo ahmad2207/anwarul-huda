@@ -161,7 +161,15 @@ export default async function CharityDashboardPage({
         </Card>
       ))}
 
-      {dashboardRows.length === 0 ? <p className="text-sm text-muted-foreground">No funds yet.</p> : null}
+      {dashboardRows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No funds yet.{" "}
+          <Link href="/admin/charity/funds" className="underline underline-offset-2">
+            Add one
+          </Link>{" "}
+          to start tracking it.
+        </p>
+      ) : null}
     </div>
   );
 }

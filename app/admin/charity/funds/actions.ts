@@ -15,7 +15,7 @@ export async function createFund(_previousState: ActionState, formData: FormData
 
   const parsed = fundSchema.safeParse(fundFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const fund = await prisma.fund.create({
@@ -49,7 +49,7 @@ export async function updateFund(
 
   const parsed = fundSchema.safeParse(fundFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const before = await prisma.fund.findUnique({ where: { id: fundId } });

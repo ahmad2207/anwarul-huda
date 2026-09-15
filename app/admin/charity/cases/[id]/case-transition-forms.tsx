@@ -27,7 +27,7 @@ export function VerifyButton({ caseId }: { caseId: string }) {
             try {
               await verifyCaseAction(caseId);
             } catch (err) {
-              setError(err instanceof Error ? err.message : "Something went wrong.");
+              setError(err instanceof Error ? err.message : "Something went wrong verifying this case. Try again.");
             }
           })
         }
@@ -125,7 +125,7 @@ export function CloseButton({ caseId }: { caseId: string }) {
             try {
               await closeCaseAction(caseId);
             } catch (err) {
-              setError(err instanceof Error ? err.message : "Something went wrong.");
+              setError(err instanceof Error ? err.message : "Something went wrong closing this case. Try again.");
             }
           })
         }

@@ -31,7 +31,7 @@ export default async function CashSessionsPage() {
           {sessions.map((session) => (
             <SessionRow key={session.id} session={session} />
           ))}
-          {sessions.length === 0 ? <EmptyState message="No sessions yet." /> : null}
+          {sessions.length === 0 ? <EmptyState message="No sessions yet. Open one above to start." /> : null}
         </CardContent>
       </Card>
     </div>

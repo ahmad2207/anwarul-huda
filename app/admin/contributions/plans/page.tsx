@@ -29,7 +29,7 @@ export default async function ContributionPlansPage() {
           {plans.map((plan) => (
             <PlanRow key={plan.id} plan={plan} wings={wings} />
           ))}
-          {plans.length === 0 ? <EmptyState message="No plans yet." /> : null}
+          {plans.length === 0 ? <EmptyState message="No plans yet. Add one below to start collecting against it." /> : null}
         </CardContent>
       </Card>
 

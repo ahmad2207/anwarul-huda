@@ -157,15 +157,21 @@ export function RegisterForm({
             {household.map((row, index) => (
               <div key={index} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">Full name</Label>
+                  <Label htmlFor={`household-${index}-fullName`} className="text-xs">
+                    Full name
+                  </Label>
                   <Input
+                    id={`household-${index}-fullName`}
                     value={row.fullName}
                     onChange={(e) => updateHouseholdRow(index, "fullName", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">Age</Label>
+                  <Label htmlFor={`household-${index}-age`} className="text-xs">
+                    Age
+                  </Label>
                   <Input
+                    id={`household-${index}-age`}
                     type="number"
                     className="w-20"
                     value={row.age}
@@ -173,8 +179,11 @@ export function RegisterForm({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">Relationship</Label>
+                  <Label htmlFor={`household-${index}-relationship`} className="text-xs">
+                    Relationship
+                  </Label>
                   <Input
+                    id={`household-${index}-relationship`}
                     value={row.relationship}
                     onChange={(e) => updateHouseholdRow(index, "relationship", e.target.value)}
                   />
@@ -229,7 +238,7 @@ export function RegisterForm({
 
           <div>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Submitting..." : "Submit registration"}
+              {isPending ? "Registering..." : "Register"}
             </Button>
           </div>
         </form>

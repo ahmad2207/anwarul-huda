@@ -144,11 +144,12 @@ export function ImportWizard() {
             <div className="grid gap-3 sm:grid-cols-2">
               {IMPORT_FIELDS.map((field) => (
                 <div key={field.key} className="flex flex-col gap-1">
-                  <Label className="text-xs">
+                  <Label htmlFor={`mapping-${field.key}`} className="text-xs">
                     {field.label}
                     {field.required ? " *" : ""}
                   </Label>
                   <select
+                    id={`mapping-${field.key}`}
                     value={mapping[field.key] ?? ""}
                     onChange={(event) =>
                       setMapping((current) => ({
@@ -334,6 +335,7 @@ function RowGroup({
                     {row.duplicate.memberNumber ?? "pending"})
                   </span>
                   <select
+                    aria-label={`Action for row ${row.rowNumber}'s duplicate`}
                     value={duplicateActions[row.rowNumber] ?? "skip"}
                     onChange={(event) =>
                       onDuplicateActionChange(row.rowNumber, event.target.value as DuplicateAction)

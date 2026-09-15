@@ -28,7 +28,7 @@ export async function createPlan(_previousState: ActionState, formData: FormData
 
   const parsed = planSchema.safeParse(planFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const amount = toAmountKobo(parsed.data.amount);
@@ -67,7 +67,7 @@ export async function updatePlan(
 
   const parsed = planSchema.safeParse(planFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const amount = toAmountKobo(parsed.data.amount);

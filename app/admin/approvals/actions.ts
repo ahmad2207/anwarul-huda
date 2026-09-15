@@ -128,7 +128,7 @@ export async function rejectMember(
     reason: formData.get("reason"),
   });
   if (!parsed.success) {
-    return parsed.error.issues[0]?.message ?? "Invalid input.";
+    return parsed.error.issues[0]?.message ?? "Check the values you entered and try again.";
   }
 
   const actor = await requireRole(["WING_ADMIN"]);

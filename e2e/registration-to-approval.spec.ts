@@ -24,7 +24,7 @@ test("a public registration can be approved into an active member with an issued
   await page.getByLabel("Password", { exact: true }).fill("correct horse battery staple");
   await page.getByLabel("Confirm password", { exact: true }).fill("correct horse battery staple");
   await page.getByLabel("I consent to my record being kept (required)").check();
-  await page.getByRole("button", { name: "Submit registration" }).click();
+  await page.getByRole("button", { name: "Register", exact: true }).click();
 
   await expect(page.getByText("Your registration has been received.")).toBeVisible();
 

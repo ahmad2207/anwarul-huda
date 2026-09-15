@@ -130,6 +130,6 @@ export async function submitRegistration(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "This phone number or email is already registered." };
     }
-    return { error: "Something went wrong. Please try again." };
+    return { error: "Something went wrong saving your registration. Try again." };
   }
 }

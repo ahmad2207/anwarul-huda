@@ -58,7 +58,7 @@ export async function createPayment(
 
   const parsed = paymentSchema.safeParse(paymentFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
   const data = parsed.data;
 

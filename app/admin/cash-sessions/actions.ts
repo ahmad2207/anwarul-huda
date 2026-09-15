@@ -35,7 +35,7 @@ export async function openCashSession(
     openingFloat: formData.get("openingFloat"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const floatResult = nairaStringToKobo(parsed.data.openingFloat);
@@ -76,7 +76,7 @@ export async function closeCashSession(
     varianceNote: formData.get("varianceNote"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const session = await prisma.cashSession.findUnique({ where: { id: sessionId } });

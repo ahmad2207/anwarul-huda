@@ -42,7 +42,7 @@ export async function createCaseAction(_previousState: ActionState, formData: Fo
 
   const parsed = createCaseSchema.safeParse(createCaseFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const amount = toKobo(parsed.data.requested);
@@ -88,7 +88,7 @@ export async function recommendCaseAction(
   const actor = await requireRole(["CHARITY_OFFICER"]);
   const parsed = recommendSchema.safeParse({ recommended: formData.get("recommended") });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
   const amount = toKobo(parsed.data.recommended);
   if ("error" in amount) return amount;
@@ -114,7 +114,7 @@ export async function approveCaseAction(
     decisionNote: formData.get("decisionNote"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
   const amount = toKobo(parsed.data.approved);
   if ("error" in amount) return amount;
@@ -139,7 +139,7 @@ export async function rejectCaseAction(
   const actor = await requireRole(["CHARITY_OFFICER"]);
   const parsed = rejectSchema.safeParse({ reason: formData.get("reason") });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const charityCase = await loadCase(caseId);

@@ -80,7 +80,7 @@ export default async function AttendancePage() {
         columns={columns}
         rows={gatherings}
         rowKey={(gathering) => gathering.id}
-        emptyMessage="No gatherings yet."
+        emptyMessage="No gatherings yet. Create one above to start taking attendance."
       />
     </div>
   );

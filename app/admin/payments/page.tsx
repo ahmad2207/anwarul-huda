@@ -71,7 +71,15 @@ export default async function PaymentsPage({
         columns={columns}
         rows={payments}
         rowKey={(payment) => payment.id}
-        emptyMessage="No payments recorded yet."
+        emptyMessage={
+          <>
+            No payments recorded yet.{" "}
+            <Link href="/admin/payments/new" className="underline underline-offset-2">
+              Record one
+            </Link>{" "}
+            to get started.
+          </>
+        }
       />
 
       {totalPages > 1 ? (

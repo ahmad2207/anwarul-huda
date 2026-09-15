@@ -29,7 +29,7 @@ export default async function FundsPage() {
           {funds.map((fund) => (
             <FundRow key={fund.id} fund={fund} closingBalanceKobo={balanceByFundId.get(fund.id) ?? 0} />
           ))}
-          {funds.length === 0 ? <EmptyState message="No funds yet." /> : null}
+          {funds.length === 0 ? <EmptyState message="No funds yet. Add one below to start tracking it." /> : null}
         </CardContent>
       </Card>
 

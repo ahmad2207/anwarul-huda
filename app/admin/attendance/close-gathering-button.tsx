@@ -20,7 +20,7 @@ export function CloseGatheringButton({ gatheringId }: { gatheringId: string }) {
             try {
               await closeGathering(gatheringId);
             } catch (err) {
-              setError(err instanceof Error ? err.message : "Something went wrong.");
+              setError(err instanceof Error ? err.message : "Something went wrong closing this gathering. Try again.");
             }
           })
         }

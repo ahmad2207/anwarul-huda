@@ -19,7 +19,7 @@ export async function voidPayment(
 
   const parsed = voidPaymentSchema.safeParse({ reason: formData.get("reason") });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });

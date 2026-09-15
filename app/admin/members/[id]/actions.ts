@@ -36,7 +36,7 @@ export async function updateMember(
 ): Promise<ActionState> {
   const parsed = memberEditSchema.safeParse(memberFormDataToRaw(formData));
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   let actor;
@@ -44,7 +44,7 @@ export async function updateMember(
   try {
     ({ actor, member: before } = await requireEditAccess(memberId));
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Not allowed." };
+    return { error: error instanceof Error ? error.message : "You do not have permission to make this change." };
   }
 
   const data = parsed.data;
@@ -128,7 +128,7 @@ export async function changeMemberStatus(
     effectiveDate: formData.get("effectiveDate"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   let actor;
@@ -136,7 +136,7 @@ export async function changeMemberStatus(
   try {
     ({ actor, member: before } = await requireEditAccess(memberId));
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Not allowed." };
+    return { error: error instanceof Error ? error.message : "You do not have permission to make this change." };
   }
 
   await prisma.$transaction((tx) =>
@@ -164,14 +164,14 @@ export async function addHouseholdMember(
     linkedMemberNumber: formData.get("linkedMemberNumber"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   let actor;
   try {
     ({ actor } = await requireEditAccess(memberId));
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Not allowed." };
+    return { error: error instanceof Error ? error.message : "You do not have permission to make this change." };
   }
 
   let linkedMemberId: string | null = null;
@@ -226,14 +226,14 @@ export async function updateHouseholdMember(
     linkedMemberNumber: formData.get("linkedMemberNumber"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
   let actor;
   try {
     ({ actor } = await requireEditAccess(memberId));
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Not allowed." };
+    return { error: error instanceof Error ? error.message : "You do not have permission to make this change." };
   }
 
   const before = await prisma.householdMember.findUnique({ where: { id: householdMemberId } });

@@ -89,7 +89,7 @@ export function CheckInClient({
           if (isLikelyNetworkError(error)) {
             break; // still offline: stop this pass, the interval or the online event will try again
           }
-          setMessage("Something went wrong while syncing pending check-ins.");
+          setMessage("Something went wrong while syncing pending check-ins. They are still queued to try again.");
           break;
         }
       }
@@ -148,7 +148,7 @@ export function CheckInClient({
       applySuccess(result, "synced", null);
     } catch (error) {
       if (!isLikelyNetworkError(error)) {
-        setMessage("Something went wrong recording this check-in.");
+        setMessage("Something went wrong recording this check-in. Try again.");
         return;
       }
       queueOffline(member, method);

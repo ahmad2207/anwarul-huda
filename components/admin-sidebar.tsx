@@ -47,7 +47,10 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "Attendance",
-    items: [{ label: "Gatherings", href: "/admin/attendance" }],
+    items: [
+      { label: "Gatherings", href: "/admin/attendance" },
+      { label: "Reports", href: "/admin/attendance/reports" },
+    ],
   },
   {
     label: "Content",

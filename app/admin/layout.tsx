@@ -22,5 +22,16 @@ export default async function AdminLayout({
     throw error;
   }
 
+  // A signed in account with no staff role at all is a member account,
+  // not an administrator (the MEMBER value in the RoleName enum is never
+  // actually assigned; an ordinary member simply has no role rows). Every
+  // individual /admin/* page already requires a specific staff role and
+  // would reject such an account anyway, but that surfaces as a raw
+  // authorization error on whatever page they land on first, rather than
+  // sending them where they actually belong.
+  if (user.roles.length === 0) {
+    redirect("/account");
+  }
+
   return <AdminShell user={user}>{children}</AdminShell>;
 }

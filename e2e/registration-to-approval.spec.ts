@@ -35,14 +35,13 @@ test("a public registration can be approved into an active member with an issued
   await loginAs(page, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD);
   await page.goto("/admin/approvals");
 
-  // Matched by its own title specifically, not just any text anywhere in
-  // the card: a "possible duplicate" panel on an unrelated card can
+  // Matched by the name cell itself, not just any text in the row: a
+  // "possible duplicate" list in another row's Duplicates column can
   // legitimately quote another pending member's full name too, which a
-  // plain hasText filter on the whole card would also match.
-  const card = page.locator('[data-slot="card"]').filter({
-    has: page.locator('[data-slot="card-title"]', { hasText: `${SURNAME} Applicant` }),
-  });
-  await card.getByRole("button", { name: "Approve" }).click();
+  // plain hasText filter on the whole row would also match.
+  const nameCell = page.getByRole("cell", { name: `${SURNAME} Applicant`, exact: true });
+  const row = nameCell.locator("xpath=ancestor::tr[1]");
+  await row.getByRole("button", { name: "Approve" }).click();
 
   // The approved card leaves the pending queue once the action completes.
   await expect(page.getByText(`${SURNAME} Applicant`)).toHaveCount(0);

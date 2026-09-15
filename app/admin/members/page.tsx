@@ -7,9 +7,23 @@ import { formatNigerianPhoneForDisplay } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/page-header";
+import { FormField } from "@/components/form-field";
+import { MemberNumber } from "@/components/member-number";
+import { DataTable } from "@/components/data-table";
+import type { DataTableColumn } from "@/components/data-table";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
+
+interface MemberRow {
+  id: string;
+  surname: string;
+  firstName: string;
+  memberNumber: string | null;
+  phone: string;
+  status: string;
+  wing: { name: string };
+}
 
 const PAGE_SIZE = 20;
 
@@ -114,29 +128,45 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
     return `/admin/members?${next.toString()}`;
   }
 
+  const columns: DataTableColumn<MemberRow>[] = [
+    {
+      key: "name",
+      header: "Name",
+      cell: (member) => (
+        <Link href={`/admin/members/${member.id}`} className="font-medium hover:underline">
+          {member.surname} {member.firstName}
+        </Link>
+      ),
+    },
+    {
+      key: "memberNumber",
+      header: "Member number",
+      cell: (member) => <MemberNumber value={member.memberNumber} />,
+    },
+    { key: "phone", header: "Phone", cell: (member) => formatNigerianPhoneForDisplay(member.phone) },
+    { key: "wing", header: "Wing", cell: (member) => member.wing.name },
+    {
+      key: "status",
+      header: "Status",
+      cell: (member) => <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Members</h1>
-        <p className="text-sm text-muted-foreground">
-          {total} member{total === 1 ? "" : "s"} match{total === 1 ? "es" : ""} this search
-        </p>
-      </div>
+      <PageHeader
+        title="Members"
+        description={`${total} member${total === 1 ? "" : "s"} match${total === 1 ? "es" : ""} this search`}
+      />
 
       <Card>
         <CardContent className="pt-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex min-w-48 flex-1 flex-col gap-1">
-              <Label htmlFor="q" className="text-xs">
-                Name, phone or member number
-              </Label>
+            <FormField label="Name, phone or member number" htmlFor="q" className="min-w-48 flex-1">
               <Input id="q" name="q" defaultValue={q} placeholder="Search..." autoFocus />
-            </div>
+            </FormField>
 
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="status" className="text-xs">
-                Status
-              </Label>
+            <FormField label="Status" htmlFor="status">
               <select
                 id="status"
                 name="status"
@@ -150,13 +180,10 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
 
             {visibleWings.length > 1 ? (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="wing" className="text-xs">
-                  Wing
-                </Label>
+              <FormField label="Wing" htmlFor="wing">
                 <select
                   id="wing"
                   name="wing"
@@ -170,13 +197,10 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
             ) : null}
 
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="branch" className="text-xs">
-                Branch
-              </Label>
+            <FormField label="Branch" htmlFor="branch">
               <select
                 id="branch"
                 name="branch"
@@ -190,7 +214,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
 
             <Button type="submit">Filter</Button>
             {q || statusParam || wingParam || branchParam ? (
@@ -200,43 +224,12 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
-            <tr>
-              <th className="p-2 font-medium">Name</th>
-              <th className="p-2 font-medium">Member number</th>
-              <th className="p-2 font-medium">Phone</th>
-              <th className="p-2 font-medium">Wing</th>
-              <th className="p-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="p-2">
-                  <Link href={`/admin/members/${member.id}`} className="font-medium hover:underline">
-                    {member.surname} {member.firstName}
-                  </Link>
-                </td>
-                <td className="p-2 font-mono text-muted-foreground">{member.memberNumber ?? "Not yet issued"}</td>
-                <td className="p-2">{formatNigerianPhoneForDisplay(member.phone)}</td>
-                <td className="p-2">{member.wing.name}</td>
-                <td className="p-2">
-                  <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>
-                </td>
-              </tr>
-            ))}
-            {members.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                  No members match this search.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={members}
+        rowKey={(member) => member.id}
+        emptyMessage="No members match this search."
+      />
 
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm">

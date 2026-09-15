@@ -3,11 +3,15 @@ import { requireRole } from "@/lib/auth";
 import { canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { getMembersNotAttendedSince, resolveWingFilter } from "@/lib/attendance/reports";
-import type { WingScope } from "@/lib/attendance/reports";
+import type { InactiveMemberRow, WingScope } from "@/lib/attendance/reports";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/page-header";
+import { FormField } from "@/components/form-field";
+import { MemberNumber } from "@/components/member-number";
+import { DataTable } from "@/components/data-table";
+import type { DataTableColumn } from "@/components/data-table";
 
 const PAGE_SIZE = 20;
 const DEFAULT_WEEKS = 4;
@@ -49,27 +53,42 @@ export default async function InactiveMembersReportPage({
   exportParams.set("weeks", String(weeks));
   if (wingId) exportParams.set("wingId", wingId);
 
+  const columns: DataTableColumn<InactiveMemberRow>[] = [
+    {
+      key: "member",
+      header: "Member",
+      cell: (row) => (
+        <Link href={`/admin/members/${row.memberId}`} className="font-medium hover:underline">
+          {row.surname} {row.firstName}
+        </Link>
+      ),
+    },
+    { key: "memberNumber", header: "Member number", cell: (row) => <MemberNumber value={row.memberNumber} /> },
+    { key: "wing", header: "Wing", cell: (row) => row.wingName },
+    {
+      key: "lastAttended",
+      header: "Last attended",
+      cell: (row) => (row.lastAttendedAt ? row.lastAttendedAt.toLocaleDateString("en-NG") : "Never"),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Not attended recently</h1>
-        <p className="text-sm text-muted-foreground">
-          Active members who have not attended anything in the given number of weeks, including those who
-          have never attended.
-        </p>
-      </div>
+      <PageHeader
+        title="Not attended recently"
+        description="Active members who have not attended anything in the given number of weeks, including those who have never attended."
+      />
 
       <Card>
         <CardContent className="pt-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Weeks</Label>
-              <Input type="number" name="weeks" min={1} defaultValue={weeks} className="w-24" />
-            </div>
+            <FormField label="Weeks" htmlFor="weeks">
+              <Input id="weeks" type="number" name="weeks" min={1} defaultValue={weeks} className="w-24" />
+            </FormField>
             {wings.length > 1 ? (
-              <div className="flex flex-col gap-1">
-                <Label className="text-xs">Wing</Label>
+              <FormField label="Wing" htmlFor="wingId">
                 <select
+                  id="wingId"
                   name="wingId"
                   defaultValue={wingId ?? ""}
                   className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -81,7 +100,7 @@ export default async function InactiveMembersReportPage({
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
             ) : null}
             <Button type="submit">Apply</Button>
           </form>
@@ -98,39 +117,12 @@ export default async function InactiveMembersReportPage({
         />
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
-            <tr>
-              <th className="p-2 font-medium">Member</th>
-              <th className="p-2 font-medium">Member number</th>
-              <th className="p-2 font-medium">Wing</th>
-              <th className="p-2 font-medium">Last attended</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.memberId} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="p-2">
-                  <Link href={`/admin/members/${row.memberId}`} className="font-medium hover:underline">
-                    {row.surname} {row.firstName}
-                  </Link>
-                </td>
-                <td className="p-2 font-mono text-muted-foreground">{row.memberNumber ?? "Not yet issued"}</td>
-                <td className="p-2">{row.wingName}</td>
-                <td className="p-2">{row.lastAttendedAt ? row.lastAttendedAt.toLocaleDateString("en-NG") : "Never"}</td>
-              </tr>
-            ))}
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-muted-foreground">
-                  Everyone in view has attended within the given period.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.memberId}
+        emptyMessage="Everyone in view has attended within the given period."
+      />
 
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm">

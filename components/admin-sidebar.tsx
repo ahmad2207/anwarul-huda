@@ -63,6 +63,18 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
 ];
 
 export function AdminSidebar({ user }: { user: CurrentUser }) {
+  // Styleguide is a building tool, not something every officer needs open
+  // during their working day, so it only shows for the role that would
+  // actually use it. Built as a fresh array rather than mutating the
+  // module-level NAV_SECTIONS, which would leak across requests.
+  const sections = user.roles.includes("SUPER_ADMIN")
+    ? NAV_SECTIONS.map((section) =>
+        section.label === "System"
+          ? { ...section, items: [...section.items, { label: "Styleguide", href: "/admin/styleguide" }] }
+          : section,
+      )
+    : NAV_SECTIONS;
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-row items-center gap-2 px-3 py-2">
@@ -74,7 +86,7 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <SidebarGroup key={section.label}>
             <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
             <SidebarGroupContent>

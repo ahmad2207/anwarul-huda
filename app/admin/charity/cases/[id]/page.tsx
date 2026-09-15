@@ -121,7 +121,7 @@ export default async function CharityCaseDetailPage({
           {charityCase.status === "RECOMMENDED" ? (
             <div className="flex flex-col gap-2">
               {selfApprovalBlocked ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
+                <p className="text-xs text-amber-800">
                   You recommended this case, so you cannot approve it. Someone else needs to.
                 </p>
               ) : null}

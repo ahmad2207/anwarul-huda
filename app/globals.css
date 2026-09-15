@@ -8,7 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-mono);
+  --font-arabic: var(--font-arabic);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -39,50 +40,91 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+
+  /* DESIGN.md section 2's own named tokens, exposed as utilities
+     (bg-navy-900, text-amber-800, border-sabon, and so on) in addition
+     to being mapped onto the shadcn slots below, since later steps and
+     DESIGN.md itself refer to these names directly. */
+  --color-navy-900: var(--navy-900);
+  --color-navy-700: var(--navy-700);
+  --color-amber-500: var(--amber-500);
+  --color-amber-800: var(--amber-800);
+  --color-paper: var(--paper);
+  --color-sabon: var(--sabon);
+  --color-alert: var(--alert);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+
+  /* Radius 4px throughout (DESIGN.md section 5): not a scaled family of
+     sizes off one base, the same flat value everywhere shadcn expects a
+     radius token. */
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* DESIGN.md section 2, sampled from the logo or derived from it, exact
+     hex values, not converted to another colour space. */
+  --navy-900: #003265;
+  --navy-700: #0a4585;
+  --amber-500: #ff9700;
+  --amber-800: #8f5300;
+  --paper: #f4f6fa;
+  --sabon: #2f6b4f;
+  --alert: #b02418;
+  --ink: #1b2440;
+  --ink-2: #5a6079;
+
+  /* Not one of DESIGN.md's named tokens: the "1px border in a light navy
+     tint" section 5 asks for, derived the same way DESIGN.md derives its
+     own secondary tones, a light tint of navy-900. */
+  --border-tint: #d7e1ec;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--navy-900);
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: var(--navy-900);
+  --muted: var(--paper);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--border-tint);
+  --accent-foreground: var(--navy-900);
+  --destructive: var(--alert);
+  --border: var(--border-tint);
+  --input: var(--border-tint);
+  --ring: var(--navy-700);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 4px;
+  --sidebar: var(--navy-900);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: var(--navy-700);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--navy-700);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 12%);
+  --sidebar-ring: var(--navy-700);
 }
 
+/* Not currently reachable: nothing in the app ever sets class="dark" (no
+   next-themes, no toggle). DESIGN.md section 1 is explicit that the dark
+   navy surfaces in the product (the check-in screen) are a deliberate
+   structural choice, not a dark mode, so this block is left as the
+   inherited shadcn scaffold rather than given a second DESIGN.md
+   palette that would never actually apply. */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

@@ -327,7 +327,7 @@ function RowGroup({
                     className={
                       tone === "destructive"
                         ? "text-xs text-destructive"
-                        : "text-xs text-amber-700 dark:text-amber-400"
+                        : "text-xs text-amber-800"
                     }
                   >
                     Possible duplicate of {row.duplicate.surname} {row.duplicate.firstName} (
@@ -355,7 +355,7 @@ function RowGroup({
                     className={
                       issue.severity === "error"
                         ? "text-xs text-destructive"
-                        : "text-xs text-amber-700 dark:text-amber-400"
+                        : "text-xs text-amber-800"
                     }
                   >
                     {issue.field}: {issue.message}

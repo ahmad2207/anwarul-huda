@@ -33,7 +33,7 @@ export function ContentForm({ wings }: { wings: Wing[] }) {
         </p>
       ) : null}
       {state.success ? (
-        <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-sm text-emerald-700 dark:text-emerald-400">
+        <p className="rounded-md border border-sabon/30 bg-sabon/10 p-2 text-sm text-sabon">
           Uploaded.
         </p>
       ) : null}

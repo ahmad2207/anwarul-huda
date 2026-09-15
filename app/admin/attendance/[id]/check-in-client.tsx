@@ -256,7 +256,7 @@ export function CheckInClient({
         <div className="text-right text-sm text-muted-foreground">
           <p>checked in</p>
           {pendingCount > 0 ? (
-            <p className="font-medium text-amber-700 dark:text-amber-400">{pendingCount} pending sync</p>
+            <p className="font-medium text-amber-800">{pendingCount} pending sync</p>
           ) : null}
         </div>
       </div>
@@ -308,7 +308,7 @@ export function CheckInClient({
                 {entry.alreadyCheckedIn ? (
                   <span className="ml-1 text-xs text-muted-foreground">(already checked in)</span>
                 ) : entry.status === "pending" ? (
-                  <span className="ml-1 text-xs text-amber-700 dark:text-amber-400">(pending sync)</span>
+                  <span className="ml-1 text-xs text-amber-800">(pending sync)</span>
                 ) : null}
               </span>
               <Button type="button" size="sm" variant="ghost" onClick={() => handleUndo(entry)}>

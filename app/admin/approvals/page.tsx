@@ -73,8 +73,8 @@ export default async function ApprovalsPage() {
             </dl>
 
             {duplicates.length > 0 ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
-                <p className="mb-2 font-medium text-amber-900 dark:text-amber-200">
+              <div className="rounded-md border border-amber-800/30 bg-amber-800/10 p-3 text-sm">
+                <p className="mb-2 font-medium text-amber-800">
                   Possible duplicate{duplicates.length === 1 ? "" : "s"}
                 </p>
                 <ul className="flex flex-col gap-1">

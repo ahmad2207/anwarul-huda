@@ -55,7 +55,7 @@ test("checking a member in at a gathering raises the count and shows them as che
   await page.waitForURL(new RegExp(`/admin/attendance/${gatheringId}$`));
 
   // The running count, not just any "0" or "1" on the page.
-  const count = page.locator("p.text-2xl.font-semibold");
+  const count = page.getByTestId("checked-in-count");
   await expect(count).toHaveText("0");
 
   await page.getByPlaceholder("Search name or member number").fill(SURNAME);

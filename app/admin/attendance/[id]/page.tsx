@@ -23,16 +23,12 @@ export default async function GatheringCheckInPage({ params }: { params: Promise
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">{gathering.title}</h1>
-        <p className="text-sm text-muted-foreground">{gathering.wing?.name ?? "All wings"}</p>
-      </div>
-      <CheckInClient
-        gatheringId={gathering.id}
-        initialCount={gathering._count.records}
-        isClosed={gathering.isClosed}
-      />
-    </div>
+    <CheckInClient
+      gatheringId={gathering.id}
+      gatheringTitle={gathering.title}
+      wingName={gathering.wing?.name ?? "All wings"}
+      initialCount={gathering._count.records}
+      isClosed={gathering.isClosed}
+    />
   );
 }

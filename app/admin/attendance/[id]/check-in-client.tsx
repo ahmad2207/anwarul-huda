@@ -26,10 +26,14 @@ const SYNC_RETRY_INTERVAL_MS = 5000;
 
 export function CheckInClient({
   gatheringId,
+  gatheringTitle,
+  wingName,
   initialCount,
   isClosed,
 }: {
   gatheringId: string;
+  gatheringTitle: string;
+  wingName: string;
   initialCount: number;
   isClosed: boolean;
 }) {
@@ -242,89 +246,110 @@ export function CheckInClient({
     }
   }
 
+  // Full bleed navy-900 (DESIGN.md section 4.3): its own surface, not
+  // another page inside the admin shell. AdminShell (components/
+  // admin-shell.tsx) already knows to leave the sidebar off this route;
+  // everything below is what fills the space that leaves.
   if (isClosed) {
     return (
-      <p className="rounded-md border p-3 text-sm text-muted-foreground">
-        This gathering is closed. No further check-ins are accepted.
-      </p>
+      <div className="flex min-h-screen items-center justify-center bg-navy-900 p-6 text-center">
+        <p className="text-lg text-white">This gathering is closed. No further check-ins are accepted.</p>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-2xl font-semibold">{count}</p>
-        <div className="text-right text-sm text-muted-foreground">
-          <p>checked in</p>
+    <div className="min-h-screen bg-navy-900 text-white" style={{ fontSize: "20px" }}>
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h1 className="text-xl font-semibold">{gatheringTitle}</h1>
+            <p className="text-sm text-white/70">{wingName}</p>
+          </div>
+          {/* Permanently visible whenever there is anything to report, never
+              a toast that could be missed or dismissed: the one place
+              amber-500 appears outside the running count itself. */}
           {pendingCount > 0 ? (
-            <StatusTag tone="attention">{pendingCount} pending sync</StatusTag>
+            <p className="text-base font-medium text-amber-500">{pendingCount} waiting to sync</p>
           ) : null}
         </div>
-      </div>
 
-      <QrScanner onScan={handleQrScan} />
+        <QrScanner onScan={handleQrScan} />
 
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search name or member number"
-        className="h-12 text-base"
-        autoFocus
-      />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search name or member number"
+          className="h-16 rounded-md border-0 bg-white px-4 text-lg text-ink placeholder:text-ink-2"
+          autoFocus
+        />
 
-      {message ? <p className="text-sm text-destructive">{message}</p> : null}
+        {message ? <p className="text-base font-medium text-amber-500">{message}</p> : null}
 
-      <div className="flex flex-col gap-2">
-        {results.map((member) => (
-          <button
-            key={member.id}
-            type="button"
-            onClick={() => void performCheckIn(member, "MANUAL")}
-            className="flex items-center justify-between rounded-md border p-3 text-left text-sm hover:bg-muted"
-          >
-            <span>
-              <span className="font-medium">
-                {member.surname} {member.firstName}
-              </span>{" "}
-              <span className="text-muted-foreground">
-                {member.memberNumber ?? "Not yet issued"} &middot; {member.wingName}
-              </span>
-            </span>
-            {member.alreadyCheckedIn ? (
-              <StatusTag tone="confirmed">Checked in</StatusTag>
-            ) : (
-              <span className="text-xs font-medium">Tap to check in</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {recent.length > 0 ? (
-        <div className="flex flex-col gap-1 border-t pt-3">
-          <p className="text-xs font-medium text-muted-foreground">Recent</p>
-          {recent.map((entry) => (
-            <div key={entry.key} className="flex items-center justify-between text-sm">
+        <div className="flex flex-col gap-2">
+          {results.map((member) => (
+            <button
+              key={member.id}
+              type="button"
+              onClick={() => void performCheckIn(member, "MANUAL")}
+              className="flex min-h-16 items-center justify-between rounded-md bg-white px-4 py-3 text-left text-ink hover:bg-white/90"
+            >
               <span>
-                {entry.memberName}
-                {entry.alreadyCheckedIn ? (
-                  <span className="ml-1 text-xs text-muted-foreground">(already checked in)</span>
-                ) : entry.status === "pending" ? (
-                  <span className="ml-1">
-                    <StatusTag tone="attention">Pending sync</StatusTag>
-                  </span>
-                ) : (
-                  <span className="ml-1">
-                    <StatusTag tone="confirmed">Synced</StatusTag>
-                  </span>
-                )}
+                <span className="font-medium">
+                  {member.surname} {member.firstName}
+                </span>{" "}
+                <span className="text-base text-ink-2">
+                  {member.memberNumber ?? "Not yet issued"} &middot; {member.wingName}
+                </span>
               </span>
-              <Button type="button" size="sm" variant="ghost" onClick={() => handleUndo(entry)}>
-                Undo
-              </Button>
-            </div>
+              {member.alreadyCheckedIn ? (
+                <StatusTag tone="confirmed">Checked in</StatusTag>
+              ) : (
+                <span className="text-base font-medium text-navy-700">Tap to check in</span>
+              )}
+            </button>
           ))}
         </div>
-      ) : null}
+
+        {/* The largest element on the screen (DESIGN.md section 4.3): what
+            an officer glances at, and what they will be asked for. */}
+        <div className="flex flex-col items-center gap-1 py-6">
+          <p data-testid="checked-in-count" className="text-8xl leading-none font-bold text-amber-500">
+            {count}
+          </p>
+          <p className="text-base text-white/70">checked in</p>
+        </div>
+
+        {recent.length > 0 ? (
+          <div className="flex flex-col gap-2 rounded-md bg-white/10 p-3">
+            <p className="text-sm font-medium tracking-wide text-white/60 uppercase">Recent</p>
+            {recent.map((entry) => (
+              <div
+                key={entry.key}
+                className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-ink"
+              >
+                <span className="text-base">
+                  {entry.memberName}
+                  {entry.alreadyCheckedIn ? (
+                    <span className="ml-1 text-sm text-ink-2">(already checked in)</span>
+                  ) : entry.status === "pending" ? (
+                    <span className="ml-1">
+                      <StatusTag tone="attention">Pending sync</StatusTag>
+                    </span>
+                  ) : (
+                    <span className="ml-1">
+                      <StatusTag tone="confirmed">Synced</StatusTag>
+                    </span>
+                  )}
+                </span>
+                <Button type="button" size="sm" variant="ghost" onClick={() => handleUndo(entry)}>
+                  Undo
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

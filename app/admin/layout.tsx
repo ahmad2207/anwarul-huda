@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
-import { AdminSidebar } from "@/components/admin-sidebar";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { AdminShell } from "@/components/admin-shell";
 import { AuthenticationError, getCurrentUser } from "@/lib/auth";
 
-// The shell for every /admin/* page. No feature pages live here yet, only
-// the chrome: a sidebar, a header, and the auth check every admin page
-// depends on.
+// The auth check every admin page depends on, still applied to every
+// route under /admin/* without exception, including check-in. Which
+// shell wraps the result of that check (the sidebar, or nothing at all
+// for check-in's own full bleed surface) is AdminShell's decision, made
+// from the current path, not this layout's.
 export default async function AdminLayout({
   children,
 }: {
@@ -25,18 +22,5 @@ export default async function AdminLayout({
     throw error;
   }
 
-  return (
-    <SidebarProvider>
-      <AdminSidebar user={user} />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 print:hidden">
-          <SidebarTrigger />
-          <span className="text-sm font-medium">
-            Anwar-ul-Huda League administration
-          </span>
-        </header>
-        <main className="flex-1 p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+  return <AdminShell user={user}>{children}</AdminShell>;
 }

@@ -1,8 +1,13 @@
 import Link from "next/link";
+import type { CharityCase } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatNaira } from "@/lib/money";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { FormField } from "@/components/form-field";
+import { Money } from "@/components/money";
+import { DataTable } from "@/components/data-table";
+import type { DataTableColumn } from "@/components/data-table";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
 
@@ -46,74 +51,69 @@ export default async function CharityCasesPage({
     take: 100,
   });
 
+  const columns: DataTableColumn<CharityCase>[] = [
+    {
+      key: "reference",
+      header: "Reference",
+      cell: (charityCase) => (
+        <Link href={`/admin/charity/cases/${charityCase.id}`} className="font-mono font-medium hover:underline">
+          {charityCase.reference}
+        </Link>
+      ),
+    },
+    { key: "beneficiary", header: "Beneficiary", cell: (charityCase) => charityCase.beneficiaryName },
+    {
+      key: "requested",
+      header: "Requested",
+      align: "right",
+      cell: (charityCase) => <Money kobo={charityCase.requestedKobo} />,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (charityCase) => (
+        <StatusTag tone={caseStatusTone(charityCase.status)}>
+          {STATUS_LABELS[charityCase.status] ?? charityCase.status}
+        </StatusTag>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-semibold">Beneficiary cases</h1>
-          <p className="text-sm text-muted-foreground">{cases.length} case{cases.length === 1 ? "" : "s"}</p>
-        </div>
-        <Button render={<Link href="/admin/charity/cases/new">New case</Link>} />
-      </div>
+      <PageHeader
+        title="Beneficiary cases"
+        description={`${cases.length} case${cases.length === 1 ? "" : "s"}`}
+        actions={<Button render={<Link href="/admin/charity/cases/new">New case</Link>} />}
+      />
 
       <form method="get" className="flex items-end gap-2">
-        <select
-          name="status"
-          defaultValue={status}
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-        >
-          <option value="">All statuses</option>
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <FormField label="Status" htmlFor="status">
+          <select
+            id="status"
+            name="status"
+            defaultValue={status}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="">All statuses</option>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </FormField>
         <Button type="submit" variant="outline" size="sm">
           Filter
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
-            <tr>
-              <th className="p-2 font-medium">Reference</th>
-              <th className="p-2 font-medium">Beneficiary</th>
-              <th className="p-2 text-right font-medium">Requested</th>
-              <th className="p-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cases.map((charityCase) => (
-              <tr key={charityCase.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="p-2 font-mono">
-                  <Link
-                    href={`/admin/charity/cases/${charityCase.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {charityCase.reference}
-                  </Link>
-                </td>
-                <td className="p-2">{charityCase.beneficiaryName}</td>
-                <td className="p-2 text-right font-mono tabular-nums">{formatNaira(charityCase.requestedKobo)}</td>
-                <td className="p-2">
-                  <StatusTag tone={caseStatusTone(charityCase.status)}>
-                    {STATUS_LABELS[charityCase.status] ?? charityCase.status}
-                  </StatusTag>
-                </td>
-              </tr>
-            ))}
-            {cases.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-muted-foreground">
-                  No cases match this filter.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={cases}
+        rowKey={(charityCase) => charityCase.id}
+        emptyMessage="No cases match this filter."
+      />
     </div>
   );
 }

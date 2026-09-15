@@ -65,9 +65,13 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
 export function AdminSidebar({ user }: { user: CurrentUser }) {
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-3 py-2">
-        <p className="text-sm font-semibold">Anwar-ul-Huda League</p>
-        <p className="text-xs text-muted-foreground">Administration</p>
+      <SidebarHeader className="flex flex-row items-center gap-2 px-3 py-2">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
+        <img src="/logo-white.svg" alt="" width={28} height={28} className="shrink-0" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">Anwar-ul-Huda League</p>
+          <p className="truncate text-xs text-sidebar-foreground/70">Administration</p>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         {NAV_SECTIONS.map((section) => (
@@ -90,7 +94,10 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
         ))}
       </SidebarContent>
       <SidebarFooter className="gap-2 px-3 py-2">
-        <p className="truncate text-xs text-muted-foreground">
+        {/* text-muted-foreground is tuned for a light surface (DESIGN.md
+            section 2); the sidebar is navy-900, so its own foreground
+            token, dimmed, is what actually reads here. */}
+        <p className="truncate text-xs text-sidebar-foreground/70">
           {user.email ?? user.phone ?? "Signed in"}
         </p>
         <SignOutButton />

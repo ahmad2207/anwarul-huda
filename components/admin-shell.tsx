@@ -28,7 +28,9 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
           <SidebarTrigger />
           <span className="text-sm font-medium">Anwar-ul-Huda League administration</span>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        {/* DESIGN.md section 4.1: 14px base for the admin desk, a dense
+            table on a laptop, not the member area's 17px. */}
+        <main className="flex-1 p-6 text-sm">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

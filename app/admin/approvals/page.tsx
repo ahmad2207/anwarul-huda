@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { findPotentialDuplicates } from "@/lib/duplicates";
 import { formatNigerianPhoneForDisplay } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { StatusTag } from "@/components/status-tag";
 import { approveMember } from "./actions";
 import { RejectMemberForm } from "./reject-member-form";
 
@@ -44,72 +43,69 @@ export default async function ApprovalsPage() {
 
       {withDuplicates.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nothing waiting for approval.</p>
-      ) : null}
-
-      {withDuplicates.map(({ member, duplicates }) => (
-        <Card key={member.id}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-base font-medium">
-              <span>
-                {member.surname} {member.firstName} {member.otherNames ?? ""}
-              </span>
-              <span className="text-xs font-normal text-muted-foreground">{member.wing.name}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-muted-foreground">Phone</dt>
-                <dd>{formatNigerianPhoneForDisplay(member.phone)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Gender</dt>
-                <dd>{member.gender === "MALE" ? "Male" : "Female"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Registered</dt>
-                <dd>{member.createdAt.toLocaleDateString("en-NG")}</dd>
-              </div>
-            </dl>
-
-            {duplicates.length > 0 ? (
-              <div className="rounded-md border border-amber-800/30 bg-amber-800/10 p-3 text-sm">
-                <p className="mb-2 font-medium text-amber-800">
-                  Possible duplicate{duplicates.length === 1 ? "" : "s"}
-                </p>
-                <ul className="flex flex-col gap-1">
-                  {duplicates.map((duplicate) => (
-                    <li
-                      key={duplicate.member.id}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <span>
-                        {duplicate.member.surname} {duplicate.member.firstName} (
-                        {duplicate.member.memberNumber ?? duplicate.member.status.toLowerCase()})
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {duplicate.matchedOnPhone
-                          ? "same phone"
-                          : `${Math.round(duplicate.nameSimilarity * 100)}% name match`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            <Separator />
-
-            <div className="flex flex-wrap items-center gap-2">
-              <form action={approveMember}>
-                <input type="hidden" name="memberId" value={member.id} />
-                <Button type="submit">Approve</Button>
-              </form>
-              <RejectMemberForm memberId={member.id} />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      ) : (
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 border-b bg-muted text-left">
+              <tr>
+                <th className="p-2 font-medium">Name</th>
+                <th className="p-2 font-medium">Wing</th>
+                <th className="p-2 font-medium">Phone</th>
+                <th className="p-2 font-medium">Gender</th>
+                <th className="p-2 font-medium">Registered</th>
+                <th className="p-2 font-medium">Duplicates</th>
+                <th className="p-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {withDuplicates.map(({ member, duplicates }) => (
+                <tr key={member.id} className="border-b align-top last:border-0 hover:bg-muted/30">
+                  <td className="p-2 font-medium">
+                    {member.surname} {member.firstName} {member.otherNames ?? ""}
+                  </td>
+                  <td className="p-2">{member.wing.name}</td>
+                  <td className="p-2">{formatNigerianPhoneForDisplay(member.phone)}</td>
+                  <td className="p-2">{member.gender === "MALE" ? "Male" : "Female"}</td>
+                  <td className="p-2">{member.createdAt.toLocaleDateString("en-NG")}</td>
+                  <td className="p-2">
+                    {duplicates.length === 0 ? (
+                      <StatusTag tone="neutral">None</StatusTag>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <StatusTag tone="attention">
+                          {duplicates.length} possible {duplicates.length === 1 ? "match" : "matches"}
+                        </StatusTag>
+                        <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                          {duplicates.map((duplicate) => (
+                            <li key={duplicate.member.id}>
+                              {duplicate.member.surname} {duplicate.member.firstName} (
+                              {duplicate.member.memberNumber ?? duplicate.member.status.toLowerCase()}),{" "}
+                              {duplicate.matchedOnPhone
+                                ? "same phone"
+                                : `${Math.round(duplicate.nameSimilarity * 100)}% name match`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <form action={approveMember}>
+                        <input type="hidden" name="memberId" value={member.id} />
+                        <Button type="submit" size="sm">
+                          Approve
+                        </Button>
+                      </form>
+                      <RejectMemberForm memberId={member.id} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

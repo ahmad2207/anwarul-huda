@@ -130,7 +130,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
               <Label htmlFor="q" className="text-xs">
                 Name, phone or member number
               </Label>
-              <Input id="q" name="q" defaultValue={q} placeholder="Search..." />
+              <Input id="q" name="q" defaultValue={q} placeholder="Search..." autoFocus />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -202,7 +202,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">Name</th>
               <th className="p-2 font-medium">Member number</th>
@@ -219,7 +219,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
                     {member.surname} {member.firstName}
                   </Link>
                 </td>
-                <td className="p-2 text-muted-foreground">{member.memberNumber ?? "Not yet issued"}</td>
+                <td className="p-2 font-mono text-muted-foreground">{member.memberNumber ?? "Not yet issued"}</td>
                 <td className="p-2">{formatNigerianPhoneForDisplay(member.phone)}</td>
                 <td className="p-2">{member.wing.name}</td>
                 <td className="p-2">

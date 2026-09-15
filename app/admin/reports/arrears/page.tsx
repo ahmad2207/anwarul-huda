@@ -69,13 +69,13 @@ export default async function ArrearsReportPage({
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">Member</th>
               <th className="p-2 font-medium">Member number</th>
               <th className="p-2 font-medium">Wing</th>
               <th className="p-2 font-medium">Unpaid periods</th>
-              <th className="p-2 font-medium">Outstanding</th>
+              <th className="p-2 text-right font-medium">Outstanding</th>
             </tr>
           </thead>
           <tbody>
@@ -86,10 +86,10 @@ export default async function ArrearsReportPage({
                     {row.surname} {row.firstName}
                   </Link>
                 </td>
-                <td className="p-2 text-muted-foreground">{row.memberNumber ?? "Not yet issued"}</td>
+                <td className="p-2 font-mono text-muted-foreground">{row.memberNumber ?? "Not yet issued"}</td>
                 <td className="p-2">{row.wingName}</td>
                 <td className="p-2">{row.recordCount}</td>
-                <td className="p-2 font-medium text-amber-800">{formatNaira(row.outstandingKobo)}</td>
+                <td className="p-2 text-right font-mono tabular-nums font-medium text-amber-800">{formatNaira(row.outstandingKobo)}</td>
               </tr>
             ))}
             {rows.length === 0 ? (

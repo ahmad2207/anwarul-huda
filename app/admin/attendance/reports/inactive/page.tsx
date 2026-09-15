@@ -100,7 +100,7 @@ export default async function InactiveMembersReportPage({
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">Member</th>
               <th className="p-2 font-medium">Member number</th>
@@ -116,7 +116,7 @@ export default async function InactiveMembersReportPage({
                     {row.surname} {row.firstName}
                   </Link>
                 </td>
-                <td className="p-2 text-muted-foreground">{row.memberNumber ?? "Not yet issued"}</td>
+                <td className="p-2 font-mono text-muted-foreground">{row.memberNumber ?? "Not yet issued"}</td>
                 <td className="p-2">{row.wingName}</td>
                 <td className="p-2">{row.lastAttendedAt ? row.lastAttendedAt.toLocaleDateString("en-NG") : "Never"}</td>
               </tr>

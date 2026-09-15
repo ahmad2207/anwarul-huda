@@ -111,7 +111,7 @@ export default async function ContentAdminPage({
           <form method="get" className="flex flex-wrap items-end gap-3">
             <div className="flex min-w-48 flex-1 flex-col gap-1">
               <Label className="text-xs">Title or author</Label>
-              <Input name="q" defaultValue={q} placeholder="Search..." />
+              <Input name="q" defaultValue={q} placeholder="Search..." autoFocus />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">Type</Label>
@@ -135,7 +135,7 @@ export default async function ContentAdminPage({
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">Title</th>
               <th className="p-2 font-medium">Type</th>

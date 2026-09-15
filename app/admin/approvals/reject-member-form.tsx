@@ -12,14 +12,14 @@ export function RejectMemberForm({ memberId }: { memberId: string }) {
 
   if (!open) {
     return (
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
         Reject
       </Button>
     );
   }
 
   return (
-    <form action={formAction} className="flex flex-1 flex-wrap items-end gap-2">
+    <form action={formAction} className="flex min-w-64 flex-wrap items-end gap-2">
       <input type="hidden" name="memberId" value={memberId} />
       <div className="flex min-w-48 flex-1 flex-col gap-1">
         <Label htmlFor={`reason-${memberId}`} className="text-xs">
@@ -27,10 +27,10 @@ export function RejectMemberForm({ memberId }: { memberId: string }) {
         </Label>
         <Input id={`reason-${memberId}`} name="reason" required minLength={3} />
       </div>
-      <Button type="submit" variant="destructive" disabled={isPending}>
+      <Button type="submit" variant="destructive" size="sm" disabled={isPending}>
         {isPending ? "Rejecting..." : "Confirm reject"}
       </Button>
-      <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+      <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
         Cancel
       </Button>
       {error ? <p className="w-full text-xs text-destructive">{error}</p> : null}

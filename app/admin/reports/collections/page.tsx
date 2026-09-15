@@ -157,11 +157,11 @@ export default async function CollectionsReportPage({
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">{GROUP_OPTIONS.find((o) => o.value === groupBy)?.label}</th>
               <th className="p-2 font-medium">Payments</th>
-              <th className="p-2 font-medium">Total</th>
+              <th className="p-2 text-right font-medium">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -169,7 +169,7 @@ export default async function CollectionsReportPage({
               <tr key={row.key} className="border-b last:border-0">
                 <td className="p-2">{row.label}</td>
                 <td className="p-2">{row.count}</td>
-                <td className="p-2">{formatNaira(row.totalKobo)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatNaira(row.totalKobo)}</td>
               </tr>
             ))}
             {rows.length === 0 ? (

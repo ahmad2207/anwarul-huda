@@ -76,18 +76,18 @@ export default async function CharityCasesPage({
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">Reference</th>
               <th className="p-2 font-medium">Beneficiary</th>
-              <th className="p-2 font-medium">Requested</th>
+              <th className="p-2 text-right font-medium">Requested</th>
               <th className="p-2 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
             {cases.map((charityCase) => (
               <tr key={charityCase.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="p-2">
+                <td className="p-2 font-mono">
                   <Link
                     href={`/admin/charity/cases/${charityCase.id}`}
                     className="font-medium hover:underline"
@@ -96,7 +96,7 @@ export default async function CharityCasesPage({
                   </Link>
                 </td>
                 <td className="p-2">{charityCase.beneficiaryName}</td>
-                <td className="p-2">{formatNaira(charityCase.requestedKobo)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatNaira(charityCase.requestedKobo)}</td>
                 <td className="p-2">
                   <StatusTag tone={caseStatusTone(charityCase.status)}>
                     {STATUS_LABELS[charityCase.status] ?? charityCase.status}

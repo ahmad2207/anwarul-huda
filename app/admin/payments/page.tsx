@@ -39,12 +39,12 @@ export default async function PaymentsPage({
 
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50 text-left">
+          <thead className="sticky top-0 z-10 border-b bg-muted text-left">
             <tr>
               <th className="p-2 font-medium">Receipt</th>
               <th className="p-2 font-medium">Member</th>
               <th className="p-2 font-medium">For</th>
-              <th className="p-2 font-medium">Amount</th>
+              <th className="p-2 text-right font-medium">Amount</th>
               <th className="p-2 font-medium">Method</th>
               <th className="p-2 font-medium">Date</th>
               <th className="p-2 font-medium">Status</th>
@@ -53,7 +53,7 @@ export default async function PaymentsPage({
           <tbody>
             {payments.map((payment) => (
               <tr key={payment.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="p-2">
+                <td className="p-2 font-mono">
                   <Link href={`/admin/payments/${payment.id}`} className="font-medium hover:underline">
                     {payment.receiptNumber}
                   </Link>
@@ -62,7 +62,7 @@ export default async function PaymentsPage({
                   {payment.member.surname} {payment.member.firstName}
                 </td>
                 <td className="p-2">{payment.plan?.name ?? payment.fund?.name ?? "General"}</td>
-                <td className="p-2">{formatNaira(payment.amountKobo)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatNaira(payment.amountKobo)}</td>
                 <td className="p-2">{payment.method}</td>
                 <td className="p-2">{payment.paidAt.toLocaleDateString("en-NG")}</td>
                 <td className="p-2">

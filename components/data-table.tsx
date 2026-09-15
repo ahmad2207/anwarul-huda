@@ -28,7 +28,7 @@ export function DataTable<T>({
   alignRowsTop?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className="overflow-x-auto rounded-md border bg-card shadow-[0_16px_30px_-22px_rgba(4,20,40,0.25)]">
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10 border-b bg-muted text-left">
           <tr>

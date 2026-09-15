@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Plus_Jakarta_Sans } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-// DESIGN.md section 3: IBM Plex Sans for the interface, IBM Plex Mono for
-// figures only (amounts, member numbers, receipt numbers), IBM Plex Sans
-// Arabic for the four places Arabic appears (the login lockup and three
-// printed artefacts). All three self hosted via next/font, replacing the
-// Geist pair the project scaffolded with in Phase 0.
-const ibmPlexSans = IBM_Plex_Sans({
+// DESIGN.md section 3: Plus Jakarta Sans carries the interface, Fraunces
+// carries anything that announces itself (page titles, card titles, the
+// wordmark), IBM Plex Mono is for figures only (amounts, member numbers,
+// receipt numbers), IBM Plex Sans Arabic is for the four places Arabic
+// appears (the login lockup and three printed artefacts). All four self
+// hosted via next/font.
+const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const fraunces = Fraunces({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
 const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
@@ -39,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${ibmPlexSans.variable} ${ibmPlexSansArabic.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      className={`${plusJakartaSans.variable} ${fraunces.variable} ${ibmPlexSansArabic.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <TooltipProvider>{children}</TooltipProvider>

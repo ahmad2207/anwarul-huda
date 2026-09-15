@@ -8,14 +8,14 @@ import type { ComponentType } from "react";
 
 export type StatusTone = "confirmed" | "attention" | "alert" | "neutral";
 
+// confirmed, attention and alert render as a small tinted pill (word and
+// icon together, never colour alone). neutral stays plain text: it is a
+// fact about the record (draft, closed, inactive), not a state, and
+// giving it a pill would make it read as one.
 const TONE_CLASSES: Record<StatusTone, string> = {
-  confirmed: "text-sabon",
-  attention: "text-amber-800",
-  alert: "text-alert",
-  // Most of a record's possible states are not one of the three above,
-  // only a fact (occasional, draft, closed). Those get no colour at
-  // all, inheriting whatever the surrounding text already is, rather
-  // than reaching for a colour that would not mean anything.
+  confirmed: "bg-sabon-soft text-sabon",
+  attention: "bg-amber-soft text-amber-800",
+  alert: "bg-alert-soft text-alert",
   neutral: "text-current",
 };
 
@@ -28,8 +28,13 @@ const TONE_ICONS: Record<StatusTone, ComponentType<{ className?: string }> | nul
 
 export function StatusTag({ tone, children }: { tone: StatusTone; children: React.ReactNode }) {
   const Icon = TONE_ICONS[tone];
+  const isPill = tone !== "neutral";
   return (
-    <span className={`inline-flex items-center gap-1 font-medium ${TONE_CLASSES[tone]}`}>
+    <span
+      className={`inline-flex items-center gap-1 font-semibold ${TONE_CLASSES[tone]} ${
+        isPill ? "rounded-full px-2.5 py-0.5 text-xs" : ""
+      }`}
+    >
       {Icon ? <Icon className="size-3.5 shrink-0" aria-hidden="true" /> : null}
       {children}
     </span>

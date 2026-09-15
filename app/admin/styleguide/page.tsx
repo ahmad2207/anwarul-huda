@@ -16,13 +16,20 @@ import { StatusTag } from "@/components/status-tag";
 // during their working day.
 
 const COLOR_SWATCHES: Array<{ name: string; className: string; use: string }> = [
-  { name: "navy-900", className: "bg-navy-900", use: "Primary. Sidebar, check-in field, primary buttons, headings" },
-  { name: "navy-700", className: "bg-navy-700", use: "Links and active states on white, hover on navy" },
-  { name: "amber-500", className: "bg-amber-500", use: "The light. Only on navy, or as a small solid mark" },
+  { name: "navy-950", className: "bg-navy-950", use: "Deepest ground. Check-in field, sidebar gradient base" },
+  { name: "navy-900", className: "bg-navy-900", use: "Primary. Sidebar, primary buttons, headings on white" },
+  { name: "navy-800", className: "bg-navy-800", use: "Mid step for gradients and hover states on navy" },
+  { name: "navy-700", className: "bg-navy-700", use: "Links and active states on white" },
+  { name: "amber-500", className: "bg-amber-500", use: "The light. Glows and small solid marks on navy" },
+  { name: "amber-300", className: "bg-amber-300", use: "Soft glow highlight, lighter edge of an amber gradient" },
   { name: "amber-800", className: "bg-amber-800", use: "Attention on white: pending, arrears, till variance, unsynced" },
-  { name: "paper", className: "bg-paper border", use: "Application background" },
+  { name: "amber-soft", className: "bg-amber-soft border", use: "Attention pill background on white" },
+  { name: "paper", className: "bg-paper border", use: "Application background. Warm, not blue-grey" },
+  { name: "paper-dim", className: "bg-paper-dim border", use: "Card wells and recessed surfaces on paper" },
   { name: "sabon", className: "bg-sabon", use: "Confirmed only: paid, approved, checked in, synced" },
+  { name: "sabon-soft", className: "bg-sabon-soft border", use: "Confirmed pill background on white" },
   { name: "alert", className: "bg-alert", use: "Voided, rejected, failed, shortfall" },
+  { name: "alert-soft", className: "bg-alert-soft border", use: "Alert pill background on white" },
   { name: "ink", className: "bg-ink", use: "Body text" },
   { name: "ink-2", className: "bg-ink-2", use: "Secondary text" },
 ];
@@ -87,10 +94,16 @@ export default async function StyleguidePage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">Type</h2>
         <p className="max-w-prose text-sm text-muted-foreground">
-          IBM Plex Sans throughout the interface. IBM Plex Mono for money, member numbers, receipt numbers and
-          references only, never for labels or headings. Scale ratio 1.25.
+          Fraunces for anything that announces itself: page titles, card titles, the wordmark, the check-in
+          count. Plus Jakarta Sans for the interface: body copy, form fields, table cells. IBM Plex Mono for
+          money, member numbers, receipt numbers and references only, never for labels or headings. Scale
+          ratio 1.25.
         </p>
         <div className="flex flex-col gap-2 rounded-md border p-4">
+          <p className="font-heading text-2xl font-bold">
+            <span className="mr-3 font-mono text-xs font-normal text-muted-foreground">font-heading</span>
+            Anwar-ul-Huda League
+          </p>
           {TYPE_SCALE.map((step) => (
             <p key={step.label} className={step.className}>
               <span className="mr-3 font-mono text-xs text-muted-foreground">{step.label}</span>

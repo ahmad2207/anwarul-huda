@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { StatusTag } from "@/components/status-tag";
 
 const METHOD_LABELS: Record<string, string> = {
@@ -40,23 +41,29 @@ export default async function MyContributionsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">My contributions</h1>
-        <p className="text-base text-muted-foreground">Your payment history and outstanding balance.</p>
-      </div>
+      <PageHeader title="My contributions" description="Your payment history and outstanding balance." />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-medium">Outstanding balance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Outstanding is arrears, not a failure: DESIGN.md section 2
-              names arrears under amber-800 (attention), not alert. */}
-          <p className={`text-2xl font-semibold ${outstandingKobo > 0 ? "text-amber-800" : ""}`}>
-            {formatNaira(outstandingKobo)}
-          </p>
-        </CardContent>
-      </Card>
+      {/* DESIGN.md section 4.2: the one warm card carrying the number
+          that matters most, everything else on this page stays plain.
+          Outstanding is arrears, not a failure, so a balance owed still
+          reads in amber (attention), never alert; paid up reads in white. */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 to-navy-800 p-6 text-white">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full bg-amber-500/35 blur-3xl"
+        />
+        <p className="relative font-mono text-xs tracking-wide text-white/60 uppercase">Outstanding balance</p>
+        <p
+          className={`relative mt-2 font-mono text-4xl font-semibold ${
+            outstandingKobo > 0 ? "text-amber-500" : "text-white"
+          }`}
+        >
+          {formatNaira(outstandingKobo)}
+        </p>
+        <p className="relative mt-1 text-sm text-white/70">
+          {outstandingKobo > 0 ? "Catch up whenever you can." : "You're paid up. Jazakumullahu khairan."}
+        </p>
+      </div>
 
       <Card>
         <CardHeader>

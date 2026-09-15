@@ -10,7 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-arabic: var(--font-arabic);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -45,19 +45,27 @@
      (bg-navy-900, text-amber-800, border-sabon, and so on) in addition
      to being mapped onto the shadcn slots below, since later steps and
      DESIGN.md itself refer to these names directly. */
+  --color-navy-950: var(--navy-950);
   --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
   --color-navy-700: var(--navy-700);
   --color-amber-500: var(--amber-500);
+  --color-amber-300: var(--amber-300);
   --color-amber-800: var(--amber-800);
+  --color-amber-soft: var(--amber-soft);
   --color-paper: var(--paper);
+  --color-paper-dim: var(--paper-dim);
   --color-sabon: var(--sabon);
+  --color-sabon-soft: var(--sabon-soft);
   --color-alert: var(--alert);
+  --color-alert-soft: var(--alert-soft);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
 
-  /* Radius 4px throughout (DESIGN.md section 5): not a scaled family of
-     sizes off one base, the same flat value everywhere shadcn expects a
-     radius token. */
+  /* Radius 14px on cards, panels and inputs (DESIGN.md section 5): a
+     real, single flat value everywhere shadcn expects a radius token,
+     not 4px any more. Pills and the check-in search bar reach for
+     rounded-full directly rather than a token here. */
   --radius-sm: var(--radius);
   --radius-md: var(--radius);
   --radius-lg: var(--radius);
@@ -68,22 +76,33 @@
 }
 
 :root {
-  /* DESIGN.md section 2, sampled from the logo or derived from it, exact
-     hex values, not converted to another colour space. */
+  /* DESIGN.md section 2. navy-900, navy-700, amber-500, amber-800,
+     sabon, alert, ink and ink-2 are unchanged from the first pass
+     (navy-900 and amber-500 sampled from the logo, the rest derived the
+     same way). navy-950, navy-800, amber-300, paper, paper-dim and the
+     three *-soft pill backgrounds are new, added for depth and for the
+     tinted status pills, derived from the same source colours. */
+  --navy-950: #041b33;
   --navy-900: #003265;
+  --navy-800: #0f3d6e;
   --navy-700: #0a4585;
   --amber-500: #ff9700;
+  --amber-300: #ffc066;
   --amber-800: #8f5300;
-  --paper: #f4f6fa;
+  --amber-soft: #fff1d9;
+  --paper: #f6f3ec;
+  --paper-dim: #ece6d8;
   --sabon: #2f6b4f;
+  --sabon-soft: #e3f0e9;
   --alert: #b02418;
+  --alert-soft: #fbe4e1;
   --ink: #1b2440;
   --ink-2: #5a6079;
 
-  /* Not one of DESIGN.md's named tokens: the "1px border in a light navy
-     tint" section 5 asks for, derived the same way DESIGN.md derives its
-     own secondary tones, a light tint of navy-900. */
-  --border-tint: #d7e1ec;
+  /* A light navy tint border, still used where a hairline separator
+     (a table row, a sticky header) is right rather than the softer
+     panel shadow below. */
+  --border-tint: #ddd4c2;
 
   --background: var(--paper);
   --foreground: var(--ink);
@@ -91,11 +110,11 @@
   --card-foreground: var(--ink);
   --popover: #ffffff;
   --popover-foreground: var(--ink);
-  --primary: var(--navy-900);
+  --primary: var(--navy-950);
   --primary-foreground: #ffffff;
   --secondary: #ffffff;
   --secondary-foreground: var(--navy-900);
-  --muted: var(--paper);
+  --muted: var(--paper-dim);
   --muted-foreground: var(--ink-2);
   --accent: var(--border-tint);
   --accent-foreground: var(--navy-900);
@@ -108,12 +127,12 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 4px;
-  --sidebar: var(--navy-900);
+  --radius: 14px;
+  --sidebar: var(--navy-950);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: var(--navy-700);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--navy-700);
+  --sidebar-accent: var(--navy-800);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgb(255 255 255 / 12%);
   --sidebar-ring: var(--navy-700);

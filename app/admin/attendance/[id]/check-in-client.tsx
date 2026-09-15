@@ -252,21 +252,21 @@ export function CheckInClient({
   // everything below is what fills the space that leaves.
   if (isClosed) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-navy-900 p-6 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-navy-950 p-6 text-center">
         <p className="text-lg text-white">This gathering is closed. No further check-ins are accepted.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-navy-900 text-white" style={{ fontSize: "20px" }}>
+    <div className="min-h-screen bg-navy-950 text-white" style={{ fontSize: "20px" }}>
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
             <img src="/logo.png" alt="" width={40} height={40} className="shrink-0" />
             <div>
-              <h1 className="text-xl font-semibold">{gatheringTitle}</h1>
+              <h1 className="font-heading text-xl font-bold">{gatheringTitle}</h1>
               <p className="text-sm text-white/70">{wingName}</p>
             </div>
           </div>
@@ -316,12 +316,22 @@ export function CheckInClient({
         </div>
 
         {/* The largest element on the screen (DESIGN.md section 4.3): what
-            an officer glances at, and what they will be asked for. */}
-        <div className="flex flex-col items-center gap-1 py-6">
-          <p data-testid="checked-in-count" className="text-8xl leading-none font-bold text-amber-500">
+            an officer glances at, and what they will be asked for. A real
+            radial glow, the same light the logo's own lantern holds, not
+            just a number set in an accent colour. The glow pulses slowly;
+            motion-reduce turns that off, everything else here is static. */}
+        <div className="relative flex flex-col items-center gap-1 py-6">
+          <div
+            aria-hidden="true"
+            className="absolute top-1/2 left-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/30 blur-3xl motion-safe:animate-pulse"
+          />
+          <p
+            data-testid="checked-in-count"
+            className="font-heading relative text-8xl leading-none font-bold text-amber-500 [text-shadow:0_0_60px_rgba(255,151,0,0.55)]"
+          >
             {count}
           </p>
-          <p className="text-base text-white/70">checked in</p>
+          <p className="relative font-heading text-lg text-white/70">checked in</p>
         </div>
 
         {recent.length > 0 ? (

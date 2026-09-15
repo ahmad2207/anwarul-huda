@@ -77,11 +77,18 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex flex-row items-center gap-2 px-3 py-2">
+      <SidebarHeader className="relative flex flex-row items-center gap-2 overflow-hidden px-3 py-2">
+        {/* DESIGN.md section 4.1: a faint amber glow behind the logo,
+            the same light the check-in count glows with, just quieter
+            here. Purely decorative, so it is inert to assistive tech. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-4 -top-4 size-24 rounded-full bg-amber-500/20 blur-2xl"
+        />
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
-        <img src="/logo.png" alt="" width={32} height={32} className="shrink-0" />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">Anwar-ul-Huda League</p>
+        <img src="/logo.png" alt="" width={32} height={32} className="relative shrink-0" />
+        <div className="relative min-w-0">
+          <p className="truncate font-heading text-sm font-bold">Anwar-ul-Huda League</p>
           <p className="truncate text-xs text-sidebar-foreground/70">Administration</p>
         </div>
       </SidebarHeader>

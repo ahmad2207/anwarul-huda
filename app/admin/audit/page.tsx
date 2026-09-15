@@ -4,10 +4,17 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { FormField } from "@/components/form-field";
 import { AuditRow } from "./audit-row";
 import type { AuditRowData } from "./audit-row";
+
+// This table is not built on the shared DataTable primitive: each row
+// can expand into a second <tr> of field level changes directly beneath
+// it (see AuditRow), a master-detail shape DataTable's one-row-per-item
+// model does not express. PageHeader and FormField still apply, since
+// those parts are the same boilerplate every other list page had.
 
 const PAGE_SIZE = 25;
 
@@ -85,20 +92,17 @@ export default async function AuditLogPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Audit log</h1>
-        <p className="text-sm text-muted-foreground">
-          Every write to members, payments, disbursements and users, and more besides, with who did it and
-          what changed.
-        </p>
-      </div>
+      <PageHeader
+        title="Audit log"
+        description="Every write to members, payments, disbursements and users, and more besides, with who did it and what changed."
+      />
 
       <Card>
         <CardContent className="pt-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Actor</Label>
+            <FormField label="Actor" htmlFor="actorId">
               <select
+                id="actorId"
                 name="actorId"
                 defaultValue={actorId}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -110,10 +114,10 @@ export default async function AuditLogPage({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Entity</Label>
+            </FormField>
+            <FormField label="Entity" htmlFor="entity">
               <select
+                id="entity"
                 name="entity"
                 defaultValue={entity}
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
@@ -125,19 +129,21 @@ export default async function AuditLogPage({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">Action contains</Label>
-              <Input name="action" defaultValue={action} placeholder="e.g. voided" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">From</Label>
-              <Input type="date" name="from" defaultValue={typeof params.from === "string" ? params.from : ""} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">To</Label>
-              <Input type="date" name="to" defaultValue={typeof params.to === "string" ? params.to : ""} />
-            </div>
+            </FormField>
+            <FormField label="Action contains" htmlFor="action">
+              <Input id="action" name="action" defaultValue={action} placeholder="e.g. voided" />
+            </FormField>
+            <FormField label="From" htmlFor="from">
+              <Input
+                id="from"
+                type="date"
+                name="from"
+                defaultValue={typeof params.from === "string" ? params.from : ""}
+              />
+            </FormField>
+            <FormField label="To" htmlFor="to">
+              <Input id="to" type="date" name="to" defaultValue={typeof params.to === "string" ? params.to : ""} />
+            </FormField>
             <Button type="submit">Filter</Button>
             {actorId || entity || action || params.from || params.to ? (
               <Button type="button" variant="ghost" render={<Link href="/admin/audit">Clear</Link>} />

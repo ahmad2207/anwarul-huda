@@ -89,7 +89,7 @@ export default async function ArrearsReportPage({
                 <td className="p-2 text-muted-foreground">{row.memberNumber ?? "Not yet issued"}</td>
                 <td className="p-2">{row.wingName}</td>
                 <td className="p-2">{row.recordCount}</td>
-                <td className="p-2">{formatNaira(row.outstandingKobo)}</td>
+                <td className="p-2 font-medium text-amber-800">{formatNaira(row.outstandingKobo)}</td>
               </tr>
             ))}
             {rows.length === 0 ? (

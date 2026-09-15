@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Fund } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { formatNaira } from "@/lib/money";
+import { StatusTag } from "@/components/status-tag";
 import { FundForm } from "./fund-form";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -26,7 +27,12 @@ export function FundRow({ fund, closingBalanceKobo }: { fund: Fund; closingBalan
       <span>
         <span className="font-medium">{fund.name}</span> &middot; {TYPE_LABELS[fund.type] ?? fund.type}{" "}
         &middot; balance {formatNaira(closingBalanceKobo)}
-        {!fund.isActive ? <span className="text-muted-foreground"> &middot; Inactive</span> : null}
+        {!fund.isActive ? (
+          <>
+            {" "}
+            &middot; <StatusTag tone="neutral">Inactive</StatusTag>
+          </>
+        ) : null}
       </span>
       <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
         Edit

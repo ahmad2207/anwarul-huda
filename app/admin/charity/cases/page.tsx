@@ -3,6 +3,8 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { Button } from "@/components/ui/button";
+import { StatusTag } from "@/components/status-tag";
+import type { StatusTone } from "@/components/status-tag";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
@@ -13,6 +15,21 @@ const STATUS_LABELS: Record<string, string> = {
   DISBURSED: "Disbursed",
   CLOSED: "Closed",
 };
+
+// Recommended is awaiting a decision (attention), approved and
+// disbursed are both a confirmed outcome, rejected is the one alert
+// state. Draft, verified and closed are just where the case is in the
+// workflow, not a state that needs a colour.
+const STATUS_TONES: Record<string, StatusTone> = {
+  RECOMMENDED: "attention",
+  APPROVED: "confirmed",
+  DISBURSED: "confirmed",
+  REJECTED: "alert",
+};
+
+function caseStatusTone(status: string): StatusTone {
+  return STATUS_TONES[status] ?? "neutral";
+}
 
 export default async function CharityCasesPage({
   searchParams,
@@ -80,7 +97,11 @@ export default async function CharityCasesPage({
                 </td>
                 <td className="p-2">{charityCase.beneficiaryName}</td>
                 <td className="p-2">{formatNaira(charityCase.requestedKobo)}</td>
-                <td className="p-2">{STATUS_LABELS[charityCase.status] ?? charityCase.status}</td>
+                <td className="p-2">
+                  <StatusTag tone={caseStatusTone(charityCase.status)}>
+                    {STATUS_LABELS[charityCase.status] ?? charityCase.status}
+                  </StatusTag>
+                </td>
               </tr>
             ))}
             {cases.length === 0 ? (

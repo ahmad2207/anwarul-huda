@@ -8,12 +8,24 @@ import { formatNigerianPhoneForDisplay } from "@/lib/phone";
 import { generateMemberQrDataUrl } from "@/lib/qr/member-qr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { StatusTag } from "@/components/status-tag";
+import type { StatusTone } from "@/components/status-tag";
 import { EditMemberForm } from "./edit-member-form";
 import { StatusChangeForm } from "./status-form";
 import { HouseholdSection } from "./household-section";
 
 function statusLabel(status: string): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
+// Only pending (awaiting approval), active (approved, in good standing)
+// and rejected carry a meaning DESIGN.md names. Everything else is a
+// fact about the member, not a state that needs a colour.
+function statusTone(status: string): StatusTone {
+  if (status === "PENDING") return "attention";
+  if (status === "ACTIVE") return "confirmed";
+  if (status === "REJECTED") return "alert";
+  return "neutral";
 }
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -55,7 +67,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </h1>
           <p className="text-sm text-muted-foreground">
             {member.memberNumber ?? "No member number yet"} &middot; {member.wing.name} &middot;{" "}
-            {statusLabel(member.status)}
+            <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>
           </p>
         </div>
         {canEdit ? <StatusChangeForm memberId={member.id} currentStatus={member.status} /> : null}

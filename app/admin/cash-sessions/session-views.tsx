@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatNaira } from "@/lib/money";
+import { StatusTag } from "@/components/status-tag";
 import { closeCashSession, openCashSession } from "./actions";
 
 export function OpenSessionForm() {
@@ -53,11 +54,14 @@ export function SessionRow({ session }: { session: SessionWithUsers }) {
           {session.openedAt.toLocaleString("en-NG")} &middot; float {formatNaira(session.openingFloatKobo)}
         </span>
         {session.status === "OPEN" ? (
-          <Button type="button" size="sm" variant="outline" onClick={() => setClosing((v) => !v)}>
-            {closing ? "Cancel" : "Close session"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <StatusTag tone="neutral">Open</StatusTag>
+            <Button type="button" size="sm" variant="outline" onClick={() => setClosing((v) => !v)}>
+              {closing ? "Cancel" : "Close session"}
+            </Button>
+          </div>
         ) : (
-          <span className="text-xs text-muted-foreground">Closed</span>
+          <StatusTag tone="neutral">Closed</StatusTag>
         )}
       </div>
 
@@ -65,13 +69,11 @@ export function SessionRow({ session }: { session: SessionWithUsers }) {
         <p className="text-xs text-muted-foreground">
           Expected {formatNaira(session.expectedCashKobo ?? 0)}, counted{" "}
           {formatNaira(session.countedCashKobo ?? 0)}, variance{" "}
-          <span
-            className={
-              (session.varianceKobo ?? 0) !== 0 ? "font-medium text-destructive" : "font-medium"
-            }
-          >
-            {formatNaira(session.varianceKobo ?? 0)}
-          </span>
+          {(session.varianceKobo ?? 0) !== 0 ? (
+            <StatusTag tone="attention">{formatNaira(session.varianceKobo ?? 0)}</StatusTag>
+          ) : (
+            <span className="font-medium">{formatNaira(session.varianceKobo ?? 0)}</span>
+          )}
           {session.varianceNote ? ` (${session.varianceNote})` : ""}
         </p>
       ) : null}

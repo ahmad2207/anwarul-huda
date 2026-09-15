@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { StatusTag } from "@/components/status-tag";
+import type { StatusTone } from "@/components/status-tag";
 import { ContentForm } from "./content-form";
 import { CONTENT_TYPES } from "./schema";
 
@@ -24,6 +26,15 @@ function statusLabel(item: Pick<ContentItem, "isPublished" | "publishAt">): stri
     return `Scheduled for ${item.publishAt.toLocaleString("en-NG")}`;
   }
   return "Published";
+}
+
+// A scheduled item is waiting for its publish time, the same kind of
+// wait as a pending approval, so it gets the same attention tone. A
+// draft is just where it is in the workflow, not a state to flag.
+function statusTone(item: Pick<ContentItem, "isPublished" | "publishAt">): StatusTone {
+  if (!item.isPublished) return "neutral";
+  if (item.publishAt && item.publishAt.getTime() > Date.now()) return "attention";
+  return "confirmed";
 }
 
 export default async function ContentAdminPage({
@@ -142,7 +153,9 @@ export default async function ContentAdminPage({
                 </td>
                 <td className="p-2">{TYPE_LABELS[item.type] ?? item.type}</td>
                 <td className="p-2">{item.wingId ? wingNames.get(item.wingId) ?? "Unknown wing" : "All wings"}</td>
-                <td className="p-2">{statusLabel(item)}</td>
+                <td className="p-2">
+                  <StatusTag tone={statusTone(item)}>{statusLabel(item)}</StatusTag>
+                </td>
                 <td className="p-2">{item.downloadCount}</td>
               </tr>
             ))}

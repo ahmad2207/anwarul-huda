@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StatusTag } from "@/components/status-tag";
+import type { StatusTone } from "@/components/status-tag";
 
 const PAGE_SIZE = 20;
 
@@ -24,6 +26,16 @@ const STATUS_OPTIONS = [
 
 function statusLabel(status: string): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
+// Only pending (awaiting approval), active (approved, in good standing)
+// and rejected carry a meaning DESIGN.md names. Everything else is a
+// fact about the member, not a state that needs a colour.
+function statusTone(status: string): StatusTone {
+  if (status === "PENDING") return "attention";
+  if (status === "ACTIVE") return "confirmed";
+  if (status === "REJECTED") return "alert";
+  return "neutral";
 }
 
 interface MembersPageProps {
@@ -210,7 +222,9 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
                 <td className="p-2 text-muted-foreground">{member.memberNumber ?? "Not yet issued"}</td>
                 <td className="p-2">{formatNigerianPhoneForDisplay(member.phone)}</td>
                 <td className="p-2">{member.wing.name}</td>
-                <td className="p-2">{statusLabel(member.status)}</td>
+                <td className="p-2">
+                  <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>
+                </td>
               </tr>
             ))}
             {members.length === 0 ? (

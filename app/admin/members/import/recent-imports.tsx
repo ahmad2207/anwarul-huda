@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusTag } from "@/components/status-tag";
+import type { StatusTone } from "@/components/status-tag";
 import { discardImport, rollbackImportAction } from "./actions";
 
 export interface RecentImportBatch {
@@ -78,7 +80,8 @@ function BatchRow({ batch }: { batch: RecentImportBatch }) {
     <div className="flex flex-col gap-1 rounded-md border p-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>
-          {batch.fileName} &middot; {batch.rowCount} rows &middot; {statusLabel(status)} &middot;{" "}
+          {batch.fileName} &middot; {batch.rowCount} rows &middot;{" "}
+          <StatusTag tone={statusTone(status)}>{statusLabel(status)}</StatusTag> &middot;{" "}
           {batch.uploadedByLabel} &middot; {batch.createdAt}
         </span>
         <div className="flex gap-2">
@@ -114,4 +117,10 @@ function statusLabel(status: string): string {
     default:
       return status;
   }
+}
+
+function statusTone(status: string): StatusTone {
+  if (status === "COMMITTED") return "confirmed";
+  if (status === "FAILED") return "alert";
+  return "neutral";
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StatusTag } from "@/components/status-tag";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -139,7 +140,9 @@ export default async function GatheringAttendanceReportPage({
                 <td className="p-2">{row.wingName}</td>
                 <td className="p-2">{row.startsAt.toLocaleDateString("en-NG")}</td>
                 <td className="p-2">{row.checkedInCount}</td>
-                <td className="p-2">{row.isClosed ? "Closed" : "Open"}</td>
+                <td className="p-2">
+                  <StatusTag tone="neutral">{row.isClosed ? "Closed" : "Open"}</StatusTag>
+                </td>
               </tr>
             ))}
             {rows.length === 0 ? (

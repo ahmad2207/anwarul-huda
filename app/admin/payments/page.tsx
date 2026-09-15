@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { Button } from "@/components/ui/button";
+import { StatusTag } from "@/components/status-tag";
 
 const PAGE_SIZE = 25;
 
@@ -64,7 +65,11 @@ export default async function PaymentsPage({
                 <td className="p-2">{formatNaira(payment.amountKobo)}</td>
                 <td className="p-2">{payment.method}</td>
                 <td className="p-2">{payment.paidAt.toLocaleDateString("en-NG")}</td>
-                <td className="p-2">{payment.status === "VOIDED" ? "Voided" : "Confirmed"}</td>
+                <td className="p-2">
+                  <StatusTag tone={payment.status === "VOIDED" ? "alert" : "confirmed"}>
+                    {payment.status === "VOIDED" ? "Voided" : "Confirmed"}
+                  </StatusTag>
+                </td>
               </tr>
             ))}
             {payments.length === 0 ? (

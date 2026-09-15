@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusTag } from "@/components/status-tag";
 import { GatheringForm } from "./gathering-form";
 import { CloseGatheringButton } from "./close-gathering-button";
 
@@ -60,7 +61,12 @@ export default async function AttendancePage() {
                 {TYPE_LABELS[gathering.type] ?? gathering.type} &middot;{" "}
                 {gathering.wing?.name ?? "All wings"} &middot;{" "}
                 {gathering.startsAt.toLocaleString("en-NG")} &middot; {gathering._count.records} checked in
-                {gathering.isClosed ? " · Closed" : ""}
+                {gathering.isClosed ? (
+                  <>
+                    {" "}
+                    &middot; <StatusTag tone="neutral">Closed</StatusTag>
+                  </>
+                ) : null}
               </p>
             </div>
             {!gathering.isClosed ? <CloseGatheringButton gatheringId={gathering.id} /> : null}

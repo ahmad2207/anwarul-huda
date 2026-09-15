@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusTag } from "@/components/status-tag";
 
 const METHOD_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -49,7 +50,9 @@ export default async function MyContributionsPage() {
           <CardTitle className="text-base font-medium">Outstanding balance</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className={`text-2xl font-semibold ${outstandingKobo > 0 ? "text-destructive" : ""}`}>
+          {/* Outstanding is arrears, not a failure: DESIGN.md section 2
+              names arrears under amber-800 (attention), not alert. */}
+          <p className={`text-2xl font-semibold ${outstandingKobo > 0 ? "text-amber-800" : ""}`}>
             {formatNaira(outstandingKobo)}
           </p>
         </CardContent>
@@ -67,7 +70,12 @@ export default async function MyContributionsPage() {
                 <p className="text-xs text-muted-foreground">
                   {payment.receiptNumber} &middot; {payment.paidAt.toLocaleDateString("en-NG")} &middot;{" "}
                   {METHOD_LABELS[payment.method] ?? payment.method}
-                  {payment.status === "VOIDED" ? " · Voided" : ""}
+                  {payment.status === "VOIDED" ? (
+                    <>
+                      {" "}
+                      &middot; <StatusTag tone="alert">Voided</StatusTag>
+                    </>
+                  ) : null}
                 </p>
               </div>
               <span className={payment.status === "VOIDED" ? "text-muted-foreground line-through" : ""}>

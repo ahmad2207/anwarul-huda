@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatusTag } from "@/components/status-tag";
 import { checkInAction, checkInByMemberNumber, loadCheckInRoster, undoCheckIn } from "./actions";
 import type { RosterMember } from "./actions";
 import { QrScanner } from "./qr-scanner";
@@ -256,7 +257,7 @@ export function CheckInClient({
         <div className="text-right text-sm text-muted-foreground">
           <p>checked in</p>
           {pendingCount > 0 ? (
-            <p className="font-medium text-amber-800">{pendingCount} pending sync</p>
+            <StatusTag tone="attention">{pendingCount} pending sync</StatusTag>
           ) : null}
         </div>
       </div>
@@ -290,7 +291,7 @@ export function CheckInClient({
               </span>
             </span>
             {member.alreadyCheckedIn ? (
-              <span className="text-xs text-muted-foreground">Checked in</span>
+              <StatusTag tone="confirmed">Checked in</StatusTag>
             ) : (
               <span className="text-xs font-medium">Tap to check in</span>
             )}
@@ -308,8 +309,14 @@ export function CheckInClient({
                 {entry.alreadyCheckedIn ? (
                   <span className="ml-1 text-xs text-muted-foreground">(already checked in)</span>
                 ) : entry.status === "pending" ? (
-                  <span className="ml-1 text-xs text-amber-800">(pending sync)</span>
-                ) : null}
+                  <span className="ml-1">
+                    <StatusTag tone="attention">Pending sync</StatusTag>
+                  </span>
+                ) : (
+                  <span className="ml-1">
+                    <StatusTag tone="confirmed">Synced</StatusTag>
+                  </span>
+                )}
               </span>
               <Button type="button" size="sm" variant="ghost" onClick={() => handleUndo(entry)}>
                 Undo

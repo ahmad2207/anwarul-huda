@@ -18,11 +18,14 @@ export function DataTable<T>({
   rows,
   rowKey,
   emptyMessage,
+  alignRowsTop,
 }: {
   columns: DataTableColumn<T>[];
   rows: T[];
   rowKey: (row: T) => string;
   emptyMessage: React.ReactNode;
+  /** Top-aligns each row's cells, for a table where one column's content can run to several lines. */
+  alignRowsTop?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-md border">
@@ -38,7 +41,10 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={rowKey(row)} className="border-b last:border-0 hover:bg-muted/30">
+            <tr
+              key={rowKey(row)}
+              className={`border-b last:border-0 hover:bg-muted/30 ${alignRowsTop ? "align-top" : ""}`}
+            >
               {columns.map((column) => (
                 <td key={column.key} className={`p-2 ${column.align === "right" ? "text-right" : ""}`}>
                   {column.cell(row)}

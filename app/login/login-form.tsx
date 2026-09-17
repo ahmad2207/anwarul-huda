@@ -24,13 +24,14 @@ export function LoginForm() {
         <img src="/logo.png" alt="Anwaru-l-Huda League of Nigeria" width={96} height={96} className="mb-2" />
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Use the email or phone number on your member account.
+          Use the member number on your card, for example AHL/M/2026/0113. Punctuation and case do not
+          matter. Administrators sign in with their email instead.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="identifier">Email or phone number</Label>
+            <Label htmlFor="identifier">Member number, email or phone number</Label>
             <Input
               id="identifier"
               name="identifier"

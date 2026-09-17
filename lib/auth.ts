@@ -26,6 +26,22 @@ export class AuthorizationError extends Error {
   }
 }
 
+// Thrown by requireRole and requireWingAccess, never by getCurrentUser
+// itself: app/change-password/actions.ts calls getCurrentUser directly,
+// specifically so a forced-change account can still load itself and
+// change its own password. Every other mutation goes through one of the
+// two functions below, so gating there is what makes "every route,
+// including any API route" (MEMBER-INTERFACE.md 2 / point 6 of the
+// credential issue prompt) hold for every action this app has today and
+// every one it adds later, not only the page layouts that redirect a
+// browser navigation (app/admin/layout.tsx, components/member-shell.tsx).
+export class PasswordChangeRequiredError extends Error {
+  constructor(message = "You must change your temporary password before continuing") {
+    super(message);
+    this.name = "PasswordChangeRequiredError";
+  }
+}
+
 export interface CurrentUser {
   id: string;
   email: string | null;
@@ -34,6 +50,8 @@ export interface CurrentUser {
   roles: RoleName[];
   /** Wings this user is explicitly scoped to. A SUPER_ADMIN has no rows here but is not wing restricted. */
   wingIds: string[];
+  /** True after an administrator issues or reissues a temporary password, until the forced change is completed. Checked on every protected route; see app/admin/layout.tsx and components/member-shell.tsx. */
+  mustChangePassword: boolean;
 }
 
 /**
@@ -71,6 +89,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     memberId: user.memberId,
     roles: user.roles.map((userRole) => userRole.role),
     wingIds: user.wingAssignments.map((assignment) => assignment.wingId),
+    mustChangePassword: user.mustChangePassword,
   };
 }
 
@@ -81,6 +100,10 @@ export async function getCurrentUser(): Promise<CurrentUser> {
  */
 export async function requireRole(roles: RoleName[]): Promise<CurrentUser> {
   const user = await getCurrentUser();
+
+  if (user.mustChangePassword) {
+    throw new PasswordChangeRequiredError();
+  }
 
   if (!hasAnyRole(user, roles)) {
     throw new AuthorizationError(
@@ -99,6 +122,10 @@ export async function requireRole(roles: RoleName[]): Promise<CurrentUser> {
  */
 export async function requireWingAccess(wingId: string): Promise<CurrentUser> {
   const user = await getCurrentUser();
+
+  if (user.mustChangePassword) {
+    throw new PasswordChangeRequiredError();
+  }
 
   if (!canAccessWing(user, wingId)) {
     throw new AuthorizationError("You do not have access to this wing");

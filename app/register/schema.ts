@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalField, optionalPhone, optionalText, requiredPhone, toStringList } from "@/lib/zod-helpers";
+import { MIN_PASSWORD_LENGTH, isCommonPassword } from "@/lib/password-policy";
 
 // Household rows collected at public registration deliberately do not
 // accept a link to an existing member record. That capability exists on
@@ -72,7 +73,15 @@ export const registrationSchema = z
 
     household: z.preprocess(parseHouseholdJson, z.array(householdRowSchema)),
 
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    // Shared with the forced first change and any later one
+    // (app/change-password/schema.ts): one password policy, not a
+    // looser rule for whichever path happens to create the account.
+    password: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+      .refine((value) => !isCommonPassword(value), {
+        message: "This password is too common and easy to guess. Choose a less predictable one.",
+      }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

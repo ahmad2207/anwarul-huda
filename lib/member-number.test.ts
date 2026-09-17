@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { generateMemberNumber, MemberNumberError } from "./member-number";
+import { generateMemberNumber, MemberNumberError, normalizeMemberNumberInput } from "./member-number";
 
 // These are integration tests against the real local Postgres database
 // (see vitest.config.mts). The safety property under test, no two
@@ -93,5 +93,47 @@ describe("generateMemberNumber", () => {
     );
 
     expect(new Set(numbers).size).toBe(concurrency);
+  });
+});
+
+describe("normalizeMemberNumberInput", () => {
+  it("accepts the canonical form unchanged", () => {
+    expect(normalizeMemberNumberInput("AHL/M/2026/0113")).toBe("AHL/M/2026/0113");
+  });
+
+  it("accepts spaces in place of slashes, in any case", () => {
+    expect(normalizeMemberNumberInput("ahl m 2026 0113")).toBe("AHL/M/2026/0113");
+  });
+
+  it("accepts the number with every separator removed", () => {
+    expect(normalizeMemberNumberInput("AHLM20260113")).toBe("AHL/M/2026/0113");
+  });
+
+  it("accepts dashes as separators", () => {
+    expect(normalizeMemberNumberInput("AHL-M-2026-0113")).toBe("AHL/M/2026/0113");
+  });
+
+  it("accepts a mix of separators and surrounding whitespace", () => {
+    expect(normalizeMemberNumberInput("  ahl/m 2026-0113  ")).toBe("AHL/M/2026/0113");
+  });
+
+  it("works for a wing letter other than M", () => {
+    expect(normalizeMemberNumberInput("AHL/W/2025/0042")).toBe("AHL/W/2025/0042");
+    expect(normalizeMemberNumberInput("ahly20260007")).toBe("AHL/Y/2026/0007");
+  });
+
+  it("returns null for a string that is not a member number", () => {
+    expect(normalizeMemberNumberInput("not a member number")).toBeNull();
+    expect(normalizeMemberNumberInput("someone@example.com")).toBeNull();
+    expect(normalizeMemberNumberInput("08012345678")).toBeNull();
+  });
+
+  it("returns null for a wing letter run that is not exactly one letter", () => {
+    expect(normalizeMemberNumberInput("AHL/MW/2026/0113")).toBeNull();
+  });
+
+  it("returns null for a sequence or year of the wrong length", () => {
+    expect(normalizeMemberNumberInput("AHL/M/26/0113")).toBeNull();
+    expect(normalizeMemberNumberInput("AHL/M/2026/113")).toBeNull();
   });
 });

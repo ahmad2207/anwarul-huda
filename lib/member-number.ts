@@ -47,3 +47,30 @@ export async function generateMemberNumber(
   const sequence = issuedCount + 1;
   return `${prefix}${String(sequence).padStart(4, "0")}`;
 }
+
+// AHL / <wing letter> / <4 digit year> / <4 digit sequence>, with no
+// assumption baked in here about which letters exist: that is Wing.
+// numberLetter's business, not this parser's, and generateMemberNumber
+// above already accepts any single uppercase letter.
+const MEMBER_NUMBER_PATTERN = /^AHL([A-Z])(\d{4})(\d{4})$/;
+
+/**
+ * Normalises a member number typed by hand into its canonical
+ * AHL/<W>/<YYYY>/<NNNN> form, or returns null if the input does not
+ * resolve to one at all. Punctuation is not meaningful to a member
+ * number, only decoration, so every separator is stripped before
+ * matching: "ahl m 2026 0113", "AHLM20260113" and "AHL/M/2026/0113" all
+ * normalise to the same string. Used both to look a member number up
+ * (auth.ts) and to key its login lockout bucket (lib/login-lockout.ts),
+ * so a member cannot dodge a lockout by retyping the same number with
+ * different punctuation.
+ */
+export function normalizeMemberNumberInput(input: string): string | null {
+  const stripped = input.replace(/[\s/-]/g, "").toUpperCase();
+  const match = stripped.match(MEMBER_NUMBER_PATTERN);
+  if (!match) {
+    return null;
+  }
+  const [, letter, year, sequence] = match;
+  return `AHL/${letter}/${year}/${sequence}`;
+}

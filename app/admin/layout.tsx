@@ -22,6 +22,14 @@ export default async function AdminLayout({
     throw error;
   }
 
+  // Checked before anything else on this route, and on every route
+  // MemberShell wraps too: a temporary password only gets its holder as
+  // far as changing it, on direct URL entry as much as on a client side
+  // navigation, since this runs on the server on every request.
+  if (user.mustChangePassword) {
+    redirect("/change-password");
+  }
+
   // A signed in account with no staff role at all is a member account,
   // not an administrator (the MEMBER value in the RoleName enum is never
   // actually assigned; an ordinary member simply has no role rows). Every

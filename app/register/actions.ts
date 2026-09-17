@@ -27,7 +27,7 @@ export async function submitRegistration(
   formData: FormData,
 ): Promise<RegistrationState> {
   const ip = await getClientIp();
-  const rateLimit = checkRateLimit(`register:${ip}`, REGISTRATION_LIMIT, REGISTRATION_WINDOW_SECONDS);
+  const rateLimit = await checkRateLimit(`register:${ip}`, REGISTRATION_LIMIT, REGISTRATION_WINDOW_SECONDS);
   if (!rateLimit.allowed) {
     const minutes = Math.ceil((rateLimit.retryAfterSeconds ?? REGISTRATION_WINDOW_SECONDS) / 60);
     return { error: `Too many attempts from this connection. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.` };
@@ -125,7 +125,9 @@ export async function submitRegistration(
       return created;
     });
 
-    return { success: true, firstName: member.firstName };
+    // Non-null: self registration always sets firstName (see data.firstName
+    // above), the type is only nullable for a nominal roll import.
+    return { success: true, firstName: member.firstName! };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "This phone number or email is already registered." };

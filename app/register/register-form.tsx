@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 import { submitRegistration } from "./actions";
 
 interface HouseholdRow {
@@ -228,9 +229,16 @@ export function RegisterForm({
 
           <fieldset className="grid gap-3 sm:grid-cols-2">
             <legend className="mb-1 text-sm font-medium">Choose a password</legend>
-            <Field label="Password" name="password" type="password" required />
-            <Field label="Confirm password" name="confirmPassword" type="password" required />
+            <Field label="Password" name="password" type="password" required minLength={MIN_PASSWORD_LENGTH} />
+            <Field
+              label="Confirm password"
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+            />
             <p className="col-span-full text-xs text-muted-foreground">
+              At least {MIN_PASSWORD_LENGTH} characters, and not one of the passwords everyone tries first.
               You will use this, with your phone number or email, to sign in once your registration
               is approved.
             </p>
@@ -253,19 +261,21 @@ function Field({
   type = "text",
   required = false,
   className = "",
+  minLength,
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   className?: string;
+  minLength?: number;
 }) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       <Label htmlFor={name} className="text-xs">
         {label}
       </Label>
-      <Input id={name} name={name} type={type} required={required} />
+      <Input id={name} name={name} type={type} required={required} minLength={minLength} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { canEditMemberRecords, canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { formatNigerianPhoneForDisplay } from "@/lib/phone";
+import { formatMemberName } from "@/lib/members/display-name";
 import { generateMemberQrDataUrl } from "@/lib/qr/member-qr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import type { StatusTone } from "@/components/status-tag";
 import { EditMemberForm } from "./edit-member-form";
 import { StatusChangeForm } from "./status-form";
 import { HouseholdSection } from "./household-section";
+import { IssueLoginCard } from "./issue-login-card";
 
 function statusLabel(status: string): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
@@ -39,6 +41,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       branch: true,
       household: { include: { linkedMember: true }, orderBy: { fullName: "asc" } },
       serviceAreas: true,
+      user: true,
     },
   });
 
@@ -63,11 +66,17 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-semibold">
-            {member.surname} {member.firstName} {member.otherNames ?? ""}
+            {formatMemberName(member)} {member.otherNames ?? ""}
           </h1>
           <p className="text-sm text-muted-foreground">
             {member.memberNumber ?? "No member number yet"} &middot; {member.wing.name} &middot;{" "}
             <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>
+            {member.isRecordIncomplete ? (
+              <>
+                {" "}
+                &middot; <StatusTag tone="attention">Incomplete record</StatusTag>
+              </>
+            ) : null}
           </p>
         </div>
         {canEdit ? <StatusChangeForm memberId={member.id} currentStatus={member.status} /> : null}
@@ -92,6 +101,22 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           )}
         </CardContent>
       </Card>
+
+      {canEdit ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium">Login</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <IssueLoginCard
+              memberId={member.id}
+              memberNumber={member.memberNumber}
+              hasAccount={member.user !== null}
+              mustChangePassword={member.user?.mustChangePassword ?? false}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

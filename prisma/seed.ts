@@ -36,7 +36,7 @@ const FUND_TYPES: Array<{ type: FundType; name: string; description: string }> =
 ];
 
 async function main() {
-  console.log("Seeding Anwar-ul-Huda League data. All names below are fictional.");
+  console.log("Seeding Anwaru-l-Huda League data. All names below are fictional.");
 
   const wingsByCode = new Map<WingCode, { id: string }>();
   for (const wing of WINGS) {
@@ -54,7 +54,7 @@ async function main() {
     update: {},
     create: {
       id: "default-branch",
-      name: "Anwar-ul-Huda Central Masjid (example branch)",
+      name: "Anwaru-l-Huda Central Masjid (example branch)",
       city: "Lagos",
       state: "Lagos",
       isDefault: true,

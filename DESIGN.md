@@ -20,7 +20,7 @@ Two consequences follow directly:
 
 **The dark surfaces are the point, not a dark mode.** The check-in screen is a deep navy field with one amber number glowing in it, a real radial light, not a flat number in an accent colour. That is the logo, working.
 
-Note on the name: the logo reads **Anwaru-l-Huda League of Nigeria**. This project has already settled on "Anwar-ul-Huda" for running text, the organisation name and the member number prefix (`AHL`); that decision stands. The logo's own spelling is only used to describe the artwork itself (for example in an image's alt text), not adopted elsewhere.
+Note on the name: the logo reads **Anwaru-l-Huda League of Nigeria**, and that is the spelling used everywhere in the system now, running text included. An earlier revision of this document settled on "Anwar-ul-Huda" for running text instead, keeping the logo's own spelling only for describing the artwork itself; that decision has been reversed, since the point of a name is to match what the people it names actually call themselves. The member number prefix (`AHL`) is unaffected either way: it is an initialism, not a spelling of the name.
 
 ---
 

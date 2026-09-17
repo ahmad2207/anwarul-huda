@@ -102,7 +102,7 @@ export default async function StyleguidePage() {
         <div className="flex flex-col gap-2 rounded-md border p-4">
           <p className="font-heading text-2xl font-bold">
             <span className="mr-3 font-mono text-xs font-normal text-muted-foreground">font-heading</span>
-            Anwar-ul-Huda League
+            Anwaru-l-Huda League
           </p>
           {TYPE_SCALE.map((step) => (
             <p key={step.label} className={step.className}>

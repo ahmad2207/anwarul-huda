@@ -4,7 +4,7 @@ Project instructions for Claude Code. Read this before doing anything in this re
 
 ## Project
 
-Anwar-ul-Huda League of Nigeria membership and administration system. A Next.js application covering the member register, contributions and payments, charity fund management, attendance, and content distribution for an Islamic organisation with three wings: men's, women's and youth.
+Anwaru-l-Huda League of Nigeria membership and administration system. A Next.js application covering the member register, contributions and payments, charity fund management, attendance, and content distribution for an Islamic organisation with three wings: men's, women's and youth.
 
 Full specification is in `docs/SPEC.md`. Read it before implementing any feature.
 

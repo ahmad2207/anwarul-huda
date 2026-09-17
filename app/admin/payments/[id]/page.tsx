@@ -68,7 +68,7 @@ export default async function PaymentReceiptPage({ params }: { params: Promise<{
 
       <Card>
         <CardHeader>
-          <CardTitle>Anwar-ul-Huda League of Nigeria</CardTitle>
+          <CardTitle>Anwaru-l-Huda League of Nigeria</CardTitle>
         </CardHeader>
         <CardContent>
           <pre className="whitespace-pre-wrap font-sans text-sm">{receiptText}</pre>

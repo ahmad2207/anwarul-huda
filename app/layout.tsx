@@ -34,7 +34,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Anwar-ul-Huda League",
+  title: "Anwaru-l-Huda League",
   description: "Membership and administration system",
 };
 

@@ -18,7 +18,7 @@ export function MemberCard({
     <div className="flex items-center justify-between gap-2 rounded-md border p-3" style={{ width: "85.6mm", height: "53.98mm" }}>
       <div className="flex flex-col justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide">Anwar-ul-Huda League</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide">Anwaru-l-Huda League</p>
           <p className="text-xs text-muted-foreground">{wingName}</p>
         </div>
         <div>

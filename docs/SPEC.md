@@ -1,4 +1,4 @@
-# Anwar-ul-Huda League of Nigeria
+# Anwaru-l-Huda League of Nigeria
 ## Membership and Administration System: Specification v1.0
 
 Prepared for: the executive committee
@@ -9,7 +9,7 @@ Date: September 2026
 
 ## 1. What this system is
 
-A single web-based system that holds the complete record of every member of Anwar-ul-Huda League of Nigeria, tracks their contributions, records attendance at gatherings, manages the charity funds, and distributes sermons and weekly publications.
+A single web-based system that holds the complete record of every member of Anwaru-l-Huda League of Nigeria, tracks their contributions, records attendance at gatherings, manages the charity funds, and distributes sermons and weekly publications.
 
 It replaces paper registers, exercise-book ledgers and scattered WhatsApp records with one source of truth that the executive can query at any time.
 

@@ -29,7 +29,7 @@ export default async function CharityPrintReportPage({
       </div>
 
       <div className="text-center">
-        <h1 className="text-xl font-semibold">Anwar-ul-Huda League of Nigeria</h1>
+        <h1 className="text-xl font-semibold">Anwaru-l-Huda League of Nigeria</h1>
         <p className="text-sm text-muted-foreground">Charity funds committee report</p>
         <p className="text-sm text-muted-foreground">
           {formatDate(period.from)} to {formatDate(period.to)}

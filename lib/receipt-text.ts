@@ -20,7 +20,7 @@ export interface ReceiptData {
  */
 export function formatReceiptText(data: ReceiptData): string {
   const lines = [
-    "Anwar-ul-Huda League of Nigeria",
+    "Anwaru-l-Huda League of Nigeria",
     `Receipt ${data.receiptNumber}`,
     "----------------------------------------",
     `Member: ${data.memberName}${data.memberNumber ? ` (${data.memberNumber})` : ""}`,

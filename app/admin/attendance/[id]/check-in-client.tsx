@@ -9,6 +9,7 @@ import type { RosterMember } from "./actions";
 import { QrScanner } from "./qr-scanner";
 import { dequeue, enqueue, isLikelyNetworkError, loadQueue } from "@/lib/attendance/offline-queue";
 import type { QueuedCheckIn } from "@/lib/attendance/offline-queue";
+import { formatMemberName } from "@/lib/members/display-name";
 
 interface RecentEntry {
   key: string;
@@ -122,8 +123,9 @@ export function CheckInClient({
           .filter((member) => {
             const q = query.trim().toLowerCase();
             return (
-              member.surname.toLowerCase().includes(q) ||
-              member.firstName.toLowerCase().includes(q) ||
+              (member.surname ?? "").toLowerCase().includes(q) ||
+              (member.firstName ?? "").toLowerCase().includes(q) ||
+              (member.fullNameAsWritten ?? "").toLowerCase().includes(q) ||
               (member.memberNumber ?? "").toLowerCase().includes(q)
             );
           })
@@ -161,7 +163,7 @@ export function CheckInClient({
     const queued: QueuedCheckIn = {
       tempId,
       memberId: member.id,
-      memberName: rosterEntry ? `${rosterEntry.surname} ${rosterEntry.firstName}` : member.memberNumber ?? "Unknown",
+      memberName: rosterEntry ? formatMemberName(rosterEntry) : member.memberNumber ?? "Unknown",
       memberNumber: rosterEntry?.memberNumber ?? member.memberNumber ?? null,
       method,
       queuedAt: new Date().toISOString(),
@@ -299,9 +301,7 @@ export function CheckInClient({
               className="flex min-h-16 items-center justify-between rounded-md bg-white px-4 py-3 text-left text-ink hover:bg-white/90"
             >
               <span>
-                <span className="font-medium">
-                  {member.surname} {member.firstName}
-                </span>{" "}
+                <span className="font-medium">{formatMemberName(member)}</span>{" "}
                 <span className="text-base text-ink-2">
                   {member.memberNumber ?? "Not yet issued"} &middot; {member.wingName}
                 </span>

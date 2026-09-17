@@ -14,14 +14,17 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
+import { formatMemberName } from "@/lib/members/display-name";
 
 interface MemberRow {
   id: string;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
+  fullNameAsWritten: string | null;
   memberNumber: string | null;
-  phone: string;
+  phone: string | null;
   status: string;
+  isRecordIncomplete: boolean;
   wing: { name: string };
 }
 
@@ -96,6 +99,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
         { surname: { contains: q, mode: "insensitive" } },
         { firstName: { contains: q, mode: "insensitive" } },
         { otherNames: { contains: q, mode: "insensitive" } },
+        { fullNameAsWritten: { contains: q, mode: "insensitive" } },
         { phone: { contains: q } },
         { memberNumber: { contains: q, mode: "insensitive" } },
       ],
@@ -134,7 +138,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
       header: "Name",
       cell: (member) => (
         <Link href={`/admin/members/${member.id}`} className="font-medium hover:underline">
-          {member.surname} {member.firstName}
+          {formatMemberName(member)}
         </Link>
       ),
     },
@@ -148,7 +152,12 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
     {
       key: "status",
       header: "Status",
-      cell: (member) => <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>,
+      cell: (member) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusTag tone={statusTone(member.status)}>{statusLabel(member.status)}</StatusTag>
+          {member.isRecordIncomplete ? <StatusTag tone="attention">Incomplete</StatusTag> : null}
+        </div>
+      ),
     },
   ];
 

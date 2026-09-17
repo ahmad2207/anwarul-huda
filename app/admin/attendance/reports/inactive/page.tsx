@@ -12,6 +12,7 @@ import { FormField } from "@/components/form-field";
 import { MemberNumber } from "@/components/member-number";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
+import { formatMemberName } from "@/lib/members/display-name";
 
 const PAGE_SIZE = 20;
 const DEFAULT_WEEKS = 4;
@@ -59,7 +60,7 @@ export default async function InactiveMembersReportPage({
       header: "Member",
       cell: (row) => (
         <Link href={`/admin/members/${row.memberId}`} className="font-medium hover:underline">
-          {row.surname} {row.firstName}
+          {formatMemberName(row)}
         </Link>
       ),
     },

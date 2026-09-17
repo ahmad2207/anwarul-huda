@@ -9,8 +9,8 @@ export interface DuplicateCandidateInput {
   /** Excluded from the search, so a member never flags itself as a duplicate of itself. */
   id?: string;
   phone: string;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
 }
 
 export interface DuplicateMatch {
@@ -41,7 +41,12 @@ export async function findPotentialDuplicates(
   // A loose prefix search narrows the field before the more expensive
   // similarity comparison runs in memory. Comparing against every member
   // in the register does not scale once there are thousands of them.
-  const surnameFragment = candidate.surname.trim().slice(0, 3);
+  // A candidate with no surname (a nominal roll import, still awaiting
+  // completion) has nothing to fuzzy-match on: phone matching above still
+  // applies, but the name search is skipped rather than compared against
+  // "null null". That import's own duplicate detection is the resolved
+  // S/N cross-reference (MemberDuplicateFlag), not this.
+  const surnameFragment = candidate.surname?.trim().slice(0, 3) ?? "";
   const nameCandidates = surnameFragment
     ? await client.member.findMany({
         where: {
@@ -64,6 +69,7 @@ export async function findPotentialDuplicates(
   }
 
   for (const member of nameCandidates) {
+    if (!member.surname || !member.firstName) continue;
     const similarity = nameSimilarity(
       `${candidate.surname} ${candidate.firstName}`,
       `${member.surname} ${member.firstName}`,

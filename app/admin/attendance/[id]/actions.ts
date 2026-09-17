@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { canViewAllWings } from "@/lib/authorization";
 import { writeAudit } from "@/lib/audit";
 import { checkInMember } from "@/lib/attendance/check-in";
+import { formatMemberName } from "@/lib/members/display-name";
 
 async function requireGatheringAccess(gatheringId: string) {
   const actor = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -23,8 +24,9 @@ async function requireGatheringAccess(gatheringId: string) {
 export interface RosterMember {
   id: string;
   memberNumber: string | null;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
+  fullNameAsWritten: string | null;
   photoPath: string | null;
   wingName: string;
   alreadyCheckedIn: boolean;
@@ -61,6 +63,7 @@ export async function loadCheckInRoster(gatheringId: string): Promise<RosterMemb
     memberNumber: member.memberNumber,
     surname: member.surname,
     firstName: member.firstName,
+    fullNameAsWritten: member.fullNameAsWritten,
     photoPath: member.photoPath,
     wingName: member.wing.name,
     alreadyCheckedIn: member.attendance.length > 0,
@@ -118,7 +121,7 @@ export async function checkInAction(
 
   return {
     memberId: member.id,
-    memberName: `${member.surname} ${member.firstName}`,
+    memberName: formatMemberName(member),
     memberNumber: member.memberNumber,
     alreadyCheckedIn: result.alreadyCheckedIn,
     checkedInAt: result.record.checkedInAt.toISOString(),

@@ -4,8 +4,9 @@ import { writeAuditMany } from "@/lib/audit";
 export interface RollbackBlocker {
   memberId: string;
   memberNumber: string | null;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
+  fullNameAsWritten: string | null;
   reason: "payments" | "attendance" | "both";
 }
 
@@ -51,6 +52,7 @@ export async function rollbackImportBatch(
         memberNumber: member.memberNumber,
         surname: member.surname,
         firstName: member.firstName,
+        fullNameAsWritten: member.fullNameAsWritten,
         reason: hasPayments && hasAttendance ? "both" : hasPayments ? "payments" : "attendance",
       });
     }

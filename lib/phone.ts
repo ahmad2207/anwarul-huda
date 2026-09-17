@@ -51,8 +51,16 @@ export function isValidNigerianPhone(input: string): boolean {
   }
 }
 
-/** Formats an E.164 Nigerian number for display, for example "0801 234 5678". */
-export function formatNigerianPhoneForDisplay(e164: string): string {
+/**
+ * Formats an E.164 Nigerian number for display, for example "0801 234 5678".
+ * A nominal roll import can genuinely have no phone on file at all, so null
+ * is accepted and shown the same way MemberNumber shows an unissued number,
+ * rather than every caller handling that case separately.
+ */
+export function formatNigerianPhoneForDisplay(e164: string | null): string {
+  if (!e164) {
+    return "Not on file";
+  }
   if (!e164.startsWith(`+${COUNTRY_CODE}`)) {
     throw new PhoneError(`"${e164}" is not an E.164 Nigerian number`);
   }

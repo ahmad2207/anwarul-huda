@@ -22,6 +22,9 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
     items: [
       { label: "Members", href: "/admin/members" },
       { label: "Approval queue", href: "/admin/approvals" },
+      { label: "Incomplete records", href: "/admin/members/incomplete" },
+      { label: "Duplicate flags", href: "/admin/members/duplicates" },
+      { label: "Bulk issue logins", href: "/admin/members/bulk-issue-login" },
       { label: "Import", href: "/admin/members/import" },
       { label: "Member cards", href: "/admin/members/cards" },
     ],
@@ -88,7 +91,7 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
         {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
         <img src="/logo.png" alt="" width={32} height={32} className="relative shrink-0" />
         <div className="relative min-w-0">
-          <p className="truncate font-heading text-sm font-bold">Anwar-ul-Huda League</p>
+          <p className="truncate font-heading text-sm font-bold">Anwaru-l-Huda League</p>
           <p className="truncate text-xs text-sidebar-foreground/70">Administration</p>
         </div>
       </SidebarHeader>

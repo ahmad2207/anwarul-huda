@@ -32,8 +32,8 @@ export interface ServiceAreaRef {
 export interface ExistingMemberRef {
   id: string;
   memberNumber: string | null;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
   phone: string;
 }
 

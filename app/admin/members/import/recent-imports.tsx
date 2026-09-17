@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
 import { discardImport, rollbackImportAction } from "./actions";
+import { formatMemberName } from "@/lib/members/display-name";
 
 export interface RecentImportBatch {
   id: string;
@@ -66,7 +67,7 @@ function BatchRow({ batch }: { batch: RecentImportBatch }) {
       if (result.blockers && result.blockers.length > 0) {
         setMessage(
           `Cannot roll back: ${result.blockers
-            .map((b) => `${b.surname} ${b.firstName} (${b.reason})`)
+            .map((b) => `${formatMemberName(b)} (${b.reason})`)
             .join(", ")} already ${result.blockers.length === 1 ? "has" : "have"} activity recorded.`,
         );
         return;
@@ -77,7 +78,7 @@ function BatchRow({ batch }: { batch: RecentImportBatch }) {
   }
 
   return (
-    <div className="flex flex-col gap-1 rounded-md border p-2 text-sm">
+    <div className="flex flex-col gap-1 rounded-md border bg-paper-dim p-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>
           {batch.fileName} &middot; {batch.rowCount} rows &middot;{" "}

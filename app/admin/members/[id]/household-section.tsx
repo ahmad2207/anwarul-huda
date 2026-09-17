@@ -6,9 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addHouseholdMember, deleteHouseholdMember, updateHouseholdMember } from "./actions";
+import { formatMemberName } from "@/lib/members/display-name";
 
 type HouseholdMemberWithLink = HouseholdMember & {
-  linkedMember: { id: string; memberNumber: string | null; surname: string; firstName: string } | null;
+  linkedMember: {
+    id: string;
+    memberNumber: string | null;
+    surname: string | null;
+    firstName: string | null;
+    fullNameAsWritten: string | null;
+  } | null;
 };
 
 export function HouseholdSection({
@@ -108,12 +115,12 @@ function HouseholdRow({
   }
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-paper-dim p-3 text-sm">
       <span>
         {entry.fullName}
         {entry.age !== null ? `, ${entry.age}` : ""}
         {entry.relationship ? ` (${entry.relationship})` : ""}
-        {entry.linkedMember ? `, linked to ${entry.linkedMember.surname} ${entry.linkedMember.firstName}` : ""}
+        {entry.linkedMember ? `, linked to ${formatMemberName(entry.linkedMember)}` : ""}
       </span>
       {canEdit ? (
         <div className="flex gap-2">

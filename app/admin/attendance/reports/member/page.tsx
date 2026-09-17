@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
 import { FormField } from "@/components/form-field";
 import { MemberNumber } from "@/components/member-number";
+import { formatMemberName } from "@/lib/members/display-name";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { loadReportMember } from "./actions";
@@ -73,7 +74,7 @@ export default async function MemberAttendanceReportPage({
             <MemberPicker from={from} to={to} />
             {member ? (
               <p className="text-sm">
-                Showing: <span className="font-medium">{member.surname} {member.firstName}</span>{" "}
+                Showing: <span className="font-medium">{formatMemberName(member)}</span>{" "}
                 <span className="text-muted-foreground">
                   (<MemberNumber value={member.memberNumber} /> &middot; {member.wingName})
                 </span>

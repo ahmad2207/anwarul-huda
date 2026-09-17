@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { findPotentialDuplicates } from "@/lib/duplicates";
 import type { DuplicateMatch } from "@/lib/duplicates";
 import { formatNigerianPhoneForDisplay } from "@/lib/phone";
+import { formatMemberName } from "@/lib/members/display-name";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { StatusTag } from "@/components/status-tag";
@@ -35,7 +36,10 @@ export default async function ApprovalsPage() {
       member,
       duplicates: await findPotentialDuplicates(prisma, {
         id: member.id,
-        phone: member.phone,
+        // Non-null: this queue is scoped to PENDING members, who only
+        // arrive through self registration or admin entry, both of which
+        // require a phone. A nominal roll import is never PENDING.
+        phone: member.phone!,
         surname: member.surname,
         firstName: member.firstName,
       }),
@@ -48,7 +52,7 @@ export default async function ApprovalsPage() {
       header: "Name",
       cell: ({ member }) => (
         <span className="font-medium">
-          {member.surname} {member.firstName} {member.otherNames ?? ""}
+          {formatMemberName(member)} {member.otherNames ?? ""}
         </span>
       ),
     },

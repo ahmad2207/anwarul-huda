@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { canViewAllWings } from "@/lib/authorization";
+import { formatMemberName } from "@/lib/members/display-name";
 
 export interface ReportMemberSearchResult {
   id: string;
@@ -25,6 +26,7 @@ export async function searchMembersForAttendanceReport(query: string): Promise<R
       OR: [
         { surname: { contains: q, mode: "insensitive" } },
         { firstName: { contains: q, mode: "insensitive" } },
+        { fullNameAsWritten: { contains: q, mode: "insensitive" } },
         { memberNumber: { contains: q, mode: "insensitive" } },
         { phone: { contains: q } },
       ],
@@ -36,7 +38,7 @@ export async function searchMembersForAttendanceReport(query: string): Promise<R
 
   return members.map((member) => ({
     id: member.id,
-    label: `${member.surname} ${member.firstName}${member.memberNumber ? ` (${member.memberNumber})` : ""}`,
+    label: `${formatMemberName(member)}${member.memberNumber ? ` (${member.memberNumber})` : ""}`,
     memberNumber: member.memberNumber,
     wingName: member.wing.name,
   }));
@@ -44,8 +46,9 @@ export async function searchMembersForAttendanceReport(query: string): Promise<R
 
 export interface SelectedMember {
   id: string;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
+  fullNameAsWritten: string | null;
   memberNumber: string | null;
   wingName: string;
 }
@@ -63,6 +66,7 @@ export async function loadReportMember(memberId: string): Promise<SelectedMember
     id: member.id,
     surname: member.surname,
     firstName: member.firstName,
+    fullNameAsWritten: member.fullNameAsWritten,
     memberNumber: member.memberNumber,
     wingName: member.wing.name,
   };

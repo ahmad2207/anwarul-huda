@@ -5,13 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { MoneyError, nairaToKobo } from "@/lib/money";
 import { recordPayment } from "@/lib/payments/record-payment";
+import { formatMemberName } from "@/lib/members/display-name";
 import { paymentFormDataToRaw, paymentSchema } from "./schema";
 
 export interface MemberSearchResult {
   id: string;
   label: string;
   memberNumber: string | null;
-  phone: string;
+  phone: string | null;
   wingName: string;
 }
 
@@ -27,6 +28,7 @@ export async function searchMembers(query: string): Promise<MemberSearchResult[]
       OR: [
         { surname: { contains: q, mode: "insensitive" } },
         { firstName: { contains: q, mode: "insensitive" } },
+        { fullNameAsWritten: { contains: q, mode: "insensitive" } },
         { phone: { contains: q } },
         { memberNumber: { contains: q, mode: "insensitive" } },
       ],
@@ -38,7 +40,7 @@ export async function searchMembers(query: string): Promise<MemberSearchResult[]
 
   return members.map((member) => ({
     id: member.id,
-    label: `${member.surname} ${member.firstName}${member.memberNumber ? ` (${member.memberNumber})` : ""}`,
+    label: `${formatMemberName(member)}${member.memberNumber ? ` (${member.memberNumber})` : ""}`,
     memberNumber: member.memberNumber,
     phone: member.phone,
     wingName: member.wing.name,

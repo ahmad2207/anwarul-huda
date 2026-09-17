@@ -59,7 +59,12 @@ export async function computePreview(
           select: { id: true, memberNumber: true, surname: true, firstName: true, phone: true },
         })
       : [];
-  const existingByPhone = new Map(existingMembers.map((member) => [member.phone, member]));
+  // Non-null: the query above only ever matches a row whose phone is in
+  // normalizedPhones, a set of real, non-empty strings, so a matched
+  // member's phone can never be null here.
+  const existingByPhone = new Map(
+    existingMembers.map((member) => [member.phone!, { ...member, phone: member.phone! }]),
+  );
 
   const groups: PreviewGroups = { clean: [], warning: [], fail: [] };
 

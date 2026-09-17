@@ -36,8 +36,8 @@ export function EditMemberForm({
       <fieldset className="grid gap-3 sm:grid-cols-3">
         <legend className="mb-1 text-sm font-medium">Identity</legend>
         <Field label="Title" name="title" defaultValue={member.title ?? ""} />
-        <Field label="Surname" name="surname" defaultValue={member.surname} required />
-        <Field label="First name" name="firstName" defaultValue={member.firstName} required />
+        <Field label="Surname" name="surname" defaultValue={member.surname ?? ""} required />
+        <Field label="First name" name="firstName" defaultValue={member.firstName ?? ""} required />
         <Field label="Other names" name="otherNames" defaultValue={member.otherNames ?? ""} />
         <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={toDateInputValue(member.dateOfBirth)} />
         <div className="flex flex-col gap-1">
@@ -70,7 +70,7 @@ export function EditMemberForm({
 
       <fieldset className="grid gap-3 sm:grid-cols-3">
         <legend className="mb-1 text-sm font-medium">Contact</legend>
-        <Field label="Phone" name="phone" defaultValue={member.phone} required />
+        <Field label="Phone" name="phone" defaultValue={member.phone ?? ""} required />
         <Field label="Alternative phone" name="altPhone" defaultValue={member.altPhone ?? ""} />
         <Field label="Email" name="email" type="email" defaultValue={member.email ?? ""} />
         <Field label="Address" name="address" defaultValue={member.address ?? ""} className="sm:col-span-2" />

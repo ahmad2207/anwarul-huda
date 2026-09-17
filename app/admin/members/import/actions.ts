@@ -2,23 +2,29 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import type { ImportMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { CsvParseError, parseCsvFile } from "@/lib/import/parse-csv";
-import { guessColumnMapping } from "@/lib/import/system-fields";
+import { guessColumnMapping, guessNominalRollColumnMapping } from "@/lib/import/system-fields";
 import { computePreview } from "@/lib/import/compute-preview";
 import type { PreviewGroups, StagedImportData } from "@/lib/import/compute-preview";
+import { computeNominalRollPreview } from "@/lib/import/compute-nominal-roll-preview";
+import type { NominalRollPreviewGroups } from "@/lib/import/compute-nominal-roll-preview";
 import { commitImportRows } from "@/lib/import/commit-import";
 import type { CommitOutcome, DuplicateAction } from "@/lib/import/commit-import";
+import { commitNominalRollRows } from "@/lib/import/commit-nominal-roll-import";
+import type { NominalRollCommitOutcome } from "@/lib/import/commit-nominal-roll-import";
 import { rollbackImportBatch } from "@/lib/import/rollback-import";
 import type { RollbackBlocker } from "@/lib/import/rollback-import";
 
-export type { PreviewGroups };
+export type { PreviewGroups, NominalRollPreviewGroups };
 
 export interface UploadResult {
   error?: string;
   batchId?: string;
+  mode?: ImportMode;
   headers?: string[];
   guessedMapping?: Record<string, string | null>;
   rowCount?: number;
@@ -35,6 +41,9 @@ export async function uploadImportFile(formData: FormData): Promise<UploadResult
     return { error: "Only .csv files are accepted." };
   }
 
+  const modeInput = formData.get("mode");
+  const mode: ImportMode = modeInput === "NOMINAL_ROLL" ? "NOMINAL_ROLL" : "FULL";
+
   let parsed;
   try {
     parsed = await parseCsvFile(file);
@@ -45,13 +54,15 @@ export async function uploadImportFile(formData: FormData): Promise<UploadResult
     return { error: "Could not read this file. Check it is a valid CSV export." };
   }
 
-  const guessedMapping = guessColumnMapping(parsed.headers);
+  const guessedMapping =
+    mode === "NOMINAL_ROLL" ? guessNominalRollColumnMapping(parsed.headers) : guessColumnMapping(parsed.headers);
 
   const batch = await prisma.importBatch.create({
     data: {
       fileName: file.name,
       rowCount: parsed.rows.length,
       status: "PENDING",
+      mode,
       uploadedById: actor.id,
       stagingData: {
         headers: parsed.headers,
@@ -62,6 +73,7 @@ export async function uploadImportFile(formData: FormData): Promise<UploadResult
 
   return {
     batchId: batch.id,
+    mode,
     headers: parsed.headers,
     guessedMapping,
     rowCount: parsed.rows.length,
@@ -81,7 +93,9 @@ async function loadOwnedBatch(batchId: string, actor: { id: string; roles: strin
 
 export interface PreviewResult {
   error?: string;
+  mode?: ImportMode;
   groups?: PreviewGroups;
+  nominalRollGroups?: NominalRollPreviewGroups;
 }
 
 export async function previewImport(
@@ -103,6 +117,20 @@ export async function previewImport(
     return { error: "This import batch has no staged data." };
   }
 
+  if (batch.mode === "NOMINAL_ROLL") {
+    const nominalRollGroups = await computeNominalRollPreview(staging, mapping, actor);
+    await prisma.importBatch.update({
+      where: { id: batch.id },
+      data: {
+        status: "PREVIEWED",
+        successCount: nominalRollGroups.clean.length,
+        errorCount: nominalRollGroups.fail.length,
+        stagingData: { headers: staging.headers, rows: staging.rows, mapping },
+      },
+    });
+    return { mode: batch.mode, nominalRollGroups };
+  }
+
   const groups = await computePreview(staging, mapping, actor);
 
   await prisma.importBatch.update({
@@ -119,12 +147,14 @@ export async function previewImport(
     },
   });
 
-  return { groups };
+  return { mode: batch.mode, groups };
 }
 
 export interface CommitResult {
   error?: string;
+  mode?: ImportMode;
   outcome?: CommitOutcome;
+  nominalRollOutcome?: NominalRollCommitOutcome;
 }
 
 export async function commitImport(
@@ -146,12 +176,51 @@ export async function commitImport(
     return { error: "This import batch has no confirmed column mapping." };
   }
 
+  const wings = await prisma.wing.findMany({ select: { id: true, numberLetter: true } });
+
+  if (batch.mode === "NOMINAL_ROLL") {
+    const nominalRollGroups = await computeNominalRollPreview(staging, staging.mapping, actor);
+
+    const nominalRollOutcome = await prisma.$transaction(async (tx) => {
+      const result = await commitNominalRollRows(tx, batch.id, nominalRollGroups, actor.id, wings);
+      await tx.importBatch.update({
+        where: { id: batch.id },
+        data: {
+          status: "COMMITTED",
+          committedAt: new Date(),
+          successCount: result.created,
+          errorCount: result.failed,
+          stagingData: Prisma.DbNull,
+          errorReport: JSON.parse(
+            JSON.stringify({
+              failedRows: nominalRollGroups.fail.map((row) => ({ rowNumber: row.rowNumber, issues: row.issues })),
+              duplicateFlagsRaised: result.duplicateFlagsRaised,
+            }),
+          ) as Prisma.InputJsonValue,
+        },
+      });
+      return result;
+    });
+
+    await writeAudit({
+      actorId: actor.id,
+      action: "import.committed",
+      entity: "ImportBatch",
+      entityId: batch.id,
+      before: { status: batch.status },
+      after: { status: "COMMITTED", ...nominalRollOutcome },
+    });
+
+    revalidatePath("/admin/members/import");
+    revalidatePath("/admin/members/incomplete");
+    return { mode: batch.mode, nominalRollOutcome };
+  }
+
   // Re-validated fresh from the staged rows and the confirmed mapping,
   // rather than trusting whatever preview the client happens to be
   // holding: the commit has to reflect the same rules the preview did,
   // not whatever the browser last rendered.
   const groups = await computePreview(staging, staging.mapping, actor);
-  const wings = await prisma.wing.findMany({ select: { id: true, numberLetter: true } });
 
   const outcome = await prisma.$transaction(async (tx) => {
     const result = await commitImportRows(tx, batch.id, groups, duplicateActions, actor.id, wings);
@@ -189,7 +258,7 @@ export async function commitImport(
   });
 
   revalidatePath("/admin/members/import");
-  return { outcome };
+  return { mode: batch.mode, outcome };
 }
 
 export interface DiscardResult {

@@ -82,7 +82,9 @@ describe("findPotentialDuplicates", () => {
 
     const matches = await findPotentialDuplicates(prisma, {
       id: self.id,
-      phone: self.phone,
+      // Non-null: this test's own fixture always sets phone, surname and
+      // firstName, the type is only nullable for a nominal roll member.
+      phone: self.phone!,
       surname: self.surname,
       firstName: self.firstName,
     });

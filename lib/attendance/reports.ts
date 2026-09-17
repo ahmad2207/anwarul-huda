@@ -174,8 +174,9 @@ export async function getWingAttendanceRates(filter: {
 
 export interface InactiveMemberRow {
   memberId: string;
-  surname: string;
-  firstName: string;
+  surname: string | null;
+  firstName: string | null;
+  fullNameAsWritten: string | null;
   memberNumber: string | null;
   wingName: string;
   lastAttendedAt: Date | null;
@@ -234,6 +235,7 @@ export async function getMembersNotAttendedSince(params: {
       memberId: member.id,
       surname: member.surname,
       firstName: member.firstName,
+      fullNameAsWritten: member.fullNameAsWritten,
       memberNumber: member.memberNumber,
       wingName: member.wing.name,
       lastAttendedAt: member.attendance[0]?.checkedInAt ?? null,

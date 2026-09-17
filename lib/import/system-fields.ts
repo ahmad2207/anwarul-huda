@@ -120,3 +120,41 @@ function normalizeHeader(value: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
+
+// A historical nominal roll: names only, never split, no phone. A
+// genuinely different, smaller column set from IMPORT_FIELDS above,
+// because it enforces different rules on the same idea (an existing
+// member, typed up from paper), not a relaxed version of the same rules.
+export const NOMINAL_ROLL_IMPORT_FIELDS: ImportFieldDef[] = [
+  {
+    key: "fullName",
+    label: "Full Name",
+    required: true,
+    aliases: ["full name as written", "name as written", "name", "full_name_as_written", "name_as_written"],
+  },
+  { key: "wing", label: "Wing", required: true, aliases: [], hint: "the wing's name or its M/W/Y letter" },
+  { key: "gender", label: "Gender", required: true, aliases: ["sex"], hint: "Male or Female" },
+  { key: "title", label: "Title", required: false, aliases: [] },
+  { key: "sourceSn", label: "Source Serial Number", required: false, aliases: ["source_sn", "s/n", "sn"] },
+  { key: "sourcePage", label: "Source Page", required: false, aliases: ["source_page", "page"] },
+  {
+    key: "needsReview",
+    label: "Needs Review",
+    required: false,
+    aliases: ["needs_review", "review", "notes"],
+    hint: "carried into the member's notes, never lost",
+  },
+];
+
+export function guessNominalRollColumnMapping(headers: string[]): Record<string, string | null> {
+  const normalizedHeaders = headers.map((header) => ({ raw: header, normalized: normalizeHeader(header) }));
+  const mapping: Record<string, string | null> = {};
+
+  for (const field of NOMINAL_ROLL_IMPORT_FIELDS) {
+    const candidates = new Set([field.label, ...field.aliases].map(normalizeHeader));
+    const match = normalizedHeaders.find((header) => candidates.has(header.normalized));
+    mapping[field.key] = match ? match.raw : null;
+  }
+
+  return mapping;
+}

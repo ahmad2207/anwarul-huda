@@ -45,7 +45,8 @@ describe("computePreview (messy CSV end to end)", () => {
         wingId: wing.id,
       },
     });
-    existingPhone = existing.phone;
+    // Non-null: this fixture always sets phone.
+    existingPhone = existing.phone!;
   });
 
   afterAll(async () => {

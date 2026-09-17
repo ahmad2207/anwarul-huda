@@ -1,4 +1,4 @@
-// Anwar-ul-Huda League of Nigeria: membership and administration system
+// Anwaru-l-Huda League of Nigeria: membership and administration system
 // All money fields are integer kobo. All timestamps are UTC.
 
 generator client {
@@ -22,13 +22,13 @@ enum WingCode {
 }
 
 model Wing {
-  id          String   @id @default(cuid())
-  code        WingCode @unique
-  name        String
-  numberLetter String  @map("number_letter") // M, W or Y for member numbers
-  minAge      Int?     @map("min_age")
-  maxAge      Int?     @map("max_age")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           String   @id @default(cuid())
+  code         WingCode @unique
+  name         String
+  numberLetter String   @map("number_letter") // M, W or Y for member numbers
+  minAge       Int?     @map("min_age")
+  maxAge       Int?     @map("max_age")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   members             Member[]
   contributionPlans   ContributionPlan[]
@@ -45,7 +45,7 @@ model Branch {
   city      String?
   state     String?
   isDefault Boolean  @default(false) @map("is_default")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   members    Member[]
   devices    BiometricDevice[]
@@ -73,30 +73,51 @@ model User {
   email         String?   @unique
   phone         String?   @unique
   passwordHash  String?   @map("password_hash")
-  emailVerified DateTime? @map("email_verified")
+  emailVerified DateTime? @map("email_verified") @db.Timestamptz(3)
   isActive      Boolean   @default(true) @map("is_active")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Administrator credential issue (MEMBER-INTERFACE.md 2, superseding
+  // SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 2.1), for a member with no
+  // self-service path to an account: login is by member number now, not
+  // phone, precisely because almost none of the 289 imported members
+  // have a phone on file at all. mustChangePassword blocks every other
+  // route until it is cleared, enforced both at the page layout
+  // (app/admin/layout.tsx, components/member-shell.tsx) and at the
+  // shared authorization gate every server action already calls through
+  // (requireRole, requireWingAccess in lib/auth.ts), so a future action
+  // or route inherits the block automatically rather than needing its
+  // own copy of this check. temporaryPasswordIssuedAt/By record that an
+  // issue happened, for the audit trail; the password value itself is
+  // never stored or logged anywhere, only its bcrypt hash in
+  // passwordHash above.
+  mustChangePassword          Boolean   @default(false) @map("must_change_password")
+  temporaryPasswordIssuedAt   DateTime? @map("temporary_password_issued_at") @db.Timestamptz(3)
+  temporaryPasswordIssuedById String?   @map("temporary_password_issued_by_id")
+  temporaryPasswordIssuedBy   User?     @relation("TemporaryPasswordIssuer", fields: [temporaryPasswordIssuedById], references: [id], onDelete: SetNull)
 
   memberId String? @unique @map("member_id")
   member   Member? @relation(fields: [memberId], references: [id])
 
   roles           UserRole[]
   wingAssignments UserWingAssignment[]
-  auditEntries    AuditLog[]            @relation("AuditActor")
+  auditEntries    AuditLog[]           @relation("AuditActor")
 
-  approvedMembers      Member[]        @relation("MemberApprovedBy")
-  collectedPayments    Payment[]       @relation("PaymentCollectedBy")
-  voidedPayments       Payment[]       @relation("PaymentVoidedBy")
-  openedCashSessions   CashSession[]   @relation("CashSessionOpenedBy")
-  closedCashSessions   CashSession[]   @relation("CashSessionClosedBy")
-  verifiedCases        CharityCase[]   @relation("CaseVerifiedBy")
-  recommendedCases     CharityCase[]   @relation("CaseRecommendedBy")
-  approvedCases        CharityCase[]   @relation("CaseApprovedBy")
-  disbursementsPaid    Disbursement[]  @relation("DisbursementPaidBy")
-  uploadedContent      ContentItem[]   @relation("ContentUploadedBy")
-  importBatches        ImportBatch[]
+  approvedMembers          Member[]              @relation("MemberApprovedBy")
+  collectedPayments        Payment[]             @relation("PaymentCollectedBy")
+  voidedPayments           Payment[]             @relation("PaymentVoidedBy")
+  openedCashSessions       CashSession[]         @relation("CashSessionOpenedBy")
+  closedCashSessions       CashSession[]         @relation("CashSessionClosedBy")
+  verifiedCases            CharityCase[]         @relation("CaseVerifiedBy")
+  recommendedCases         CharityCase[]         @relation("CaseRecommendedBy")
+  approvedCases            CharityCase[]         @relation("CaseApprovedBy")
+  disbursementsPaid        Disbursement[]        @relation("DisbursementPaidBy")
+  uploadedContent          ContentItem[]         @relation("ContentUploadedBy")
+  importBatches            ImportBatch[]
+  dismissedDuplicateFlags  MemberDuplicateFlag[]
+  issuedTemporaryPasswords User[]                @relation("TemporaryPasswordIssuer")
 
   @@map("users")
 }
@@ -167,22 +188,33 @@ model Member {
   id           String  @id @default(cuid())
   memberNumber String? @unique @map("member_number") // AHL/M/2026/0001, issued on approval
 
-  // Identity
-  title         String?
-  surname       String
-  firstName     String         @map("first_name")
-  otherNames    String?        @map("other_names")
-  dateOfBirth   DateTime?      @map("date_of_birth")
-  gender        Gender
-  maritalStatus MaritalStatus? @map("marital_status")
-  occupation    String?
-  nationality   String?
-  stateOfOrigin String?        @map("state_of_origin")
-  languages     String[]
-  photoPath     String?        @map("photo_path")
+  // Identity. surname and firstName are nullable only because a nominal
+  // roll import can supply a name that was never split (see
+  // fullNameAsWritten below); every other path into this table (self
+  // registration, admin entry, the full CSV import) still requires both,
+  // enforced in that path's own validator, not by the column itself.
+  title             String?
+  surname           String?
+  firstName         String?        @map("first_name")
+  otherNames        String?        @map("other_names")
+  /**
+   * The name exactly as it appeared on a historical roll, never overwritten, so the original is always recoverable even after surname/firstName are filled in.
+   */
+  fullNameAsWritten String?        @map("full_name_as_written")
+  dateOfBirth       DateTime?      @map("date_of_birth") @db.Timestamptz(3)
+  gender            Gender
+  maritalStatus     MaritalStatus? @map("marital_status")
+  occupation        String?
+  nationality       String?
+  stateOfOrigin     String?        @map("state_of_origin")
+  languages         String[]
+  photoPath         String?        @map("photo_path")
 
-  // Contact
-  phone            String
+  // Contact. phone is nullable for the same reason surname and firstName
+  // are: a nominal roll import can genuinely have none on file. A blank
+  // phone from the full import path is still refused, by that path's own
+  // validator, never by this column.
+  phone            String?
   altPhone         String?         @map("alt_phone")
   email            String?
   address          String?
@@ -197,7 +229,7 @@ model Member {
   yearJoined   Int?         @map("year_joined")
   status       MemberStatus @default(PENDING)
   statusReason String?      @map("status_reason")
-  statusAt     DateTime?    @map("status_at")
+  statusAt     DateTime?    @map("status_at") @db.Timestamptz(3)
   officeHeld   String?      @map("office_held")
   halaqah      String?
 
@@ -215,36 +247,43 @@ model Member {
   nokAltPhone     String? @map("nok_alt_phone")
 
   // Consent
-  consentRecords     Boolean @default(false) @map("consent_records")
-  consentDirectory   Boolean @default(false) @map("consent_directory")
-  consentComms       Boolean @default(false) @map("consent_comms")
-  consentBiometric   Boolean @default(false) @map("consent_biometric")
+  consentRecords   Boolean @default(false) @map("consent_records")
+  consentDirectory Boolean @default(false) @map("consent_directory")
+  consentComms     Boolean @default(false) @map("consent_comms")
+  consentBiometric Boolean @default(false) @map("consent_biometric")
 
   // Provenance
-  source        MemberSource @default(SELF_REGISTRATION)
-  importBatchId String?      @map("import_batch_id")
-  approvedById  String?      @map("approved_by_id")
-  approvedAt    DateTime?    @map("approved_at")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  source             MemberSource @default(SELF_REGISTRATION)
+  importBatchId      String?      @map("import_batch_id")
+  approvedById       String?      @map("approved_by_id")
+  approvedAt         DateTime?    @map("approved_at") @db.Timestamptz(3)
+  /**
+   * True when surname, firstName or phone is missing, so the record needs a human to complete it. Set on nominal roll import, cleared once the incomplete-records worklist fills the gaps (or, for phone, confirms there genuinely is none).
+   */
+  isRecordIncomplete Boolean      @default(false) @map("is_record_incomplete")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   wing        Wing         @relation(fields: [wingId], references: [id])
   branch      Branch?      @relation(fields: [branchId], references: [id])
   approvedBy  User?        @relation("MemberApprovedBy", fields: [approvedById], references: [id])
   importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
 
-  user             User?
-  household        HouseholdMember[] @relation("HouseholdOwner")
-  linkedInHousehold HouseholdMember[] @relation("HouseholdLinkedMember")
-  serviceAreas     MemberServiceArea[]
-  payments         Payment[]
-  contributions    ContributionRecord[]
-  attendance       AttendanceRecord[]
-  biometricLinks   BiometricEnrolment[]
+  user              User?
+  household         HouseholdMember[]     @relation("HouseholdOwner")
+  linkedInHousehold HouseholdMember[]     @relation("HouseholdLinkedMember")
+  serviceAreas      MemberServiceArea[]
+  payments          Payment[]
+  contributions     ContributionRecord[]
+  attendance        AttendanceRecord[]
+  biometricLinks    BiometricEnrolment[]
+  duplicateFlagsAsA MemberDuplicateFlag[] @relation("DuplicateFlagMemberA")
+  duplicateFlagsAsB MemberDuplicateFlag[] @relation("DuplicateFlagMemberB")
 
   @@index([wingId, status])
   @@index([surname, firstName])
   @@index([phone])
+  @@index([isRecordIncomplete])
   @@map("members")
 }
 
@@ -304,10 +343,10 @@ model ContributionPlan {
   frequency   Frequency
   wingId      String?   @map("wing_id") // null means all wings
   isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  wing    Wing?                @relation(fields: [wingId], references: [id])
-  records ContributionRecord[]
+  wing     Wing?                @relation(fields: [wingId], references: [id])
+  records  ContributionRecord[]
   payments Payment[]
 
   @@map("contribution_plans")
@@ -315,18 +354,18 @@ model ContributionPlan {
 
 // One expected contribution for one member for one period
 model ContributionRecord {
-  id          String   @id @default(cuid())
-  memberId    String   @map("member_id")
-  planId      String   @map("plan_id")
-  periodLabel String   @map("period_label") // "2026-09", "2026-Q3", "2026"
-  periodStart DateTime @map("period_start")
-  periodEnd   DateTime @map("period_end")
-  amountDueKobo  Int   @map("amount_due_kobo")
-  amountPaidKobo Int   @default(0) @map("amount_paid_kobo")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String   @id @default(cuid())
+  memberId       String   @map("member_id")
+  planId         String   @map("plan_id")
+  periodLabel    String   @map("period_label") // "2026-09", "2026-Q3", "2026"
+  periodStart    DateTime @map("period_start") @db.Timestamptz(3)
+  periodEnd      DateTime @map("period_end") @db.Timestamptz(3)
+  amountDueKobo  Int      @map("amount_due_kobo")
+  amountPaidKobo Int      @default(0) @map("amount_paid_kobo")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  member  Member           @relation(fields: [memberId], references: [id])
-  plan    ContributionPlan @relation(fields: [planId], references: [id])
+  member   Member           @relation(fields: [memberId], references: [id])
+  plan     ContributionPlan @relation(fields: [planId], references: [id])
   payments Payment[]
 
   @@unique([memberId, planId, periodLabel])
@@ -346,26 +385,26 @@ enum PaymentStatus {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  receiptNumber String        @unique @map("receipt_number")
-  memberId      String        @map("member_id")
-  planId        String?       @map("plan_id")
-  contributionRecordId String? @map("contribution_record_id")
-  fundId        String?       @map("fund_id") // set when the payment is a donation to a fund
-  amountKobo    Int           @map("amount_kobo")
-  method        PaymentMethod
-  reference     String? // POS terminal reference or bank transfer reference
-  narration     String?
-  status        PaymentStatus @default(CONFIRMED)
-  paidAt        DateTime      @map("paid_at")
-  collectedById String        @map("collected_by_id")
-  cashSessionId String?       @map("cash_session_id")
+  id                   String        @id @default(cuid())
+  receiptNumber        String        @unique @map("receipt_number")
+  memberId             String        @map("member_id")
+  planId               String?       @map("plan_id")
+  contributionRecordId String?       @map("contribution_record_id")
+  fundId               String?       @map("fund_id") // set when the payment is a donation to a fund
+  amountKobo           Int           @map("amount_kobo")
+  method               PaymentMethod
+  reference            String? // POS terminal reference or bank transfer reference
+  narration            String?
+  status               PaymentStatus @default(CONFIRMED)
+  paidAt               DateTime      @map("paid_at") @db.Timestamptz(3)
+  collectedById        String        @map("collected_by_id")
+  cashSessionId        String?       @map("cash_session_id")
 
   voidedById String?   @map("voided_by_id")
-  voidedAt   DateTime? @map("voided_at")
+  voidedAt   DateTime? @map("voided_at") @db.Timestamptz(3)
   voidReason String?   @map("void_reason")
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   member             Member              @relation(fields: [memberId], references: [id])
   plan               ContributionPlan?   @relation(fields: [planId], references: [id])
@@ -389,10 +428,10 @@ model CashSession {
   id               String            @id @default(cuid())
   label            String
   openedById       String            @map("opened_by_id")
-  openedAt         DateTime          @map("opened_at")
+  openedAt         DateTime          @map("opened_at") @db.Timestamptz(3)
   openingFloatKobo Int               @default(0) @map("opening_float_kobo")
   closedById       String?           @map("closed_by_id")
-  closedAt         DateTime?         @map("closed_at")
+  closedAt         DateTime?         @map("closed_at") @db.Timestamptz(3)
   countedCashKobo  Int?              @map("counted_cash_kobo")
   expectedCashKobo Int?              @map("expected_cash_kobo")
   varianceKobo     Int?              @map("variance_kobo")
@@ -436,7 +475,7 @@ model Fund {
   type        FundType
   description String?
   isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   payments      Payment[]
   disbursements Disbursement[]
@@ -455,31 +494,31 @@ enum CaseStatus {
 }
 
 model CharityCase {
-  id          String  @id @default(cuid())
-  reference   String  @unique
-  beneficiaryName String @map("beneficiary_name")
-  beneficiaryPhone String? @map("beneficiary_phone")
+  id                 String  @id @default(cuid())
+  reference          String  @unique
+  beneficiaryName    String  @map("beneficiary_name")
+  beneficiaryPhone   String? @map("beneficiary_phone")
   beneficiaryAddress String? @map("beneficiary_address")
-  isMember    Boolean @default(false) @map("is_member")
-  linkedMemberId String? @map("linked_member_id")
+  isMember           Boolean @default(false) @map("is_member")
+  linkedMemberId     String? @map("linked_member_id")
 
-  needDescription String     @map("need_description")
+  needDescription String         @map("need_description")
   zakatCategory   ZakatCategory? @map("zakat_category")
-  requestedKobo   Int        @map("requested_kobo")
-  recommendedKobo Int?       @map("recommended_kobo")
-  approvedKobo    Int?       @map("approved_kobo")
-  status          CaseStatus @default(DRAFT)
+  requestedKobo   Int            @map("requested_kobo")
+  recommendedKobo Int?           @map("recommended_kobo")
+  approvedKobo    Int?           @map("approved_kobo")
+  status          CaseStatus     @default(DRAFT)
 
   verifiedById    String?   @map("verified_by_id")
-  verifiedAt      DateTime? @map("verified_at")
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(3)
   recommendedById String?   @map("recommended_by_id")
-  recommendedAt   DateTime? @map("recommended_at")
+  recommendedAt   DateTime? @map("recommended_at") @db.Timestamptz(3)
   approvedById    String?   @map("approved_by_id")
-  approvedAt      DateTime? @map("approved_at")
+  approvedAt      DateTime? @map("approved_at") @db.Timestamptz(3)
   decisionNote    String?   @map("decision_note")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   verifiedBy    User? @relation("CaseVerifiedBy", fields: [verifiedById], references: [id])
   recommendedBy User? @relation("CaseRecommendedBy", fields: [recommendedById], references: [id])
@@ -492,17 +531,17 @@ model CharityCase {
 }
 
 model Disbursement {
-  id         String   @id @default(cuid())
-  reference  String   @unique
-  fundId     String   @map("fund_id")
-  caseId     String   @map("case_id")
-  amountKobo Int      @map("amount_kobo")
-  method     PaymentMethod
-  narration  String?
-  evidencePath String? @map("evidence_path")
-  paidById   String   @map("paid_by_id")
-  paidAt     DateTime @map("paid_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           String        @id @default(cuid())
+  reference    String        @unique
+  fundId       String        @map("fund_id")
+  caseId       String        @map("case_id")
+  amountKobo   Int           @map("amount_kobo")
+  method       PaymentMethod
+  narration    String?
+  evidencePath String?       @map("evidence_path")
+  paidById     String        @map("paid_by_id")
+  paidAt       DateTime      @map("paid_at") @db.Timestamptz(3)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   fund   Fund        @relation(fields: [fundId], references: [id])
   case   CharityCase @relation(fields: [caseId], references: [id])
@@ -531,10 +570,10 @@ model Gathering {
   type      GatheringType
   wingId    String?       @map("wing_id") // null means open to all wings
   branchId  String?       @map("branch_id")
-  startsAt  DateTime      @map("starts_at")
-  endsAt    DateTime?     @map("ends_at")
+  startsAt  DateTime      @map("starts_at") @db.Timestamptz(3)
+  endsAt    DateTime?     @map("ends_at") @db.Timestamptz(3)
   isClosed  Boolean       @default(false) @map("is_closed")
-  createdAt DateTime      @default(now()) @map("created_at")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   wing    Wing?              @relation(fields: [wingId], references: [id])
   branch  Branch?            @relation(fields: [branchId], references: [id])
@@ -552,13 +591,13 @@ enum CheckInMethod {
 }
 
 model AttendanceRecord {
-  id          String        @id @default(cuid())
-  gatheringId String        @map("gathering_id")
-  memberId    String        @map("member_id")
-  checkedInAt DateTime      @map("checked_in_at")
-  method      CheckInMethod
-  deviceId    String?       @map("device_id")
-  recordedById String?      @map("recorded_by_id")
+  id           String        @id @default(cuid())
+  gatheringId  String        @map("gathering_id")
+  memberId     String        @map("member_id")
+  checkedInAt  DateTime      @map("checked_in_at") @db.Timestamptz(3)
+  method       CheckInMethod
+  deviceId     String?       @map("device_id")
+  recordedById String?       @map("recorded_by_id")
 
   gathering Gathering        @relation(fields: [gatheringId], references: [id])
   member    Member           @relation(fields: [memberId], references: [id])
@@ -582,9 +621,9 @@ model BiometricDevice {
   serial     String     @unique
   branchId   String?    @map("branch_id")
   apiKeyHash String     @map("api_key_hash")
-  lastSeenAt DateTime?  @map("last_seen_at")
+  lastSeenAt DateTime?  @map("last_seen_at") @db.Timestamptz(3)
   isActive   Boolean    @default(true) @map("is_active")
-  createdAt  DateTime   @default(now()) @map("created_at")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
 
   branch     Branch?              @relation(fields: [branchId], references: [id])
   enrolments BiometricEnrolment[]
@@ -600,7 +639,7 @@ model BiometricEnrolment {
   deviceId     String     @map("device_id")
   deviceUserId String     @map("device_user_id")
   type         DeviceType
-  enrolledAt   DateTime   @map("enrolled_at")
+  enrolledAt   DateTime   @map("enrolled_at") @db.Timestamptz(3)
   isActive     Boolean    @default(true) @map("is_active")
 
   member Member          @relation(fields: [memberId], references: [id])
@@ -622,26 +661,26 @@ enum ContentType {
 }
 
 model ContentItem {
-  id          String      @id @default(cuid())
-  type        ContentType
-  title       String
-  slug        String      @unique
-  author      String? // speaker for a sermon, author for a book
-  summary     String?
-  body        String?
-  filePath    String?     @map("file_path")
-  coverPath   String?     @map("cover_path")
-  externalUrl String?     @map("external_url")
-  tags        String[]
-  wingId      String?     @map("wing_id") // null means visible to all
-  deliveredOn DateTime?   @map("delivered_on")
-  publishAt   DateTime?   @map("publish_at")
-  isPublished Boolean     @default(false) @map("is_published")
-  downloadCount Int       @default(0) @map("download_count")
+  id            String      @id @default(cuid())
+  type          ContentType
+  title         String
+  slug          String      @unique
+  author        String? // speaker for a sermon, author for a book
+  summary       String?
+  body          String?
+  filePath      String?     @map("file_path")
+  coverPath     String?     @map("cover_path")
+  externalUrl   String?     @map("external_url")
+  tags          String[]
+  wingId        String?     @map("wing_id") // null means visible to all
+  deliveredOn   DateTime?   @map("delivered_on") @db.Timestamptz(3)
+  publishAt     DateTime?   @map("publish_at") @db.Timestamptz(3)
+  isPublished   Boolean     @default(false) @map("is_published")
+  downloadCount Int         @default(0) @map("download_count")
 
   uploadedById String   @map("uploaded_by_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   uploadedBy User @relation("ContentUploadedBy", fields: [uploadedById], references: [id])
 
@@ -661,6 +700,16 @@ enum ImportStatus {
   FAILED
 }
 
+// FULL is the existing Member Information Form import: surname, firstName,
+// gender, phone and wing are all required, same as self registration.
+// NOMINAL_ROLL is a historical roll of names only: no phone, no split
+// name. Chosen explicitly at upload, never guessed from the file, because
+// the two modes enforce genuinely different rules on the same columns.
+enum ImportMode {
+  FULL
+  NOMINAL_ROLL
+}
+
 model ImportBatch {
   id           String       @id @default(cuid())
   fileName     String       @map("file_name")
@@ -669,6 +718,7 @@ model ImportBatch {
   successCount Int          @default(0) @map("success_count")
   errorCount   Int          @default(0) @map("error_count")
   status       ImportStatus @default(PENDING)
+  mode         ImportMode   @default(FULL)
   // Parsed rows and the confirmed column mapping, held here between
   // upload and commit so nothing is written to Member until the import
   // is confirmed. Cleared back to null once committed or discarded; the
@@ -676,13 +726,45 @@ model ImportBatch {
   stagingData  Json?        @map("staging_data")
   errorReport  Json?        @map("error_report")
   uploadedById String       @map("uploaded_by_id")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  committedAt  DateTime?    @map("committed_at")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  committedAt  DateTime?    @map("committed_at") @db.Timestamptz(3)
 
   uploadedBy User     @relation(fields: [uploadedById], references: [id])
   members    Member[]
 
   @@map("import_batches")
+}
+
+enum DuplicateFlagStatus {
+  PENDING
+  DISMISSED
+}
+
+// A curated fact from the source data ("this specific row is the same
+// person as that one"), not the fuzzy name/phone similarity
+// lib/duplicates.ts computes at read time for the approval queue. Raised
+// during a nominal roll import by resolving each row's "possible
+// duplicate of S/N n" note into the member ID that row became, once every
+// row in the batch has been written. Dismissing a flag here never merges
+// or deletes anything: a real merge (moving payments, attendance and so
+// on to a single surviving record) is a separate, larger feature this
+// does not build.
+model MemberDuplicateFlag {
+  id            String              @id @default(cuid())
+  memberAId     String              @map("member_a_id")
+  memberBId     String              @map("member_b_id")
+  reason        String
+  status        DuplicateFlagStatus @default(PENDING)
+  dismissedById String?             @map("dismissed_by_id")
+  dismissedAt   DateTime?           @map("dismissed_at") @db.Timestamptz(3)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  memberA     Member @relation("DuplicateFlagMemberA", fields: [memberAId], references: [id])
+  memberB     Member @relation("DuplicateFlagMemberB", fields: [memberBId], references: [id])
+  dismissedBy User?  @relation(fields: [dismissedById], references: [id])
+
+  @@index([status])
+  @@map("member_duplicate_flags")
 }
 
 model AuditLog {
@@ -695,11 +777,43 @@ model AuditLog {
   after     Json?
   ipAddress String?  @map("ip_address")
   userAgent String?  @map("user_agent")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   actor User? @relation("AuditActor", fields: [actorId], references: [id])
 
   @@index([entity, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// Backs both lib/rate-limit.ts's per-IP counters and lib/login-lockout.ts's
+// per-account failure counters, one row per key, holding whatever the
+// current fixed window's count is. Moved here from an in-process Map
+// because the deployment target is Vercel: multiple concurrent instances,
+// each one potentially a cold start with no memory of the last request,
+// which made an in-memory counter not just imprecise but liable to never
+// accumulate at all. See lib/rate-limit-store.ts for the atomic upsert
+// every increment goes through, and its own cleanup path for expired rows.
+model RateLimitCounter {
+  key String @id
+
+  count Int @default(1)
+
+  // timestamptz deliberately, not the schema's usual bare DateTime
+  // (which maps to Postgres's timestamp without time zone): a naive
+  // timestamp stores a wall clock reading with no timezone attached, and
+  // round-tripping a JS Date through it landed an hour off in this very
+  // environment (server local time Africa/Lagos, UTC+1) the first time
+  // this table was tested against expiry, which is exactly why a real
+  // expiry check needs an unambiguous absolute instant, not a naive one.
+  // Found and fixed here rather than left as a surprise once this ran
+  // somewhere other than UTC; whether the same gap in every other
+  // DateTime column in this schema is worth the same fix is a separate,
+  // larger decision, flagged rather than made silently here.
+  windowStart DateTime @default(now()) @map("window_start") @db.Timestamptz(3)
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("rate_limit_counters")
 }

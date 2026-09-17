@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "rate_limit_counters" ALTER COLUMN "window_start" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "expires_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(3);

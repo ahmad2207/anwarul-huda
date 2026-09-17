@@ -92,7 +92,7 @@ Build the finance module.
 6. Voiding: a payment is never edited or deleted. Voiding requires a reason, sets status VOIDED, reverses the amount against the contribution record, and writes the audit entry. The original row stays.
 7. Cash sessions: open a session, all cash payments attach to it, close it by entering the counted cash. The system computes expected, counted and variance, and requires a note if the variance is not zero. A closed session cannot be reopened.
 8. Reports: collections by period, by plan, by wing, by officer and by method. Arrears list per wing. All exportable to CSV.
-9. A member sees their own payment history and outstanding balance at /account/contributions.
+9. A member sees their own payment history and outstanding balance at /account/payments.
 
 All money is integer kobo. No floats anywhere in this module.
 

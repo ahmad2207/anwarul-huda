@@ -29,7 +29,7 @@ export function StatusChangeForm({ memberId, currentStatus }: { memberId: string
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-md border p-3">
+    <form action={formAction} className="flex flex-col gap-3 rounded-md border bg-paper-dim p-3">
       <p className="text-sm font-medium">
         Change status (currently {currentStatus.charAt(0) + currentStatus.slice(1).toLowerCase()})
       </p>

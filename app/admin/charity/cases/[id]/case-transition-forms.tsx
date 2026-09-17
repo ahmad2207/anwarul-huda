@@ -44,7 +44,7 @@ export function RecommendForm({ caseId }: { caseId: string }) {
   const [state, formAction, isPending] = useActionState(boundAction, {});
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border bg-paper-dim p-3">
       <div className="flex flex-col gap-1">
         <Label className="text-xs">Recommended amount (Naira)</Label>
         <Input name="recommended" type="number" step="0.01" min="0.01" className="w-32" required />
@@ -62,7 +62,7 @@ export function ApproveForm({ caseId }: { caseId: string }) {
   const [state, formAction, isPending] = useActionState(boundAction, {});
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border bg-paper-dim p-3">
       <div className="flex flex-col gap-1">
         <Label className="text-xs">Approved amount (Naira)</Label>
         <Input name="approved" type="number" step="0.01" min="0.01" className="w-32" required />
@@ -93,7 +93,7 @@ export function RejectForm({ caseId }: { caseId: string }) {
   }
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border bg-paper-dim p-3">
       <div className="flex min-w-48 flex-1 flex-col gap-1">
         <Label className="text-xs">Reason</Label>
         <Input name="reason" required minLength={3} />

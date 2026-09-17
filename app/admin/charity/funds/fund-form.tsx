@@ -25,7 +25,7 @@ export function FundForm({ fund, onDone }: { fund?: Fund; onDone?: () => void })
         await formAction(formData);
         onDone?.();
       }}
-      className="flex flex-wrap items-end gap-3 rounded-md border p-3"
+      className="flex flex-wrap items-end gap-3 rounded-md border bg-paper-dim p-3"
     >
       <div className="flex min-w-40 flex-1 flex-col gap-1">
         <Label className="text-xs">Name</Label>

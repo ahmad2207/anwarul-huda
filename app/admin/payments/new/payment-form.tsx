@@ -65,7 +65,7 @@ export function PaymentForm({
               placeholder="Search..."
             />
             {results.length > 0 && !selectedMember ? (
-              <ul className="mt-1 flex flex-col gap-1 rounded-md border p-1">
+              <ul className="mt-1 flex flex-col gap-1 rounded-md border bg-card p-1 shadow-[0_16px_30px_-16px_rgba(4,20,40,0.3)]">
                 {results.map((result) => (
                   <li key={result.id}>
                     <button

@@ -20,7 +20,7 @@ export function GatheringForm({ wings, branches }: { wings: Wing[]; branches: Br
   const [state, formAction, isPending] = useActionState(createGathering, {});
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-3 rounded-md border p-3">
+    <form action={formAction} className="flex flex-wrap items-end gap-3 rounded-md border bg-paper-dim p-3">
       <div className="flex min-w-40 flex-1 flex-col gap-1">
         <Label className="text-xs">Title</Label>
         <Input name="title" placeholder="Jumu'ah, 19 September" required />

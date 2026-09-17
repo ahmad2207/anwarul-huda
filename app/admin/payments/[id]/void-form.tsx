@@ -20,7 +20,7 @@ export function VoidForm({ paymentId }: { paymentId: string }) {
   }
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+    <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md border bg-paper-dim p-3">
       <div className="flex min-w-48 flex-1 flex-col gap-1">
         <Label className="text-xs">Reason for voiding</Label>
         <Input name="reason" required minLength={3} />

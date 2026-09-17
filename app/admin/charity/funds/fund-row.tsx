@@ -23,7 +23,7 @@ export function FundRow({ fund, closingBalanceKobo }: { fund: Fund; closingBalan
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-paper-dim p-3 text-sm">
       <span>
         <span className="font-medium">{fund.name}</span> &middot; {TYPE_LABELS[fund.type] ?? fund.type}{" "}
         &middot; balance {formatNaira(closingBalanceKobo)}

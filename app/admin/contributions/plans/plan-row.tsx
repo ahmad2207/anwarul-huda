@@ -28,7 +28,7 @@ export function PlanRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-paper-dim p-3 text-sm">
       <span>
         <span className="font-medium">{plan.name}</span> &middot; {formatNaira(plan.amountKobo)} &middot;{" "}
         {FREQUENCY_LABELS[plan.frequency] ?? plan.frequency} &middot; {plan.wing?.name ?? "All wings"}

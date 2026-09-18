@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { classifyLoginIdentifier } from "@/lib/login-identifier";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { assertRequiredEnvVars } from "@/lib/env-check";
 import {
   accountLockoutKey,
   checkAccountLockout,
@@ -14,6 +15,13 @@ import {
   recordLoginFailure,
   unknownIdentifierLockoutKey,
 } from "@/lib/login-lockout";
+
+// Runs once, at module load: this file is what actually needed
+// AUTH_SECRET and produced Auth.js's own unnamed Configuration error
+// when it was missing in production. Every route that calls
+// getCurrentUser imports this module transitively, so this fires on
+// the very first request to reach any of them.
+assertRequiredEnvVars();
 
 // Auth.js with the Credentials provider only supports the "jwt" session
 // strategy. Database sessions rely on the adapter's account linking flow,

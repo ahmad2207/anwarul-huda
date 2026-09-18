@@ -3,27 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { firstNameForGreeting } from "@/lib/members/display-name";
+import { recordProgress } from "@/lib/members/record-sections";
 import { Button } from "@/components/ui/button";
-
-// The nine sections MEMBER-INTERFACE.md 3.4 lists, in order. Section
-// completion is not tracked yet: that lands with the record itself
-// (M3), which is explicitly not part of this build ("no record sections
-// yet"). Until then, every incomplete record is honestly at 0 of 9,
-// because nobody has been able to complete a single section, since
-// there is nowhere yet to do that. This is not a placeholder standing
-// in for a real number: it is the true count today. M3 replaces
-// `completedCount` below with a real one once sections exist to finish.
-const RECORD_SECTIONS = [
-  "Your name",
-  "About you",
-  "Contact details",
-  "Household",
-  "Your membership",
-  "Service and skills",
-  "Next of kin",
-  "Consent",
-  "Face check-in",
-];
 
 export default async function AccountHomePage() {
   const user = await getCurrentUser();
@@ -49,16 +30,21 @@ export default async function AccountHomePage() {
   const greeting = greetingName ? `Assalamu alaikum, ${greetingName}` : "Assalamu alaikum";
 
   if (member.isRecordIncomplete) {
-    return <IncompleteHome greeting={greeting} />;
+    return <IncompleteHome greeting={greeting} completedSections={member.completedSections} />;
   }
 
   return <CompleteHome greeting={greeting} member={member} />;
 }
 
-function IncompleteHome({ greeting }: { greeting: string }) {
-  const completedCount = 0; // see the comment on RECORD_SECTIONS above
-  const nextSection = RECORD_SECTIONS[completedCount];
-  const progressPercent = Math.round((completedCount / RECORD_SECTIONS.length) * 100);
+function IncompleteHome({
+  greeting,
+  completedSections,
+}: {
+  greeting: string;
+  completedSections: Parameters<typeof recordProgress>[0];
+}) {
+  const progress = recordProgress(completedSections);
+  const progressPercent = Math.round((progress.completedCount / progress.total) * 100);
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,7 +52,7 @@ function IncompleteHome({ greeting }: { greeting: string }) {
 
       <div className="flex flex-col gap-2">
         <p className="text-base font-medium">
-          Your record is {completedCount} of {RECORD_SECTIONS.length} done
+          Your record is {progress.completedCount} of {progress.total} done
         </p>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="presentation">
           <div className="h-full rounded-full bg-amber-800" style={{ width: `${progressPercent}%` }} />
@@ -74,7 +60,9 @@ function IncompleteHome({ greeting }: { greeting: string }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <p className="text-base text-muted-foreground">Next: {nextSection.toLowerCase()}</p>
+        {progress.nextSection ? (
+          <p className="text-base text-muted-foreground">Next: {progress.nextSection.label.toLowerCase()}</p>
+        ) : null}
         <Button
           render={<Link href="/account/record">Continue</Link>}
           className="h-11 self-start rounded-[4px] px-6 text-base"
@@ -145,7 +133,7 @@ async function CompleteHome({
       <div className="relative overflow-hidden rounded-[4px] bg-navy-900 p-5 text-white">
         <p className="text-sm uppercase tracking-wide text-white/60">Outstanding</p>
         <p className={`mt-1 font-mono text-3xl font-semibold ${outstandingKobo > 0 ? "text-amber-500" : "text-white"}`}>
-          {formatNaira(outstandingKobo, { symbol: "unicode" })}
+          {formatNaira(outstandingKobo)}
         </p>
         <p className="mt-1 text-base text-white/70">
           {outstandingRecord

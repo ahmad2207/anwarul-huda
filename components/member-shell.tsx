@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Settings } from "lucide-react";
-import { SignOutButton } from "@/components/sign-out-button";
 import { MemberBottomNav } from "@/components/member-bottom-nav";
 import { AuthenticationError, getCurrentUser } from "@/lib/auth";
 
@@ -38,23 +37,17 @@ export async function MemberShell({ children }: { children: React.ReactNode }) {
         <Link href="/account" className="min-w-0 truncate text-base font-semibold">
           Anwaru-l-Huda League
         </Link>
-        <div className="flex shrink-0 items-center gap-1">
-          {/* /account/settings is not built yet (it is not part of this
-              build); the link is wired to where it belongs regardless,
-              rather than leaving the gear with nowhere to go. Sign out
-              sits here too, only until settings exists to hold it: the
-              routing table names settings for "password, phone,
-              notification preferences", not for signing out, but a
-              member needs a way to leave the account today. */}
-          <Link
-            href="/account/settings"
-            aria-label="Settings"
-            className="flex size-11 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white"
-          >
-            <Settings className="size-5" aria-hidden="true" />
-          </Link>
-          <SignOutButton className="h-11 w-auto border-white/25 bg-transparent px-3 text-sm text-white hover:bg-white/10 hover:text-white" />
-        </div>
+        {/* MEMBER-INTERFACE.md 3.1: settings sits in the header, not the
+            bar, and is the only control here. /account/settings now
+            holds sign out, since a member leaves the account from
+            settings, not from a second button living beside the gear. */}
+        <Link
+          href="/account/settings"
+          aria-label="Settings"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white"
+        >
+          <Settings className="size-5" aria-hidden="true" />
+        </Link>
       </header>
 
       {/* pb-28: clears the fixed bottom nav's own height (min-h-14, plus

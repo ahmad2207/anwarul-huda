@@ -9,9 +9,19 @@ import "./globals.css";
 // receipt numbers), IBM Plex Sans Arabic is for the four places Arabic
 // appears (the login lockup and three printed artefacts). All four self
 // hosted via next/font.
+//
+// Plus Jakarta Sans and IBM Plex Mono both carry formatNaira's output
+// (the mono face for every <Money> figure, the sans face for the plain
+// text totals that appear outside a table cell), and both need
+// latin-ext as well as latin: the Naira sign, U+20A6, sits in Google's
+// latin-ext glyph range for these two families, not latin, confirmed
+// against the subsetted @font-face rules Google Fonts itself serves.
+// Requesting latin alone would leave every ₦ in the interface, and on
+// paper the office hands to a member, falling back to whatever font the
+// browser substitutes for the one missing glyph.
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700", "800"],
 });
 
@@ -29,7 +39,7 @@ const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
 
 const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-mono",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600"],
 });
 

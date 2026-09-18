@@ -1,5 +1,6 @@
 import type { Member, MemberStatus, Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
+import { deleteFaceEnrolmentsOnDeactivation } from "@/lib/face/delete-enrolments-on-deactivation";
 
 export interface ApplyMemberStatusChangeInput {
   newStatus: MemberStatus;
@@ -47,6 +48,11 @@ export async function applyMemberStatusChange(
     },
     tx,
   );
+
+  // SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 4.5: retention written into the
+  // code, alongside the same two statuses that already deactivate a
+  // linked login just below.
+  await deleteFaceEnrolmentsOnDeactivation(tx, before.id, input.newStatus, input.actorId);
 
   const linkedUser = await tx.user.findUnique({ where: { memberId: before.id } });
   if (linkedUser) {

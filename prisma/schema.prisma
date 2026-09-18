@@ -2,13 +2,15 @@
 // All money fields are integer kobo. All timestamps are UTC.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 // ---------------------------------------------------------------
@@ -184,6 +186,22 @@ enum MemberSource {
   CSV_IMPORT
 }
 
+// MEMBER-INTERFACE.md 3.4: the nine sections of the Member Information
+// Form, owned by the member and completed one screen at a time. A
+// member's own progress is which of these appear in Member.completedSections,
+// not a separately computed guess.
+enum RecordSection {
+  NAME
+  ABOUT
+  CONTACT
+  HOUSEHOLD
+  MEMBERSHIP
+  SERVICE
+  NEXT_OF_KIN
+  CONSENT
+  FACE
+}
+
 model Member {
   id           String  @id @default(cuid())
   memberNumber String? @unique @map("member_number") // AHL/M/2026/0001, issued on approval
@@ -261,8 +279,27 @@ model Member {
    * True when surname, firstName or phone is missing, so the record needs a human to complete it. Set on nominal roll import, cleared once the incomplete-records worklist fills the gaps (or, for phone, confirms there genuinely is none).
    */
   isRecordIncomplete Boolean      @default(false) @map("is_record_incomplete")
-  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // The member's own record, section by section (MEMBER-INTERFACE.md 3.4).
+  /**
+   * Which of the nine record sections the member has saved. isRecordIncomplete clears once every RecordSection value is present here.
+   */
+  completedSections RecordSection[] @default([]) @map("completed_sections")
+  /**
+   * Section 9 without a completed enrolment: the member chose "I cannot do this now" rather than set up face check-in. Deferring still completes the section (MEMBER-INTERFACE.md 3.4), and puts the member on the office's enrolment worklist.
+   */
+  faceEnrolmentDeferred   Boolean   @default(false) @map("face_enrolment_deferred")
+  faceEnrolmentDeferredAt DateTime? @map("face_enrolment_deferred_at") @db.Timestamptz(3)
+
+  /**
+   * A light review, not an approval: the wing administrator's worklist for a record that just finished all nine sections, or that changed its name, phone or address afterwards. Set alongside, never instead of, the member's own save; nothing about the member's status or account is gated on it. Same boolean-plus-worklist shape as isRecordIncomplete.
+   */
+  needsWingReview       Boolean   @default(false) @map("needs_wing_review")
+  wingReviewReason      String?   @map("wing_review_reason")
+  wingReviewRequestedAt DateTime? @map("wing_review_requested_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   wing        Wing         @relation(fields: [wingId], references: [id])
   branch      Branch?      @relation(fields: [branchId], references: [id])
@@ -277,6 +314,7 @@ model Member {
   contributions     ContributionRecord[]
   attendance        AttendanceRecord[]
   biometricLinks    BiometricEnrolment[]
+  faceEnrolments    FaceEnrolment[]
   duplicateFlagsAsA MemberDuplicateFlag[] @relation("DuplicateFlagMemberA")
   duplicateFlagsAsB MemberDuplicateFlag[] @relation("DuplicateFlagMemberB")
 
@@ -284,6 +322,7 @@ model Member {
   @@index([surname, firstName])
   @@index([phone])
   @@index([isRecordIncomplete])
+  @@index([needsWingReview])
   @@map("members")
 }
 
@@ -647,6 +686,38 @@ model BiometricEnrolment {
 
   @@unique([deviceId, deviceUserId])
   @@map("biometric_enrolments")
+}
+
+// Module B (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md section 3): in-browser
+// face recognition, unrelated to BiometricEnrolment above, which maps a
+// member to a device user ID on the hardware terminal SPEC.md section 5
+// describes. This model holds the embedding itself, computed on the
+// member's own phone and never accompanied by an image.
+//
+// embedding is Unsupported: pgvector's vector type has no equivalent in
+// Prisma's schema language, so this column, and the index on it, are
+// declared here only to keep Prisma aware the column exists (it never
+// reads or writes the column itself, every query against it is raw
+// SQL); the migration that creates them is written by hand for the same
+// reason CLAUDE.md's "do not generate migration files by hand" already
+// has one standing exception in this codebase (the timestamptz cast
+// migration): this is a case prisma migrate dev cannot express.
+model FaceEnrolment {
+  id            String                 @id @default(cuid())
+  memberId      String                 @map("member_id")
+  embedding     Unsupported("vector(1024)")
+  livenessScore Float                  @map("liveness_score")
+  enrolledAt    DateTime               @map("enrolled_at") @db.Timestamptz(3)
+  deviceLabel   String?                @map("device_label")
+  /**
+   * Always true today: re-enrolling replaces a member's row rather than accumulating a history (app/account/face/actions.ts deletes the old one and inserts the new one in the same transaction), so there is never an inactive row sitting alongside an active one. Kept as a column, not removed, since B2's matching query should still filter on it explicitly rather than assume every row present is usable.
+   */
+  isActive      Boolean                @default(true) @map("is_active")
+
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@index([memberId])
+  @@map("face_enrolments")
 }
 
 // ---------------------------------------------------------------

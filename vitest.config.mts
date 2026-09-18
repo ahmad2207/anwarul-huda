@@ -50,6 +50,13 @@ export default defineConfig({
     // that cross-process race, which is a test methodology artifact, not
     // a bug in the app.
     fileParallelism: false,
+    // The database these integration tests hit is a remote Supabase
+    // project, not a local one, so each of the several sequential
+    // queries a test makes pays real network round-trip time instead of
+    // localhost's near-zero latency. The 5s default was tuned for the
+    // latter and was failing tests that were behaving correctly, just
+    // slowly.
+    testTimeout: 30000,
     // e2e/*.spec.ts also matches vitest's own default *.spec.ts pattern,
     // but those files use Playwright's test runner, not vitest's, and
     // are run separately with `pnpm test:e2e`.

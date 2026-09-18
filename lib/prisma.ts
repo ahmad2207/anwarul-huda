@@ -14,9 +14,20 @@ const globalForPrisma = globalThis as unknown as {
 // failure to the first query a request actually makes.
 let client: PrismaClient | undefined;
 
+function createClient(): PrismaClient {
+  return new PrismaClient({
+    // Both connect over the network to Supabase, not a local database, so
+    // Prisma's defaults (2s to acquire a transaction slot, 5s for the
+    // transaction body) are tuned for latency this app no longer has.
+    // Raised, not removed: a transaction that is still this slow is worth
+    // failing loudly over, just not at a threshold latency alone can miss.
+    transactionOptions: { maxWait: 10000, timeout: 15000 },
+  });
+}
+
 function getClient(): PrismaClient {
   if (!client) {
-    client = globalForPrisma.prisma ?? new PrismaClient();
+    client = globalForPrisma.prisma ?? createClient();
     if (process.env.NODE_ENV !== "production") {
       globalForPrisma.prisma = client;
     }

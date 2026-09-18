@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireWingAccess } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
+import { markSectionComplete } from "@/app/account/record/[section]/actions";
 import { completeIncompleteMemberSchema } from "./schema";
 
 export async function completeIncompleteMember(
@@ -40,15 +41,13 @@ export async function completeIncompleteMember(
 
   // Never inventing a phone number here: either a real one was given, or
   // noPhoneOnFile is set and the field stays null, both enforced already
-  // by the schema's refinements. Either way surname and firstName are now
-  // present, so the record is complete and the flag clears.
+  // by the schema's refinements.
   const updated = await prisma.member.update({
     where: { id: member.id },
     data: {
       surname: parsed.data.surname,
       firstName: parsed.data.firstName,
       phone: parsed.data.noPhoneOnFile ? null : parsed.data.phone,
-      isRecordIncomplete: false,
     },
   });
 
@@ -60,6 +59,15 @@ export async function completeIncompleteMember(
     before: { surname: member.surname, firstName: member.firstName, phone: member.phone },
     after: { surname: updated.surname, firstName: updated.firstName, phone: updated.phone },
   });
+
+  // These fields satisfy the NAME section's only required fields (surname,
+  // firstName) and the entirely-optional CONTACT section, the same bar the
+  // member's own record flow uses (app/account/record/[section]/actions.ts)
+  // to mark those two sections complete. isRecordIncomplete only clears
+  // once every one of the 9 sections is present this way, never as a
+  // side effect of this narrower, admin-on-behalf-of fix.
+  await markSectionComplete(member.id, actor.id, "NAME");
+  await markSectionComplete(member.id, actor.id, "CONTACT");
 
   revalidatePath("/admin/members/incomplete");
   revalidatePath(`/admin/members/${member.id}`);

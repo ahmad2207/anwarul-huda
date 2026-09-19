@@ -14,7 +14,12 @@ import { computeNominalRollPreview } from "@/lib/import/compute-nominal-roll-pre
 import type { NominalRollPreviewGroups } from "@/lib/import/compute-nominal-roll-preview";
 import { commitImportRows } from "@/lib/import/commit-import";
 import type { CommitOutcome, DuplicateAction } from "@/lib/import/commit-import";
-import { commitNominalRollRows } from "@/lib/import/commit-nominal-roll-import";
+import {
+  chunkCleanRows,
+  commitNominalRollRowsChunk,
+  createNominalRollCommitState,
+  finalizeNominalRollImport,
+} from "@/lib/import/commit-nominal-roll-import";
 import type { NominalRollCommitOutcome } from "@/lib/import/commit-nominal-roll-import";
 import { rollbackImportBatch } from "@/lib/import/rollback-import";
 import type { RollbackBlocker } from "@/lib/import/rollback-import";
@@ -181,8 +186,22 @@ export async function commitImport(
   if (batch.mode === "NOMINAL_ROLL") {
     const nominalRollGroups = await computeNominalRollPreview(staging, staging.mapping, actor);
 
+    // Committed in chunks, each its own transaction, rather than the
+    // whole file in one, as a safety margin for a very large file:
+    // commitNominalRollRowsChunk reserves member numbers and inserts a
+    // whole wing group at once now, so a chunk this size costs a small,
+    // roughly constant number of round trips rather than one per row.
+    // State that spans chunks (which member ended up as which source
+    // S/N, for resolving duplicate notes once every chunk is in) is
+    // threaded through explicitly; see commit-nominal-roll-import.ts.
+    const NOMINAL_ROLL_CHUNK_SIZE = 200;
+    const state = createNominalRollCommitState();
+    for (const chunk of chunkCleanRows(nominalRollGroups, NOMINAL_ROLL_CHUNK_SIZE)) {
+      await prisma.$transaction((tx) => commitNominalRollRowsChunk(tx, batch.id, chunk, actor.id, wings, state));
+    }
+
     const nominalRollOutcome = await prisma.$transaction(async (tx) => {
-      const result = await commitNominalRollRows(tx, batch.id, nominalRollGroups, actor.id, wings);
+      const result = await finalizeNominalRollImport(tx, state, nominalRollGroups.fail.length);
       await tx.importBatch.update({
         where: { id: batch.id },
         data: {

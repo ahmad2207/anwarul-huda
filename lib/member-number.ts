@@ -34,6 +34,38 @@ export async function generateMemberNumber(
     throw new MemberNumberError(`"${wingNumberLetter}" is not a valid wing number letter`);
   }
 
+  const [number] = await reserveMemberNumberBlock(tx, { wingId, wingNumberLetter, year, count: 1 });
+  return number;
+}
+
+/**
+ * Reserves `count` consecutive member numbers for a wing and year in one
+ * lock, one count and no per-number query, for a caller creating many
+ * members in bulk (a nominal roll import). generateMemberNumber above is
+ * this with count fixed to 1: calling it in a loop for N rows costs a
+ * lock acquire, a count and a create per row, three real network round
+ * trips each, fully serialised by the lock's own correctness guarantee.
+ * That is fine for one member at a time, but for N it is 3N sequential
+ * round trips against a networked database, which is what pushed a
+ * whole nominal roll file past any reasonable transaction timeout
+ * regardless of how small the commit was chunked. Assigning the whole
+ * block up front and letting the caller bulk-insert removes the N
+ * multiplier from everything except the insert itself.
+ */
+export async function reserveMemberNumberBlock(
+  tx: Prisma.TransactionClient,
+  input: GenerateMemberNumberInput & { count: number },
+): Promise<string[]> {
+  const { wingId, wingNumberLetter, count } = input;
+  const year = input.year ?? getLagosYear();
+
+  if (!/^[A-Z]$/.test(wingNumberLetter)) {
+    throw new MemberNumberError(`"${wingNumberLetter}" is not a valid wing number letter`);
+  }
+  if (count < 1) {
+    throw new MemberNumberError("count must be at least 1");
+  }
+
   await withNamedLock(tx, `member-number:${wingId}:${year}`);
 
   const prefix = `AHL/${wingNumberLetter}/${year}/`;
@@ -44,8 +76,7 @@ export async function generateMemberNumber(
     },
   });
 
-  const sequence = issuedCount + 1;
-  return `${prefix}${String(sequence).padStart(4, "0")}`;
+  return Array.from({ length: count }, (_, index) => `${prefix}${String(issuedCount + index + 1).padStart(4, "0")}`);
 }
 
 // AHL / <wing letter> / <4 digit year> / <4 digit sequence>, with no

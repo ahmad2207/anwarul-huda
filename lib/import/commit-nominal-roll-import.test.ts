@@ -3,7 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { parseCsvFile } from "./parse-csv";
 import { guessNominalRollColumnMapping } from "./system-fields";
 import { computeNominalRollPreview } from "./compute-nominal-roll-preview";
-import { commitNominalRollRows } from "./commit-nominal-roll-import";
+import type { NominalRollPreviewGroups } from "./compute-nominal-roll-preview";
+import {
+  chunkCleanRows,
+  commitNominalRollRowsChunk,
+  createNominalRollCommitState,
+  finalizeNominalRollImport,
+} from "./commit-nominal-roll-import";
+import type { NominalRollCommitOutcome } from "./commit-nominal-roll-import";
 
 // Integration tests against the real local Postgres database, the same
 // way commit-import.test.ts exercises the full import's commit inside a
@@ -21,7 +28,27 @@ async function makeBatch(actorId: string) {
   });
 }
 
-describe("commitNominalRollRows", () => {
+/**
+ * Mirrors exactly what app/admin/members/import/actions.ts does: commit
+ * clean rows chunk by chunk, each its own transaction, then resolve
+ * duplicate references and write the audit trail in one final
+ * transaction. Chunk size is small here on purpose, to exercise more
+ * than one chunk even with a handful of fixture rows.
+ */
+async function commitAll(
+  batchId: string,
+  groups: NominalRollPreviewGroups,
+  actorId: string,
+  wings: Array<{ id: string; numberLetter: string }>,
+): Promise<NominalRollCommitOutcome> {
+  const state = createNominalRollCommitState();
+  for (const chunk of chunkCleanRows(groups, 1)) {
+    await prisma.$transaction((tx) => commitNominalRollRowsChunk(tx, batchId, chunk, actorId, wings, state));
+  }
+  return prisma.$transaction((tx) => finalizeNominalRollImport(tx, state, groups.fail.length));
+}
+
+describe("commitNominalRollRowsChunk and finalizeNominalRollImport", () => {
   let actorId: string;
   let wings: Array<{ id: string; numberLetter: string }>;
 
@@ -50,7 +77,7 @@ describe("commitNominalRollRows", () => {
     expect(groups.clean).toHaveLength(1);
 
     const batch = await makeBatch(actorId);
-    const outcome = await prisma.$transaction((tx) => commitNominalRollRows(tx, batch.id, groups, actorId, wings));
+    const outcome = await commitAll(batch.id, groups, actorId, wings);
 
     expect(outcome).toEqual({ created: 1, failed: 0, duplicateFlagsRaised: 0 });
 
@@ -76,14 +103,14 @@ describe("commitNominalRollRows", () => {
     const groups = await computeNominalRollPreview(parsed, mapping, { roles: ["SUPER_ADMIN"], wingIds: [] });
 
     const batch = await makeBatch(actorId);
-    await prisma.$transaction((tx) => commitNominalRollRows(tx, batch.id, groups, actorId, wings));
+    await commitAll(batch.id, groups, actorId, wings);
 
     const member = await prisma.member.findFirstOrThrow({ where: { fullNameAsWritten: FIXTURE_NAME } });
     expect(member.officeHeld).toBe("Tailor");
     expect(member.notes).toContain("committee decision");
   });
 
-  it("resolves possible-duplicate S/N cross-references into a single MemberDuplicateFlag pair", async () => {
+  it("resolves possible-duplicate S/N cross-references into a single MemberDuplicateFlag pair, even across chunks", async () => {
     const csv = [
       "full_name,wing,gender,source_sn,source_page,needs_review",
       `${FIXTURE_NAME} DupA,Men's wing,Male,601,2,possible duplicate of S/N 602`,
@@ -95,7 +122,10 @@ describe("commitNominalRollRows", () => {
     expect(groups.clean).toHaveLength(2);
 
     const batch = await makeBatch(actorId);
-    const outcome = await prisma.$transaction((tx) => commitNominalRollRows(tx, batch.id, groups, actorId, wings));
+    // Chunk size 1: DupA and DupB land in separate transactions, so this
+    // also checks that the cross-reference still resolves once both
+    // chunks have committed, not just within a single one.
+    const outcome = await commitAll(batch.id, groups, actorId, wings);
 
     // One flag for the pair, not two, even though both rows note the
     // cross-reference.
@@ -126,7 +156,7 @@ describe("commitNominalRollRows", () => {
     expect(groups.fail).toHaveLength(1);
 
     const batch = await makeBatch(actorId);
-    const outcome = await prisma.$transaction((tx) => commitNominalRollRows(tx, batch.id, groups, actorId, wings));
+    const outcome = await commitAll(batch.id, groups, actorId, wings);
     expect(outcome).toEqual({ created: 0, failed: 1, duplicateFlagsRaised: 0 });
   });
 });

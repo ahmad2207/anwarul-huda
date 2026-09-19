@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
+import { BackLink } from "@/components/back-link";
 import { EditMemberForm } from "./edit-member-form";
 import { StatusChangeForm } from "./status-form";
 import { HouseholdSection } from "./household-section";
@@ -63,6 +64,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="flex flex-col gap-4">
+      <BackLink href="/admin/members" label="Back to members" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-semibold">

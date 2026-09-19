@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import { BackLink } from "@/components/back-link";
 import { CheckInClient } from "./check-in-client";
 
 export default async function GatheringCheckInPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,12 +24,15 @@ export default async function GatheringCheckInPage({ params }: { params: Promise
   }
 
   return (
-    <CheckInClient
-      gatheringId={gathering.id}
-      gatheringTitle={gathering.title}
-      wingName={gathering.wing?.name ?? "All wings"}
-      initialCount={gathering._count.records}
-      isClosed={gathering.isClosed}
-    />
+    <div className="flex flex-col gap-2">
+      <BackLink href="/admin/attendance" label="Back to gatherings" />
+      <CheckInClient
+        gatheringId={gathering.id}
+        gatheringTitle={gathering.title}
+        wingName={gathering.wing?.name ?? "All wings"}
+        initialCount={gathering._count.records}
+        isClosed={gathering.isClosed}
+      />
+    </div>
   );
 }

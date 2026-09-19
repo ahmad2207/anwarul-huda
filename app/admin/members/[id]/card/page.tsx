@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { generateMemberQrDataUrl } from "@/lib/qr/member-qr";
 import { MemberCard } from "../../member-card";
 import { PrintButton } from "@/app/admin/charity/print/print-button";
+import { BackLink } from "@/components/back-link";
 
 export default async function MemberCardPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireRole(["WING_ADMIN", "FINANCE_OFFICER", "ATTENDANCE_OFFICER"]);
@@ -22,6 +23,7 @@ export default async function MemberCardPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col items-center gap-4">
+      <BackLink href={`/admin/members/${id}`} label="Back to member" className="print:hidden self-start" />
       <div className="print:hidden">
         <PrintButton />
       </div>

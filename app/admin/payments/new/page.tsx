@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { BackLink } from "@/components/back-link";
 import { PaymentForm } from "./payment-form";
 
 export default async function NewPaymentPage() {
@@ -12,6 +13,7 @@ export default async function NewPaymentPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <BackLink href="/admin/payments" label="Back to payments" />
       <div>
         <h1 className="text-lg font-semibold">New payment</h1>
         <p className="text-sm text-muted-foreground">

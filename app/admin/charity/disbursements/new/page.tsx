@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackLink } from "@/components/back-link";
 import { DisbursementForm } from "./disbursement-form";
 
 export default async function NewDisbursementPage({
@@ -22,6 +23,10 @@ export default async function NewDisbursementPage({
 
   return (
     <div className="flex flex-col gap-4">
+      <BackLink
+        href={preselectedCaseId ? `/admin/charity/cases/${preselectedCaseId}` : "/admin/charity"}
+        label={preselectedCaseId ? "Back to case" : "Back to charity dashboard"}
+      />
       <div>
         <h1 className="text-lg font-semibold">Record a disbursement</h1>
         <p className="text-sm text-muted-foreground">

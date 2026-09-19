@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusTag } from "@/components/status-tag";
 import type { StatusTone } from "@/components/status-tag";
+import { BackLink } from "@/components/back-link";
 import {
   ApproveForm,
   CloseButton,
@@ -67,6 +68,7 @@ export default async function CharityCaseDetailPage({
 
   return (
     <div className="flex flex-col gap-4">
+      <BackLink href="/admin/charity/cases" label="Back to beneficiary cases" />
       <div>
         <h1 className="text-lg font-semibold">{charityCase.reference}</h1>
         <p className="text-sm text-muted-foreground">

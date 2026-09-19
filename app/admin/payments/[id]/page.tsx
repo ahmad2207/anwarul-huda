@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { formatReceiptText } from "@/lib/receipt-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackLink } from "@/components/back-link";
 import { ReceiptActions } from "./receipt-actions";
 import { VoidForm } from "./void-form";
 
@@ -54,6 +55,7 @@ export default async function PaymentReceiptPage({ params }: { params: Promise<{
 
   return (
     <div className="flex flex-col gap-4">
+      <BackLink href="/admin/payments" label="Back to payments" className="print:hidden" />
       <div className="flex items-center justify-between print:hidden">
         <h1 className="text-lg font-semibold">Receipt {payment.receiptNumber}</h1>
         <ReceiptActions text={receiptText} />

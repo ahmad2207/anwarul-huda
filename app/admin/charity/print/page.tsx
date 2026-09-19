@@ -3,6 +3,7 @@ import { formatNaira } from "@/lib/money";
 import { getCharityDashboardData, resolveDashboardPeriod } from "@/lib/charity/dashboard-data";
 import { getPreviousPeriod } from "@/lib/charity/period-comparison";
 import { ZAKAT_CATEGORY_LABELS } from "@/lib/charity/zakat-breakdown";
+import { BackLink } from "@/components/back-link";
 import { PrintButton } from "./print-button";
 
 function formatDate(date: Date): string {
@@ -23,6 +24,7 @@ export default async function CharityPrintReportPage({
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <BackLink href="/admin/charity" label="Back to charity dashboard" className="print:hidden" />
       <div className="flex items-center justify-between print:hidden">
         <p className="text-sm text-muted-foreground">Suitable for presenting at a general meeting.</p>
         <PrintButton />

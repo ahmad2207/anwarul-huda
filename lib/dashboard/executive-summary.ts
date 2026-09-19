@@ -87,16 +87,24 @@ export interface AttendanceTrendWeek {
 /** Total check-ins per week, oldest to newest, for the given number of trailing weeks (including the current, partial one). */
 export async function getAttendanceTrend(weeksBack = 8): Promise<AttendanceTrendWeek[]> {
   const now = new Date();
-  const weeks: AttendanceTrendWeek[] = [];
+  const periods = Array.from({ length: weeksBack }, (_, index) => {
+    const weeksAgo = weeksBack - 1 - index;
+    return computePeriod("WEEKLY", new Date(now.getTime() - weeksAgo * 7 * 24 * 60 * 60 * 1000));
+  });
 
-  for (let i = weeksBack - 1; i >= 0; i--) {
-    const reference = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-    const period = computePeriod("WEEKLY", reference);
-    const checkIns = await prisma.attendanceRecord.count({
-      where: { checkedInAt: { gte: period.periodStart, lt: period.periodEnd } },
-    });
-    weeks.push({ weekLabel: period.periodLabel, checkIns });
-  }
+  // One query for the whole window, bucketed in memory, rather than one
+  // round trip per week: each week's boundaries are already known from
+  // computePeriod without touching the database, so there is nothing a
+  // per-week query learns that this single one does not.
+  const records = await prisma.attendanceRecord.findMany({
+    where: { checkedInAt: { gte: periods[0].periodStart, lt: periods[periods.length - 1].periodEnd } },
+    select: { checkedInAt: true },
+  });
 
-  return weeks;
+  return periods.map((period) => ({
+    weekLabel: period.periodLabel,
+    checkIns: records.filter(
+      (record) => record.checkedInAt >= period.periodStart && record.checkedInAt < period.periodEnd,
+    ).length,
+  }));
 }

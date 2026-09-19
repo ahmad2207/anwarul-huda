@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { writeAuditMany } from "@/lib/audit";
+import { deleteFaceEnrolmentsOnDeactivation } from "@/lib/face/delete-enrolments-on-deactivation";
 
 export interface RollbackBlocker {
   memberId: string;
@@ -86,6 +87,11 @@ export async function rollbackImportBatch(
       before: { status: member.status },
       after: { status: updated.status, statusReason: updated.statusReason, statusAt: updated.statusAt },
     });
+    // SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 4.5: this sets INACTIVE outside
+    // lib/members/status-change.ts, the only other place that does, so
+    // it needs its own call rather than inheriting the hook that lives
+    // there.
+    await deleteFaceEnrolmentsOnDeactivation(tx, member.id, "INACTIVE", actorId);
   }
 
   await writeAuditMany(auditEntries, tx);

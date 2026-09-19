@@ -62,7 +62,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "System",
-    items: [{ label: "Users" }, { label: "Audit log", href: "/admin/audit" }],
+    items: [{ label: "Users", href: "/admin/users" }, { label: "Audit log", href: "/admin/audit" }],
   },
 ];
 

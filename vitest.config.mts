@@ -55,8 +55,10 @@ export default defineConfig({
     // queries a test makes pays real network round-trip time instead of
     // localhost's near-zero latency. The 5s default was tuned for the
     // latter and was failing tests that were behaving correctly, just
-    // slowly.
+    // slowly. hookTimeout covers beforeAll/afterAll the same way: a
+    // fixture's own setup query pays the identical network cost.
     testTimeout: 30000,
+    hookTimeout: 30000,
     // e2e/*.spec.ts also matches vitest's own default *.spec.ts pattern,
     // but those files use Playwright's test runner, not vitest's, and
     // are run separately with `pnpm test:e2e`.

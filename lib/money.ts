@@ -50,18 +50,12 @@ export function koboToNaira(kobo: number): number {
 
 /**
  * Formats a kobo amount as Nigerian Naira for display, for example
- * formatNaira(125000) returns "N1,250.00".
- *
- * Uses the ASCII Naira sign by default so it renders correctly everywhere.
- * Pass { symbol: "unicode" } for the Naira currency symbol where the font
- * and encoding are known to support it.
+ * formatNaira(125000) returns "₦1,250.00", matching CLAUDE.md and
+ * DESIGN.md, which both specify the Naira sign, never the letter N.
  */
-export function formatNaira(
-  kobo: number,
-  options: { symbol?: "ascii" | "unicode" } = {},
-): string {
+export function formatNaira(kobo: number): string {
   assertInteger(kobo, "kobo");
-  const symbol = options.symbol === "unicode" ? "₦" : "N";
+  const symbol = "₦";
   const negative = kobo < 0;
   const absoluteNaira = koboToNaira(Math.abs(kobo));
   const formatted = absoluteNaira.toLocaleString("en-NG", {

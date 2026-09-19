@@ -25,8 +25,8 @@ describe("money", () => {
   });
 
   it("formats kobo as Naira", () => {
-    expect(formatNaira(125000)).toBe("N1,250.00");
-    expect(formatNaira(50)).toBe("N0.50");
-    expect(formatNaira(-125000)).toBe("-N1,250.00");
+    expect(formatNaira(125000)).toBe("₦1,250.00");
+    expect(formatNaira(50)).toBe("₦0.50");
+    expect(formatNaira(-125000)).toBe("-₦1,250.00");
   });
 });

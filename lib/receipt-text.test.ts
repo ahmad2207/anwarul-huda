@@ -19,7 +19,7 @@ describe("formatReceiptText", () => {
     const text = formatReceiptText(base);
     expect(text).toContain("RCT/2026/000123");
     expect(text).toContain("Bello Amina (AHL/W/2026/0001)");
-    expect(text).toContain("N500.00");
+    expect(text).toContain("₦500.00");
     expect(text).toContain("Monthly dues (2026-09)");
     expect(text).toContain("Thank you.");
   });

@@ -112,7 +112,7 @@ export default async function StyleguidePage() {
           ))}
           <p className="font-mono text-base">
             <span className="mr-3 font-mono text-xs text-muted-foreground">font-mono</span>
-            AHL/M/2026/0113 &middot; N1,250.00
+            AHL/M/2026/0113 &middot; ₦1,250.00
           </p>
         </div>
       </section>

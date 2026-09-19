@@ -7,8 +7,8 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { buildLoginSlipsHtml } from "@/lib/print/login-slip";
 import { openPrintWindow } from "@/lib/print/open-print-window";
-import { bulkIssueLogin } from "./actions";
-import type { BulkIssueRowError, BulkIssueRowResult } from "./actions";
+import { bulkIssueLogin, bulkReissueAllLogins } from "./actions";
+import type { BulkIssueRowError, BulkIssueRowResult, BulkReissueState } from "./actions";
 
 export interface EligibleMemberRow {
   id: string;
@@ -20,9 +20,11 @@ export interface EligibleMemberRow {
 export function BulkIssueLoginForm({
   eligibleMembers,
   notYetApprovedNames,
+  alreadyIssuedCount,
 }: {
   eligibleMembers: EligibleMemberRow[];
   notYetApprovedNames: string[];
+  alreadyIssuedCount: number;
 }) {
   const [state, formAction, isPending] = useActionState(bulkIssueLogin, {});
   const [checked, setChecked] = useState<Record<string, boolean>>(() =>
@@ -123,11 +125,73 @@ export function BulkIssueLoginForm({
           </CardContent>
         </Card>
       ) : null}
+
+      <ReissueAllSection alreadyIssuedCount={alreadyIssuedCount} />
     </div>
   );
 }
 
-function BulkIssueResults({ issued, failed }: { issued: BulkIssueRowResult[]; failed: BulkIssueRowError[] }) {
+// No selection, no exceptions: reissuing invalidates the current
+// password for every member who has a login, in the actor's own wing
+// scope, the moment this commits. Kept out of the main form and behind
+// its own reveal-then-confirm step (the same pattern void-form.tsx
+// uses for voiding a payment) precisely because there is no undo and
+// no way to narrow it to fewer members after the fact.
+function ReissueAllSection({ alreadyIssuedCount }: { alreadyIssuedCount: number }) {
+  const [confirming, setConfirming] = useState(false);
+  const [state, formAction, isPending] = useActionState<BulkReissueState, FormData>(bulkReissueAllLogins, {});
+
+  if (alreadyIssuedCount === 0) {
+    return null;
+  }
+
+  if (state.issued && state.issued.length + (state.failed?.length ?? 0) > 0) {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Logins reissued for everyone</p>
+        <BulkIssueResults issued={state.issued} failed={state.failed ?? []} />
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-medium">Reissue every login</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          Generates a brand new temporary password for all {alreadyIssuedCount} member
+          {alreadyIssuedCount === 1 ? "" : "s"} who already have a login. No selection: this is everyone, and
+          each current password stops working the moment this commits.
+        </p>
+        {!confirming ? (
+          <Button type="button" variant="destructive" className="self-start" onClick={() => setConfirming(true)}>
+            Reissue every login
+          </Button>
+        ) : (
+          <form action={formAction} className="flex flex-col gap-2 rounded-md border bg-paper-dim p-3">
+            <p className="text-sm font-medium text-destructive">
+              This cannot be undone. Every one of the {alreadyIssuedCount} current passwords stops working
+              immediately, whether or not it was ever used.
+            </p>
+            <div className="flex gap-2">
+              <Button type="submit" variant="destructive" size="sm" disabled={isPending}>
+                {isPending ? "Reissuing..." : `Yes, reissue all ${alreadyIssuedCount}`}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+        {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function BulkIssueResults({ issued, failed }: { issued: BulkIssueRowResult[]; failed: BulkIssueRowError[] }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [popupBlocked, setPopupBlocked] = useState(false);
 

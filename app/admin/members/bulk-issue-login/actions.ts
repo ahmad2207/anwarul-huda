@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { canEditMemberRecords } from "@/lib/authorization";
+import { canEditMemberRecords, canViewAllWings } from "@/lib/authorization";
 import { formatMemberName } from "@/lib/members/display-name";
 import { IssueLoginError, issueLoginForMember } from "@/lib/members/issue-login";
 
@@ -83,6 +83,54 @@ export async function bulkIssueLogin(
 
   revalidatePath("/admin/members/bulk-issue-login");
   revalidatePath("/admin/members/incomplete");
+
+  return { issued, failed };
+}
+
+export type BulkReissueState = BulkIssueLoginState;
+
+/**
+ * Reissues a fresh temporary password for every member in the actor's
+ * wing scope who already has a login, no selection: the "everyone, no
+ * exceptions" action for when an earlier batch's passwords were never
+ * printed or written down and are gone for good, by design, the moment
+ * that page was left. issueLoginForMember already overwrites
+ * passwordHash outright on a reissue, so the old password stops working
+ * the instant this commits, for every member it touches.
+ */
+export async function bulkReissueAllLogins(): Promise<BulkReissueState> {
+  const actor = await requireRole(["WING_ADMIN"]);
+  const wingScope = canViewAllWings(actor) ? {} : { wingId: { in: actor.wingIds } };
+
+  const members = await prisma.member.findMany({
+    where: { ...wingScope, user: { isNot: null } },
+    include: { user: true },
+  });
+
+  const issued: BulkIssueRowResult[] = [];
+  const failed: BulkIssueRowError[] = [];
+
+  for (const member of members) {
+    const memberName = formatMemberName(member);
+
+    try {
+      const result = await prisma.$transaction((tx) => issueLoginForMember(tx, member, actor.id));
+      issued.push({
+        memberId: member.id,
+        memberName,
+        memberNumber: member.memberNumber,
+        temporaryPassword: result.temporaryPassword,
+      });
+    } catch (error) {
+      failed.push({
+        memberId: member.id,
+        memberName,
+        error: error instanceof IssueLoginError ? error.message : "Could not reissue a login for this member.",
+      });
+    }
+  }
+
+  revalidatePath("/admin/members/bulk-issue-login");
 
   return { issued, failed };
 }

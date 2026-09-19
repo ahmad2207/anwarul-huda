@@ -20,7 +20,7 @@ export default async function BulkIssueLoginPage() {
   const canSeeAllWings = canViewAllWings(user);
   const wingScope = canSeeAllWings ? {} : { wingId: { in: user.wingIds } };
 
-  const [eligible, notYetApproved] = await Promise.all([
+  const [eligible, notYetApproved, alreadyIssuedCount] = await Promise.all([
     prisma.member.findMany({
       where: { ...wingScope, memberNumber: { not: null }, user: null },
       include: { wing: true },
@@ -32,6 +32,7 @@ export default async function BulkIssueLoginPage() {
       orderBy: [{ surname: "asc" }, { firstName: "asc" }],
       take: 500,
     }),
+    prisma.member.count({ where: { ...wingScope, user: { isNot: null } } }),
   ]);
 
   return (
@@ -50,6 +51,7 @@ export default async function BulkIssueLoginPage() {
           wingName: member.wing.name,
         }))}
         notYetApprovedNames={notYetApproved.map((member) => formatMemberName(member))}
+        alreadyIssuedCount={alreadyIssuedCount}
       />
     </div>
   );

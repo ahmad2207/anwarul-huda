@@ -22,7 +22,8 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
     items: [
       { label: "Members", href: "/admin/members" },
       { label: "Approval queue", href: "/admin/approvals" },
-      { label: "Incomplete records", href: "/admin/members/incomplete" },
+      { label: "Record progress", href: "/admin/members/incomplete" },
+      { label: "Record reviews", href: "/admin/members/review" },
       { label: "Duplicate flags", href: "/admin/members/duplicates" },
       { label: "Bulk issue logins", href: "/admin/members/bulk-issue-login" },
       { label: "Import", href: "/admin/members/import" },

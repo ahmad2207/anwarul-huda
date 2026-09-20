@@ -73,6 +73,9 @@ export function FaceCheckIn({
   // the models failing to load, all previously collapsed into one generic
   // message that gave the officer nothing to act on.
   const [unavailableReason, setUnavailableReason] = useState("");
+  // TEMPORARY: diagnosing why no face check-in has ever matched in
+  // production. Remove once resolved.
+  const [debugInfo, setDebugInfo] = useState("");
   // Environment is only ever a preference (below): a device with no rear
   // camera falls back to a front one, and only that fallback case should
   // be mirrored, the same reason enrolment mirrors its always-front
@@ -238,6 +241,12 @@ export function FaceCheckIn({
       // number embedding and its score: the same discard point
       // face-capture.tsx documents, reused rather than re-proven here.
 
+      setDebugInfo(
+        face
+          ? `score=${face.score.toFixed(2)} live=${(face.live ?? 0).toFixed(2)} real=${(face.real ?? 0).toFixed(2)} hasEmbedding=${!!face.embedding} hasRotation=${!!face.rotation} best=${!!best}`
+          : "no face detected this frame",
+      );
+
       if (face && face.score >= UNCALIBRATED_MIN_FACE_SCORE && face.embedding && face.rotation) {
         readings.push({ yaw: face.rotation.angle.yaw, pitch: face.rotation.angle.pitch });
         if (
@@ -250,7 +259,11 @@ export function FaceCheckIn({
       }
 
       if (performance.now() - attemptStartedAt >= ATTEMPT_WINDOW_MS) {
-        if (best && challengeSatisfied(currentChallenge.id, readings)) {
+        const satisfied = best ? challengeSatisfied(currentChallenge.id, readings) : false;
+        setDebugInfo(
+          `attempt ended: best=${!!best} challenge=${currentChallenge.id} satisfied=${satisfied} readings=${readings.length}`,
+        );
+        if (best && satisfied) {
           const toSubmit = best;
           void submit(toSubmit.embedding, toSubmit.live);
         }
@@ -274,8 +287,10 @@ export function FaceCheckIn({
       setStatus("checking");
       try {
         const result = await checkInByFace(gatheringId, embedding, livenessScore);
+        setDebugInfo(`server result: ${JSON.stringify(result)}`);
         onResult(result);
-      } catch {
+      } catch (error) {
+        setDebugInfo(`server call threw: ${error instanceof Error ? error.message : String(error)}`);
         // No offline path for a face check-in (3.5): a genuine network
         // failure here is silently retried on the next attempt, not
         // queued. Manual search is what still works while this does not.
@@ -305,6 +320,9 @@ export function FaceCheckIn({
 
   return (
     <div className="flex flex-col gap-2">
+      <p className="break-all rounded-md bg-amber-500/20 px-3 py-2 font-mono text-xs text-amber-200">
+        DEBUG {debugInfo}
+      </p>
       <div className="relative mx-auto w-full max-w-xs overflow-hidden rounded-md border border-white/20">
         <video
           ref={videoRef}

@@ -56,6 +56,12 @@ export async function matchFaceForCheckIn(embedding: number[], wingId: string | 
   `);
 
   const best = rows[0];
+  // TEMPORARY: diagnosing why no face check-in has ever matched in
+  // production. Never the embedding, only the score this was already
+  // going to compute anyway. Remove once resolved.
+  console.log(
+    `[face-match-debug] candidates=${rows.length} bestSimilarity=${best?.similarity ?? "none"} threshold=${UNCALIBRATED_MATCH_THRESHOLD} wingId=${wingId ?? "null"}`,
+  );
   if (!best || best.similarity < UNCALIBRATED_MATCH_THRESHOLD) {
     return null;
   }

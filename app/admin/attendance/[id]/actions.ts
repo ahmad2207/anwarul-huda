@@ -7,6 +7,8 @@ import { canViewAllWings } from "@/lib/authorization";
 import { writeAudit } from "@/lib/audit";
 import { checkInMember } from "@/lib/attendance/check-in";
 import { formatMemberName } from "@/lib/members/display-name";
+import { matchFaceForCheckIn } from "@/lib/face/match-face";
+import { UNCALIBRATED_MIN_LIVENESS_SCORE } from "@/lib/face/thresholds";
 
 async function requireGatheringAccess(gatheringId: string) {
   const actor = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -142,6 +144,79 @@ export async function checkInByMemberNumber(
   }
 
   return checkInAction(gatheringId, member.id, "QR_CODE");
+}
+
+/**
+ * SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md B2 #1/#6: matches a live embedding
+ * against enrolled members scoped to this gathering's wing and, if
+ * confident, checks that member in exactly the way a manual or QR
+ * check-in does. No match, a closed gathering the embedding was too
+ * unconvincing to be worth checking, and a match whose member is no
+ * longer active all return the same shape as "nothing happened" rather
+ * than an error: a face check-in that does not resolve is the ordinary
+ * case, not a failure, and the officer's screen falls back to manual
+ * search either way, with no error state to show for it.
+ */
+export async function checkInByFace(
+  gatheringId: string,
+  embedding: number[],
+  livenessScore: number,
+): Promise<CheckInActionResult> {
+  const { actor, gathering } = await requireGatheringAccess(gatheringId);
+
+  if (gathering.isClosed) {
+    return { error: "This gathering is closed. No further check-ins are accepted." };
+  }
+
+  if (livenessScore < UNCALIBRATED_MIN_LIVENESS_SCORE) {
+    return {};
+  }
+
+  const match = await matchFaceForCheckIn(embedding, gathering.wingId);
+  if (!match) {
+    return {};
+  }
+
+  const member = await prisma.member.findUnique({ where: { id: match.memberId } });
+  if (!member || member.status !== "ACTIVE") {
+    return {};
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const outcome = await checkInMember(tx, {
+      gatheringId,
+      memberId: member.id,
+      method: "FACE",
+      recordedById: actor.id,
+      matchScore: match.similarity,
+      livenessScore,
+    });
+    if (!outcome.alreadyCheckedIn) {
+      await writeAudit(
+        {
+          actorId: actor.id,
+          action: "attendance.checked_in",
+          entity: "AttendanceRecord",
+          entityId: outcome.record.id,
+          before: null,
+          after: outcome.record,
+        },
+        tx,
+      );
+    }
+    return outcome;
+  });
+
+  revalidatePath(`/admin/attendance/${gatheringId}`);
+
+  return {
+    memberId: member.id,
+    memberName: formatMemberName(member),
+    memberNumber: member.memberNumber,
+    alreadyCheckedIn: result.alreadyCheckedIn,
+    checkedInAt: result.record.checkedInAt.toISOString(),
+    recordId: result.record.id,
+  };
 }
 
 export async function undoCheckIn(gatheringId: string, recordId: string): Promise<void> {

@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusTag } from "@/components/status-tag";
 import { checkInAction, checkInByMemberNumber, loadCheckInRoster, undoCheckIn } from "./actions";
-import type { RosterMember } from "./actions";
-import { QrScanner } from "./qr-scanner";
+import type { CheckInActionResult, RosterMember } from "./actions";
+import { FaceCheckIn } from "./face-check-in";
 import { dequeue, enqueue, isLikelyNetworkError, loadQueue } from "@/lib/attendance/offline-queue";
 import type { QueuedCheckIn } from "@/lib/attendance/offline-queue";
 import { formatMemberName } from "@/lib/members/display-name";
@@ -24,6 +25,7 @@ interface RecentEntry {
 
 const MAX_RECENT_ENTRIES = 5;
 const SYNC_RETRY_INTERVAL_MS = 5000;
+const BANNER_DURATION_MS = 2500;
 
 export function CheckInClient({
   gatheringId,
@@ -44,7 +46,38 @@ export function CheckInClient({
   const [count, setCount] = useState(initialCount);
   const [pendingCount, setPendingCount] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
+  // A prominent, self-dismissing confirmation for every successful
+  // check-in, face or manual: the running count and Recent list below
+  // already record it, but neither is loud enough for an officer whose
+  // attention is on the camera, or a member glancing up after search
+  // finds their own name. bannerId, not just the text, keys the banner
+  // element, so two check-ins in a row for the same person (a duplicate
+  // scan) restart the timeout and the on-screen dwell instead of the
+  // second one being a no-op update to already-displayed text.
+  const [banner, setBanner] = useState<{ id: number; text: string } | null>(null);
+  const bannerIdRef = useRef(0);
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncingRef = useRef(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    return () => {
+      if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+    };
+  }, []);
+
+  // Every check-in, face included, leaves this gathering's screen for
+  // the gatherings list once the confirmation has had time to be seen.
+  // Confirmed with the office despite what it costs face check-in
+  // specifically: the camera's continuous scanning (3.5, "never a dead
+  // end") only ever covers one arrival before the officer has to reopen
+  // this gathering for the next.
+  function showBanner(text: string) {
+    bannerIdRef.current += 1;
+    setBanner({ id: bannerIdRef.current, text });
+    if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+    bannerTimeoutRef.current = setTimeout(() => router.push("/admin/attendance"), BANNER_DURATION_MS);
+  }
 
   // The roster is loaded once, while the page still has a connection
   // (it was just server rendered, so it does). After that, search and QR
@@ -135,13 +168,10 @@ export function CheckInClient({
     setRoster((current) => current.map((m) => (m.id === memberId ? { ...m, alreadyCheckedIn: true } : m)));
   }
 
-  async function performCheckIn(member: { id: string; memberNumber: string | null }, method: "MANUAL" | "QR_CODE") {
+  async function performCheckIn(member: { id: string; memberNumber: string | null }) {
     setMessage(null);
     try {
-      const result =
-        method === "QR_CODE" && !roster.some((m) => m.id === member.id)
-          ? await checkInByMemberNumber(gatheringId, member.memberNumber ?? "")
-          : await checkInAction(gatheringId, member.id, method);
+      const result = await checkInAction(gatheringId, member.id, "MANUAL");
 
       if (result.error) {
         setMessage(result.error);
@@ -153,7 +183,7 @@ export function CheckInClient({
         setMessage("Something went wrong recording this check-in. Try again.");
         return;
       }
-      queueOffline(member, method);
+      queueOffline(member, "MANUAL");
     }
   }
 
@@ -193,6 +223,10 @@ export function CheckInClient({
     }
     if (result.memberId) markRosterCheckedIn(result.memberId);
 
+    showBanner(
+      result.alreadyCheckedIn ? `${result.memberName} was already checked in` : `${result.memberName} checked in`,
+    );
+
     setRecent((current) =>
       [
         {
@@ -211,24 +245,14 @@ export function CheckInClient({
     setQuery("");
   }
 
-  function handleQrScan(scannedMemberNumber: string) {
-    const match = roster.find((m) => m.memberNumber === scannedMemberNumber);
-    if (!match) {
-      // Not in the cached roster (rare: a very new member, or the roster
-      // has not loaded yet). Try the server directly rather than failing
-      // outright; if that also fails for lack of connection, there is
-      // nothing safe to queue, since which member this is has never been
-      // confirmed.
-      void checkInByMemberNumber(gatheringId, scannedMemberNumber).then((result) => {
-        if (result.error) {
-          setMessage(result.error);
-          return;
-        }
-        applySuccess(result, "synced", null);
-      });
-      return;
-    }
-    void performCheckIn(match, "QR_CODE");
+  // A face match already carries the same shape performCheckIn's server
+  // actions return, and it has no offline path to fall back to (3.5), so
+  // it goes straight to applySuccess rather than through performCheckIn.
+  // A miss stays silent: no message, camera keeps running, search stays
+  // available exactly as it already was.
+  function handleFaceResult(result: CheckInActionResult) {
+    if (!result.memberId || !result.memberName) return;
+    applySuccess(result, "synced", null);
   }
 
   function handleUndo(entry: RecentEntry) {
@@ -262,6 +286,15 @@ export function CheckInClient({
 
   return (
     <div className="min-h-screen bg-navy-950 text-white" style={{ fontSize: "20px" }}>
+      {banner ? (
+        <p
+          key={banner.id}
+          role="status"
+          className="fixed top-4 left-1/2 z-50 w-[90vw] max-w-md -translate-x-1/2 rounded-md bg-emerald-600 px-6 py-3 text-center text-lg font-semibold text-white shadow-lg"
+        >
+          ✓ {banner.text}
+        </p>
+      ) : null}
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className="flex items-center gap-3">
@@ -280,7 +313,7 @@ export function CheckInClient({
           ) : null}
         </div>
 
-        <QrScanner onScan={handleQrScan} />
+        <FaceCheckIn gatheringId={gatheringId} onResult={handleFaceResult} />
 
         <Input
           value={query}
@@ -297,7 +330,7 @@ export function CheckInClient({
             <button
               key={member.id}
               type="button"
-              onClick={() => void performCheckIn(member, "MANUAL")}
+              onClick={() => void performCheckIn(member)}
               className="flex min-h-16 items-center justify-between rounded-md bg-white px-4 py-3 text-left text-ink hover:bg-white/90"
             >
               <span>

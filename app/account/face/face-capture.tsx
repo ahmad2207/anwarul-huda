@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type Human from "@vladmandic/human";
 import type { Result } from "@vladmandic/human";
@@ -11,25 +11,19 @@ import {
   challengeSatisfied,
   pickRandomChallenge,
 } from "@/lib/face/liveness-challenge";
+import {
+  UNCALIBRATED_DARKNESS_THRESHOLD,
+  UNCALIBRATED_MIN_ANTISPOOF_SCORE,
+  UNCALIBRATED_MIN_FACE_SCORE,
+  UNCALIBRATED_MIN_LIVENESS_SCORE,
+} from "@/lib/face/thresholds";
+import { sampleBrightness } from "@/lib/face/sample-brightness";
 import { saveFaceEnrolment } from "./actions";
 
 // SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.4: a randomly chosen action,
 // held for this long to give a real, deliberate movement time to show
 // up in the captured readings.
 const CAPTURE_WINDOW_MS = 4000;
-
-// UNCALIBRATED. Every threshold below is a reasonable-sounding guess,
-// not a number measured against a real capture, the same position B3
-// is explicitly in for the match threshold ("do not accept a number
-// from documentation. Build a calibration screen... pick from real
-// data collected at the actual mosque"). These need that same
-// treatment: real attempts, false accept and false reject rates across
-// a range of values, before any of this ships as tuned rather than
-// merely plausible.
-const UNCALIBRATED_MIN_FACE_SCORE = 0.7;
-const UNCALIBRATED_MIN_LIVENESS_SCORE = 0.6;
-const UNCALIBRATED_MIN_ANTISPOOF_SCORE = 0.6;
-const UNCALIBRATED_DARKNESS_THRESHOLD = 40; // mean 0-255 luminance sampled from the video frame
 
 type Phase =
   | "loading-models"
@@ -71,6 +65,21 @@ export function FaceCapture() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const humanRef = useRef<Human | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // A callback ref, not a plain one: the video element only mounts once
+  // phase reaches "ready", but the camera stream is requested and
+  // resolved while still on "requesting-camera", a phase with no video
+  // element in its tree at all. A plain ref read at that moment is
+  // always null, so the stream obtained then was never attached to the
+  // element that eventually appeared. This attaches it the instant the
+  // node actually exists, whichever phase that happens to be.
+  const attachVideo = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    if (node && streamRef.current && node.srcObject !== streamRef.current) {
+      node.srcObject = streamRef.current;
+      void node.play();
+    }
+  }, []);
 
   // Loaded once, lazily, on this route only (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md
   // 3.3). ~8.2MB across the library and its four models (see the
@@ -121,18 +130,21 @@ export function FaceCapture() {
     async function requestCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 } },
+          // { ideal }, not a hard requirement: a device with no
+          // front-facing camera (or that does not label one) should
+          // still get whatever camera it has, not an OverconstrainedError.
+          // 4:5, matched to the preview box below.
+          video: { facingMode: { ideal: "user" }, width: { ideal: 480 }, height: { ideal: 600 } },
           audio: false,
         });
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
+        // Not attached here: the video element for "ready" has not
+        // mounted yet at this point. attachVideo's callback ref does it
+        // the instant it does.
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
         setPhase("ready");
       } catch (error) {
         if (cancelled) return;
@@ -337,7 +349,12 @@ export function FaceCapture() {
   return (
     <FaceScreen title="Face check-in">
       <div className="flex flex-col gap-4">
-        <video ref={videoRef} muted playsInline className="w-full rounded-[4px] bg-black" />
+        <video
+          ref={attachVideo}
+          muted
+          playsInline
+          className="mx-auto aspect-[4/5] w-full max-w-xs rounded-[4px] bg-black object-cover"
+        />
 
         {phase === "ready" ? (
           <>
@@ -403,25 +420,4 @@ function DeferButton({ label = "Leave it to the office" }: { label?: string }) {
       className="h-11 w-full rounded-[4px] px-6 text-base"
     />
   );
-}
-
-// A tiny, disposable scratch canvas, reused every call rather than
-// created fresh: nothing here is ever exported, saved, or read outside
-// this function.
-let scratchCanvas: HTMLCanvasElement | null = null;
-function sampleBrightness(video: HTMLVideoElement): number {
-  if (!scratchCanvas) {
-    scratchCanvas = document.createElement("canvas");
-    scratchCanvas.width = 16;
-    scratchCanvas.height = 16;
-  }
-  const ctx = scratchCanvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx || video.videoWidth === 0) return 255;
-  ctx.drawImage(video, 0, 0, 16, 16);
-  const { data } = ctx.getImageData(0, 0, 16, 16);
-  let total = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    total += (data[i] + data[i + 1] + data[i + 2]) / 3;
-  }
-  return total / (data.length / 4);
 }

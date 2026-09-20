@@ -637,6 +637,11 @@ model AttendanceRecord {
   method       CheckInMethod
   deviceId     String?       @map("device_id")
   recordedById String?       @map("recorded_by_id")
+  /**
+   * Set only when method is FACE: the cosine similarity of the match and the liveness score of the capture that produced it (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.4, "log the liveness score and the match score on every face check-in"). Never the embedding itself.
+   */
+  matchScore    Float? @map("match_score")
+  livenessScore Float? @map("liveness_score")
 
   gathering Gathering        @relation(fields: [gatheringId], references: [id])
   member    Member           @relation(fields: [memberId], references: [id])

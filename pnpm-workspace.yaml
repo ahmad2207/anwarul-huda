@@ -4,3 +4,5 @@ allowBuilds:
   esbuild: true
   prisma: true
   unrs-resolver: true
+patchedDependencies:
+  '@vladmandic/human': patches/@vladmandic__human.patch

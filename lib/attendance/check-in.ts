@@ -5,6 +5,9 @@ export interface CheckInInput {
   memberId: string;
   method: CheckInMethod;
   recordedById: string | null;
+  /** Set only for method FACE (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.4: "log the liveness score and the match score on every face check-in"). */
+  matchScore?: number;
+  livenessScore?: number;
 }
 
 export interface CheckInResult {
@@ -42,6 +45,8 @@ export async function checkInMember(
         checkedInAt: new Date(),
         method: input.method,
         recordedById: input.recordedById,
+        matchScore: input.matchScore,
+        livenessScore: input.livenessScore,
       },
     });
     return { record: created, alreadyCheckedIn: false };

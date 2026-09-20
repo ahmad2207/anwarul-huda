@@ -1,0 +1,49 @@
+diff --git a/package.json b/package.json
+index ccd81fb230ae8e0988d279e0a6369273fe086c94..c96792d6a9134281316bb7623330c093ea6e9aff 100644
+--- a/package.json	
++++ b/package.json	
+@@ -8,24 +8,26 @@
+   "browser": "dist/human.esm.js",
+   "types": "types/human.d.ts",
+   "exports": {
+-    "node": "./dist/human.node.js",
+-    "script": "./dist/human.js",
+-    "module": "./dist/human.esm.js",
+-    "types": "./types/human.d.ts",
+-    "dist/human": "./dist/human.js",
+-    "dist/human.js": "./dist/human.js",
+-    "dist/human.esm": "./dist/human.esm.js",
+-    "dist/human.esm.js": "./dist/human.esm.js",
+-    "dist/human.esm-nobundle": "./dist/human.esm-nobundle.js",
+-    "dist/human.esm-nobundle.js": "./dist/human.esm-nobundle.js",
+-    "dist/human.node": "./dist/human.node.js",
+-    "dist/human.node.js": "./dist/human.node.js",
+-    "dist/human.node-wasm": "./dist/human.node-wasm.js",
+-    "dist/human.node-wasm.js": "./dist/human.node-wasm.js",
+-    "dist/human.node-gpu": "./dist/human.node-gpu.js",
+-    "dist/human.node-gpu.js": "./dist/human.node-gpu.js",
+-    "require": "./dist/human.node.js",
+-    "import": "./dist/human.esm.js"
++    ".": {
++      "types": "./types/human.d.ts",
++      "node": "./dist/human.node.js",
++      "script": "./dist/human.js",
++      "module": "./dist/human.esm.js",
++      "require": "./dist/human.node.js",
++      "import": "./dist/human.esm.js"
++    },
++    "./dist/human": "./dist/human.js",
++    "./dist/human.js": "./dist/human.js",
++    "./dist/human.esm": "./dist/human.esm.js",
++    "./dist/human.esm.js": "./dist/human.esm.js",
++    "./dist/human.esm-nobundle": "./dist/human.esm-nobundle.js",
++    "./dist/human.esm-nobundle.js": "./dist/human.esm-nobundle.js",
++    "./dist/human.node": "./dist/human.node.js",
++    "./dist/human.node.js": "./dist/human.node.js",
++    "./dist/human.node-wasm": "./dist/human.node-wasm.js",
++    "./dist/human.node-wasm.js": "./dist/human.node-wasm.js",
++    "./dist/human.node-gpu": "./dist/human.node-gpu.js",
++    "./dist/human.node-gpu.js": "./dist/human.node-gpu.js"
+   },
+   "author": "Vladimir Mandic <mandic00@live.com>",
+   "bugs": {

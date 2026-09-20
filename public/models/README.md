@@ -1,8 +1,9 @@
 # Face recognition models
 
-These four files are committed binaries, not source: the TensorFlow.js
+These five files are committed binaries, not source: the TensorFlow.js
 weights [vladmandic/human](https://github.com/vladmandic/human) needs
-for face enrolment (`/account/face`), copied out of
+for face enrolment (`/account/face`) and check-in
+(`app/admin/attendance/[id]/face-check-in.tsx`), copied out of
 `node_modules/@vladmandic/human/models/` rather than the full model set
 the package ships:
 
@@ -10,11 +11,14 @@ the package ships:
 - `faceres.bin` / `faceres.json` — the face embedding itself
 - `liveness.bin` / `liveness.json` — liveness score
 - `antispoof.bin` / `antispoof.json` — anti-spoofing score
+- `facemesh.bin` / `facemesh.json` — landmarks the head-turn liveness
+  challenge computes rotation angle from; not used for the embedding
+  itself, but required for `face.rotation` to be populated at all
 
-Total size: ~8.8MB. See `lib/face/human-config.ts` for why they are
+Total size: ~10.4MB. See `lib/face/human-config.ts` for why they are
 self-hosted from here rather than loaded from a third party CDN, and
 `app/account/face/face-capture.tsx` for how they are lazy loaded, on
-this one route only.
+this route and check-in only.
 
 ## Why committed to the repository
 

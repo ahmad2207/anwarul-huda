@@ -6,17 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { ageInYears } from "@/lib/members/age";
+import { toVectorLiteral } from "@/lib/face/vector-literal";
 import { faceEnrolmentPayloadSchema } from "./schema";
 
 const MINIMUM_ENROLMENT_AGE = 18;
-
-// pgvector's own text input format for a vector literal: "[n1,n2,...]",
-// cast to ::vector in the SQL itself. Every number in it has already
-// passed z.number().finite() in faceEnrolmentPayloadSchema, so this
-// never has to guard against NaN or Infinity reaching the query.
-function toVectorLiteral(embedding: number[]): string {
-  return `[${embedding.join(",")}]`;
-}
 
 export interface SaveFaceEnrolmentInput {
   embedding: number[];

@@ -72,6 +72,15 @@ export default async function GatheringAttendanceReportPage({
       header: "Status",
       cell: (row) => <StatusTag tone="neutral">{row.isClosed ? "Closed" : "Open"}</StatusTag>,
     },
+    {
+      key: "attendees",
+      header: "",
+      cell: (row) => (
+        <Link href={`/admin/attendance/reports/gatherings/${row.gatheringId}`} className="text-sm hover:underline">
+          Attendees
+        </Link>
+      ),
+    },
   ];
 
   return (

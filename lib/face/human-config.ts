@@ -1,14 +1,19 @@
 import type { Config } from "@vladmandic/human";
 
 // Only what enrolment (and later, check-in) actually needs: face
-// detection, the embedding model, and the two anti-spoofing signals
+// detection, the embedding model, the two anti-spoofing signals
 // (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.3, "never load it on any route
-// other than enrolment and check-in"). Body, hand, object, gesture and
-// segmentation are disabled outright rather than merely unused, so
-// their models are never fetched at all: mesh, iris, emotion, attention
-// and gear are disabled the same way, since none of them serve
-// embedding, liveness or anti-spoofing either, and every one of them is
-// megabytes this route has no reason to ask a member's data plan for.
+// other than enrolment and check-in"), and mesh. Body, hand, object,
+// gesture and segmentation are disabled outright rather than merely
+// unused, so their models are never fetched at all: iris, emotion,
+// attention and gear are disabled the same way, since none of them
+// serve embedding, liveness or anti-spoofing either. mesh looked like it
+// belonged in that list too, but face.rotation (the head-turn liveness
+// challenge in lib/face/liveness-challenge.ts) is only ever populated
+// from mesh landmarks (@vladmandic/human computes it from face.mesh,
+// itself only present when this is enabled): without it, a face is
+// never counted as detected at all, on either enrolment or check-in,
+// regardless of how well it is actually in frame.
 //
 // detector.return stays false, its default: a detected face never
 // carries a cropped tensor of itself in the result object at all with
@@ -34,7 +39,7 @@ export const HUMAN_CONFIG: Partial<Config> = {
     description: { enabled: true },
     liveness: { enabled: true },
     antispoof: { enabled: true },
-    mesh: { enabled: false },
+    mesh: { enabled: true },
     attention: { enabled: false },
     iris: { enabled: false },
     emotion: { enabled: false },

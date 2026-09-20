@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@vladmandic/human': c918bf0cca5c7744b75d6f6ea5addc19b9ff0bd6ad24a1a8c95b0c8057076c72
+
 importers:
 
   .:
@@ -177,7 +180,7 @@ importers:
         version: 2.116.0
       '@vladmandic/human':
         specifier: ^3.3.6
-        version: 3.3.6
+        version: 3.3.6(patch_hash=c918bf0cca5c7744b75d6f6ea5addc19b9ff0bd6ad24a1a8c95b0c8057076c72)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -5011,7 +5014,7 @@ snapshots:
 
   '@vitest/spy@5.0.0': {}
 
-  '@vladmandic/human@3.3.6': {}
+  '@vladmandic/human@3.3.6(patch_hash=c918bf0cca5c7744b75d6f6ea5addc19b9ff0bd6ad24a1a8c95b0c8057076c72)': {}
 
   accepts@2.0.0:
     dependencies:

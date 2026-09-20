@@ -1,5 +1,6 @@
 import type { GatheringType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { formatMemberName } from "@/lib/members/display-name";
 
 // The four reports Phase 5 asks for. Each has a "load" function that hits
 // the database and a "compute" function that does the actual arithmetic,
@@ -72,6 +73,29 @@ export async function getGatheringAttendanceReport(filter: GatheringReportFilter
     startsAt: gathering.startsAt,
     isClosed: gathering.isClosed,
     checkedInCount: gathering._count.records,
+  }));
+}
+
+export interface GatheringAttendeeRow {
+  memberId: string;
+  name: string;
+  memberNumber: string | null;
+  checkedInAt: Date;
+}
+
+/** Who actually attended a specific gathering: every checked-in member, in the order they checked in. */
+export async function getGatheringAttendeeList(gatheringId: string): Promise<GatheringAttendeeRow[]> {
+  const records = await prisma.attendanceRecord.findMany({
+    where: { gatheringId },
+    include: { member: true },
+    orderBy: { checkedInAt: "asc" },
+  });
+
+  return records.map((record) => ({
+    memberId: record.memberId,
+    name: formatMemberName(record.member),
+    memberNumber: record.member.memberNumber,
+    checkedInAt: record.checkedInAt,
   }));
 }
 

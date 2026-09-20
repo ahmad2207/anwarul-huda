@@ -31,7 +31,17 @@ export function pickRandomChallenge(): LivenessChallenge {
 }
 
 export interface HeadPoseReading {
-  /** Radians. Negative is left, positive is right. */
+  /**
+   * Radians, as @vladmandic/human returns it from the raw, unmirrored
+   * frame: negative is the subject's own right, positive is the
+   * subject's own left. A subject faces the camera, so their left
+   * appears on the camera's right side of frame, the same mirror
+   * relationship as looking at another person rather than a reflection.
+   * Confirmed against real turns on a real device, not derived from
+   * documentation: an earlier guess here had this backwards, and no
+   * synthetic test camera could have caught it, since a fake device's
+   * frames never contain an actual turning face.
+   */
   yaw: number;
   /** Radians. Negative is down, positive is up. */
   pitch: number;
@@ -57,9 +67,9 @@ const UNCALIBRATED_PITCH_THRESHOLD_RADIANS = 0.15;
 export function challengeSatisfied(challenge: LivenessChallengeId, readings: HeadPoseReading[]): boolean {
   switch (challenge) {
     case "TURN_LEFT":
-      return readings.some((reading) => reading.yaw <= -UNCALIBRATED_YAW_THRESHOLD_RADIANS);
-    case "TURN_RIGHT":
       return readings.some((reading) => reading.yaw >= UNCALIBRATED_YAW_THRESHOLD_RADIANS);
+    case "TURN_RIGHT":
+      return readings.some((reading) => reading.yaw <= -UNCALIBRATED_YAW_THRESHOLD_RADIANS);
     case "NOD":
       return readings.some((reading) => Math.abs(reading.pitch) >= UNCALIBRATED_PITCH_THRESHOLD_RADIANS);
   }

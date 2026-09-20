@@ -22,13 +22,15 @@ describe("challengeSatisfied", () => {
   });
 
   it("recognises a left turn only for the left challenge", () => {
-    const readings = [{ yaw: 0.01, pitch: 0 }, { yaw: -0.35, pitch: 0 }, { yaw: 0.0, pitch: 0 }];
+    // Positive yaw: the subject's own left, on the camera's right side of
+    // frame, per the mirror relationship of a subject facing the camera.
+    const readings = [{ yaw: 0.01, pitch: 0 }, { yaw: 0.35, pitch: 0 }, { yaw: 0.0, pitch: 0 }];
     expect(challengeSatisfied("TURN_LEFT", readings)).toBe(true);
     expect(challengeSatisfied("TURN_RIGHT", readings)).toBe(false);
   });
 
   it("recognises a right turn only for the right challenge", () => {
-    const readings = [{ yaw: 0.01, pitch: 0 }, { yaw: 0.35, pitch: 0 }, { yaw: 0.0, pitch: 0 }];
+    const readings = [{ yaw: 0.01, pitch: 0 }, { yaw: -0.35, pitch: 0 }, { yaw: 0.0, pitch: 0 }];
     expect(challengeSatisfied("TURN_RIGHT", readings)).toBe(true);
     expect(challengeSatisfied("TURN_LEFT", readings)).toBe(false);
   });
@@ -42,7 +44,7 @@ describe("challengeSatisfied", () => {
     const readings = [
       { yaw: 0, pitch: 0 },
       { yaw: 0, pitch: 0 },
-      { yaw: -0.25, pitch: 0 },
+      { yaw: 0.25, pitch: 0 },
       { yaw: 0, pitch: 0 },
     ];
     expect(challengeSatisfied("TURN_LEFT", readings)).toBe(true);

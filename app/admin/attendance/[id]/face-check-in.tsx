@@ -73,6 +73,13 @@ export function FaceCheckIn({
   // the models failing to load, all previously collapsed into one generic
   // message that gave the officer nothing to act on.
   const [unavailableReason, setUnavailableReason] = useState("");
+  // Environment is only ever a preference (below): a device with no rear
+  // camera falls back to a front one, and only that fallback case should
+  // be mirrored, the same reason enrolment mirrors its always-front
+  // camera. A genuine rear camera, aimed at whoever is arriving rather
+  // than at the person holding the phone, must stay unmirrored, or the
+  // scene itself would flip.
+  const [mirror, setMirror] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const humanRef = useRef<Human | null>(null);
@@ -152,6 +159,7 @@ export function FaceCheckIn({
           return;
         }
         streamRef.current = stream;
+        setMirror(stream.getVideoTracks()[0]?.getSettings().facingMode === "user");
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
@@ -298,7 +306,12 @@ export function FaceCheckIn({
   return (
     <div className="flex flex-col gap-2">
       <div className="relative mx-auto w-full max-w-xs overflow-hidden rounded-md border border-white/20">
-        <video ref={videoRef} muted playsInline className="aspect-[4/5] w-full bg-black object-cover" />
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          className={`aspect-[4/5] w-full bg-black object-cover ${mirror ? "-scale-x-100" : ""}`}
+        />
         {status === "loading" || status === "requesting-camera" ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-sm text-white">
             {status === "loading" ? "Getting ready…" : "Requesting camera…"}

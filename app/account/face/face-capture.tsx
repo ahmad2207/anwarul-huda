@@ -353,7 +353,13 @@ export function FaceCapture() {
           ref={attachVideo}
           muted
           playsInline
-          className="mx-auto aspect-[4/5] w-full max-w-xs rounded-[4px] bg-black object-cover"
+          // This always requests the front-facing camera (facingMode:
+          // "user" above), so a mirrored preview is what everyone
+          // expects from a selfie camera: turn your real left, your
+          // reflection on screen turns the same way. The raw frame human
+          // reads for detection is unaffected: this is a display
+          // transform only, not a change to what challengeSatisfied sees.
+          className="mx-auto aspect-[4/5] w-full max-w-xs -scale-x-100 rounded-[4px] bg-black object-cover"
         />
 
         {phase === "ready" ? (

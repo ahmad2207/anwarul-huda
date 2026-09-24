@@ -168,16 +168,11 @@ export async function checkInByFace(
     return { error: "This gathering is closed. No further check-ins are accepted." };
   }
 
-  // TEMPORARY: diagnosing why no face check-in has ever matched in
-  // production. Remove once resolved.
-  console.log(`[face-checkin-debug] livenessScore=${livenessScore} threshold=${UNCALIBRATED_MIN_LIVENESS_SCORE}`);
-
   if (livenessScore < UNCALIBRATED_MIN_LIVENESS_SCORE) {
     return {};
   }
 
   const match = await matchFaceForCheckIn(embedding, gathering.wingId);
-  console.log(`[face-checkin-debug] match=${match ? JSON.stringify(match) : "none"}`);
   if (!match) {
     return {};
   }

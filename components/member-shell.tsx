@@ -34,8 +34,10 @@ export async function MemberShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background text-[17px]">
       <header className="flex h-14 shrink-0 items-center justify-between gap-2 bg-navy-900 px-3 text-white">
-        <Link href="/account" className="min-w-0 truncate text-base font-semibold">
-          Anwaru-l-Huda League
+        <Link href="/account" className="flex min-w-0 items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
+          <img src="/logo.png" alt="" width={28} height={28} className="shrink-0" />
+          <span className="min-w-0 truncate text-base font-semibold">Anwaru-l-Huda League</span>
         </Link>
         {/* MEMBER-INTERFACE.md 3.1: settings sits in the header, not the
             bar, and is the only control here. /account/settings now

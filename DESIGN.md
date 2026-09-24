@@ -164,7 +164,7 @@ shadcn/ui as the foundation, then override the defaults.
 - Buttons: solid `navy-950` primary with a soft lift shadow, bordered secondary, `alert`-toned text destructive. No gradients on buttons; gradients are reserved for the sidebar, the check-in ground and the member area's one balance card, where they carry the light metaphor rather than decorate a control.
 - Tables: sticky headers, tabular numerals, zebra striping off, hairline row separators, sitting inside a softly elevated panel rather than a bare bordered box.
 - Status: a small pill with a soft tinted background, word and icon together, never colour alone.
-- The logo appears in the admin rail, the login screen, the check-in header and on print. Nowhere else.
+- The logo appears in the admin rail, the login screen, the check-in header, the member portal header, the public landing page, the browser tab favicon, and on print. Nowhere else.
 
 Motion is limited to what answers a click, the offline sync indicator, and the check-in glow's slow pulse. No entrance animations, no hover lift on every card. Respect `prefers-reduced-motion`.
 

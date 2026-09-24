@@ -58,7 +58,10 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
   },
   {
     label: "Content",
-    items: [{ label: "Upload", href: "/admin/content" }],
+    items: [
+      { label: "Upload", href: "/admin/content" },
+      { label: "Announcements", href: "/admin/content/announcements" },
+    ],
   },
   {
     label: "System",

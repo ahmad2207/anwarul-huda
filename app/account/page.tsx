@@ -1,10 +1,20 @@
 import Link from "next/link";
+import type { RecordSection } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatNaira } from "@/lib/money";
 import { firstNameForGreeting } from "@/lib/members/display-name";
 import { recordProgress } from "@/lib/members/record-sections";
+import {
+  formatDayMonth,
+  formatGatheringWhen,
+  getAttendanceSummary,
+  getAttentionItems,
+  getLatestContent,
+  getServiceAreaNames,
+  getUpcomingGatherings,
+} from "@/lib/members/member-home";
 import { Button } from "@/components/ui/button";
+import { AttentionBlock } from "./attention-block";
 
 export default async function AccountHomePage() {
   const user = await getCurrentUser();
@@ -84,41 +94,33 @@ function IncompleteHome({
   );
 }
 
+// The complete home (MEMBER-HOME-AND-ADMIN-VIEW.md 1). Order is
+// deliberate: attention, next, attendance, service, latest, so a member
+// never scrolls past a sermon to learn they are in arrears. Every block
+// is a small server-rendered summary with a route onward; any block
+// with nothing to say renders nothing.
 async function CompleteHome({
   greeting,
   member,
 }: {
   greeting: string;
-  member: { id: string; memberNumber: string | null; wingId: string };
+  member: {
+    id: string;
+    memberNumber: string | null;
+    wingId: string;
+    completedSections: RecordSection[];
+    faceEnrolmentDeferred: boolean;
+  };
 }) {
-  // amountPaidKobo < amountDueKobo is a column-to-column comparison,
-  // which Prisma's query builder cannot express in a where clause (see
-  // lib/reports/arrears.ts, which resorts to raw SQL for the same
-  // reason, across every member at once). A single member's own records
-  // are few enough that fetching them all and filtering in JS is the
-  // simpler, still correct choice here, rather than reaching for raw
-  // SQL for one row.
-  const [records, latestSermon, latestBook] = await Promise.all([
-    prisma.contributionRecord.findMany({
-      where: { memberId: member.id },
-      include: { plan: true },
-      orderBy: { periodStart: "desc" },
-    }),
-    latestPublishedContent("SERMON", member.wingId),
-    latestPublishedContent("WEEKLY_BOOK", member.wingId),
+  const [attention, upcoming, attendance, serviceAreas, announcement, sermon, book] = await Promise.all([
+    getAttentionItems(member),
+    getUpcomingGatherings(member),
+    getAttendanceSummary(member),
+    getServiceAreaNames(member.id),
+    getLatestContent("ANNOUNCEMENT", member.wingId),
+    getLatestContent("SERMON", member.wingId),
+    getLatestContent("WEEKLY_BOOK", member.wingId),
   ]);
-
-  const outstandingRecords = records.filter((record) => record.amountPaidKobo < record.amountDueKobo);
-  const outstandingKobo = outstandingRecords.reduce(
-    (sum, record) => sum + (record.amountDueKobo - record.amountPaidKobo),
-    0,
-  );
-  // Records are already ordered by periodStart descending, so the first
-  // outstanding one found is the most recently due, the one worth
-  // naming in the "what it is for" line (MEMBER-INTERFACE.md 3.3): a
-  // running total with nothing to point at reads as an accusation, not
-  // information.
-  const outstandingRecord = outstandingRecords[0] ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,89 +129,88 @@ async function CompleteHome({
         <p className="font-mono text-sm text-muted-foreground">{member.memberNumber ?? "Not yet issued"}</p>
       </div>
 
-      {/* The one warm card (DESIGN.md 4.2): amber only appears here,
-          against navy, because this is the number that matters most.
-          Everything else on the page stays plain and readable. */}
-      <div className="relative overflow-hidden rounded-[4px] bg-navy-900 p-5 text-white">
-        <p className="text-sm uppercase tracking-wide text-white/60">Outstanding</p>
-        <p className={`mt-1 font-mono text-3xl font-semibold ${outstandingKobo > 0 ? "text-amber-500" : "text-white"}`}>
-          {formatNaira(outstandingKobo)}
-        </p>
-        <p className="mt-1 text-base text-white/70">
-          {outstandingRecord
-            ? `${outstandingRecord.plan.name}, ${outstandingRecord.periodStart.toLocaleDateString("en-NG", { month: "long" })}`
-            : outstandingKobo > 0
-              ? "Catch up whenever you can."
-              : "You're paid up. Jazakumullahu khairan."}
-        </p>
-        <Button
-          render={<Link href="/account/payments">View payments</Link>}
-          variant="outline"
-          className="mt-3 h-11 rounded-[4px] border-white/30 bg-transparent px-5 text-base text-white hover:bg-white/10 hover:text-white"
-        />
-      </div>
+      <AttentionBlock items={attention} />
 
-      {/* Face check-in is not built yet (a later, separate prompt): every
-          member is honestly "awaiting setup" today, since there is
-          nowhere yet to set it up. Not a placeholder invented for this
-          screen, the true state of a feature that does not exist yet. */}
-      <div className="flex items-center justify-between rounded-[4px] border border-border bg-card p-4">
-        <div>
-          <p className="text-base font-medium">Face check-in</p>
-          <p className="text-sm text-muted-foreground">Set up at the mosque, when it&apos;s ready</p>
-        </div>
-        <span className="rounded-full bg-amber-soft px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-          Awaiting setup
-        </span>
-      </div>
+      {upcoming.length > 0 ? (
+        <HomeSection title="What is next">
+          {upcoming.map((gathering) => (
+            <div key={gathering.id} className="rounded-[4px] border border-border bg-card p-3">
+              <p className="text-base font-medium">{gathering.title}</p>
+              <p className="text-sm text-muted-foreground">
+                {formatGatheringWhen(gathering.startsAt)}
+                {gathering.branchName ? `, ${gathering.branchName}` : ""}
+              </p>
+            </div>
+          ))}
+        </HomeSection>
+      ) : null}
 
-      <div className="flex flex-col gap-2">
-        <p className="text-base font-medium">Latest</p>
-        {latestSermon ? (
-          <Link
-            href={`/library/${latestSermon.slug}`}
-            className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border p-3 text-base hover:bg-muted/30"
-          >
-            <span className="font-medium">{latestSermon.title}</span>
-            <span className="text-sm text-muted-foreground">
-              {latestSermon.deliveredOn?.toLocaleDateString("en-NG", { day: "numeric", month: "long" }) ??
-                "Friday khutbah"}
-            </span>
-          </Link>
-        ) : null}
-        {latestBook ? (
-          <Link
-            href={`/library/${latestBook.slug}`}
-            className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border p-3 text-base hover:bg-muted/30"
-          >
-            <span className="font-medium">{latestBook.title}</span>
-            <span className="text-sm text-muted-foreground">This week&apos;s book</span>
-          </Link>
-        ) : null}
-        {!latestSermon && !latestBook ? (
-          <p className="text-base text-muted-foreground">Nothing published yet.</p>
-        ) : null}
-      </div>
+      {/* A count and a date, never a percentage, a streak or a badge
+          (MEMBER-HOME-AND-ADMIN-VIEW.md 1.3). Shown even at 0 of 0, since
+          "when did I last attend" is still worth answering. */}
+      <HomeSection title="Your attendance">
+        <Link
+          href="/account/attendance"
+          className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border bg-card p-3 hover:bg-muted/30"
+        >
+          <span className="text-base">
+            {attendance.attendedThisMonth} of {attendance.heldThisMonth} gatherings this month
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {attendance.lastAttendedAt
+              ? `Last attended ${formatDayMonth(attendance.lastAttendedAt)}`
+              : "No attendance recorded yet"}
+          </span>
+        </Link>
+      </HomeSection>
+
+      {serviceAreas.length > 0 ? (
+        <HomeSection title="Your service">
+          <p className="text-base">{serviceAreas.join(", ")}</p>
+        </HomeSection>
+      ) : null}
+
+      {announcement || sermon || book ? (
+        <HomeSection title="Latest">
+          {announcement ? (
+            <ContentLink
+              slug={announcement.slug}
+              title={announcement.title}
+              // An announcement from the announcements page has no summary; its message is the detail.
+              detail={(announcement.summary ?? announcement.body ?? "Announcement").slice(0, 200)}
+            />
+          ) : null}
+          {sermon ? (
+            <ContentLink
+              slug={sermon.slug}
+              title={sermon.title}
+              detail={sermon.deliveredOn ? formatDayMonth(sermon.deliveredOn) : "Sermon"}
+            />
+          ) : null}
+          {book ? <ContentLink slug={book.slug} title={book.title} detail="This week's book" /> : null}
+        </HomeSection>
+      ) : null}
     </div>
   );
 }
 
-// Same visibility rule as app/library/page.tsx: published, past its
-// publish time if it has one, and either open to every wing or matching
-// this member's own. Kept as its own small query rather than importing
-// the library page's own logic, since that file also carries its
-// search/filter form, which nothing here needs.
-function latestPublishedContent(type: "SERMON" | "WEEKLY_BOOK", wingId: string) {
-  return prisma.contentItem.findFirst({
-    where: {
-      type,
-      isPublished: true,
-      AND: [
-        { OR: [{ publishAt: null }, { publishAt: { lte: new Date() } }] },
-        { OR: [{ wingId: null }, { wingId }] },
-      ],
-    },
-    select: { slug: true, title: true, deliveredOn: true },
-    orderBy: { createdAt: "desc" },
-  });
+function HomeSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-base font-medium">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function ContentLink({ slug, title, detail }: { slug: string; title: string; detail: string }) {
+  return (
+    <Link
+      href={`/library/${slug}`}
+      className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border p-3 text-base hover:bg-muted/30"
+    >
+      <span className="font-medium">{title}</span>
+      <span className="line-clamp-2 text-sm text-muted-foreground">{detail}</span>
+    </Link>
+  );
 }

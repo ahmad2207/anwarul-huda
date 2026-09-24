@@ -46,3 +46,23 @@ export function getLagosDateParts(instant: Date = new Date()): LagosDateParts {
 export function lagosMidnightUtc(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month - 1, day, -1, 0, 0, 0));
 }
+
+/**
+ * Reads the "YYYY-MM-DDTHH:mm" value of a datetime-local input as a Lagos
+ * wall clock time and returns the UTC instant it names. `new Date()` on
+ * the same string would read it in the server's own zone instead, which
+ * on a UTC server puts every time an hour late. Returns null for anything
+ * that is not that exact shape or not a real calendar time.
+ */
+export function parseLagosDateTimeLocal(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const instant = new Date(Date.UTC(year, month - 1, day, hour - 1, minute));
+  // Round trip through Lagos to reject a date that rolled over, such as 31 February.
+  const parts = getLagosDateParts(instant);
+  if (parts.year !== year || parts.month !== month || parts.day !== day || hour > 23 || minute > 59) {
+    return null;
+  }
+  return instant;
+}

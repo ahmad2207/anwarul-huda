@@ -15,6 +15,11 @@ function fixtureKey(): string {
   return `${FIXTURE_PREFIX}:${counter}`;
 }
 
+const SETUP_WINDOW_SECONDS = 10;
+// Expiry is set from this machine's clock but compared against the
+// database's, so allow for the two disagreeing by up to this much.
+const CLOCK_MARGIN_MS = 2000;
+
 describe("checkRateLimit", () => {
   afterAll(async () => {
     await prisma.rateLimitCounter.deleteMany({ where: { key: { startsWith: FIXTURE_PREFIX } } });
@@ -50,14 +55,21 @@ describe("checkRateLimit", () => {
 
   it("allows calls again once the window has elapsed", async () => {
     const key = fixtureKey();
+    // The window has to outlast four sequential round trips, which on a
+    // remote database can take several seconds, or it expires before the
+    // limit is reached and the fourth call is allowed. So it is generous,
+    // and the test then waits for the expiry actually stored rather than
+    // a fixed sleep.
     for (let i = 0; i < 3; i++) {
-      await checkRateLimit(key, 3, 1);
+      await checkRateLimit(key, 3, SETUP_WINDOW_SECONDS);
     }
-    expect((await checkRateLimit(key, 3, 1)).allowed).toBe(false);
+    expect((await checkRateLimit(key, 3, SETUP_WINDOW_SECONDS)).allowed).toBe(false);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // generous margin over the DB round trip
-    expect((await checkRateLimit(key, 3, 1)).allowed).toBe(true);
-  });
+    const row = await prisma.rateLimitCounter.findUniqueOrThrow({ where: { key } });
+    const waitMs = Math.max(0, row.expiresAt.getTime() - Date.now()) + CLOCK_MARGIN_MS;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    expect((await checkRateLimit(key, 3, SETUP_WINDOW_SECONDS)).allowed).toBe(true);
+  }, 30_000);
 
   it("serialises concurrent increments for the same key rather than losing any of them", async () => {
     const key = fixtureKey();

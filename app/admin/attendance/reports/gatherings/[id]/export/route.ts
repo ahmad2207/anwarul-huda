@@ -3,8 +3,9 @@ import { canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { toCsvDocument } from "@/lib/csv";
 import { getGatheringAttendeeList } from "@/lib/attendance/reports";
+import { withRouteAuth } from "@/lib/route-auth";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleGet(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
   const { id } = await params;
 
@@ -31,3 +32,5 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

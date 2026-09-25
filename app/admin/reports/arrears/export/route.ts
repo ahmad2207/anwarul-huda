@@ -3,8 +3,9 @@ import { requireRole } from "@/lib/auth";
 import { koboToNaira } from "@/lib/money";
 import { toCsvDocument } from "@/lib/csv";
 import { getArrearsReport } from "@/lib/reports/arrears";
+import { withRouteAuth } from "@/lib/route-auth";
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   await requireRole(["FINANCE_OFFICER"]);
 
   const wingId = request.nextUrl.searchParams.get("wingId") || undefined;
@@ -28,3 +29,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

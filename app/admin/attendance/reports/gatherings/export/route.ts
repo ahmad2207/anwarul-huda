@@ -5,6 +5,7 @@ import { canViewAllWings } from "@/lib/authorization";
 import { toCsvDocument } from "@/lib/csv";
 import { getGatheringAttendanceReport, resolveWingFilter } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
+import { withRouteAuth } from "@/lib/route-auth";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -15,7 +16,7 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
   const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
   const scope: WingScope = canSeeAll ? null : user.wingIds;
@@ -47,3 +48,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

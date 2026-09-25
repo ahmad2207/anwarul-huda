@@ -4,11 +4,12 @@ import { canViewAllWings } from "@/lib/authorization";
 import { toCsvDocument } from "@/lib/csv";
 import { getMembersNotAttendedSince, resolveWingFilter } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
+import { withRouteAuth } from "@/lib/route-auth";
 
 const DEFAULT_WEEKS = 4;
 const EXPORT_LIMIT = 10000; // matches the "assume ten thousand members" ceiling used elsewhere
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
   const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
   const scope: WingScope = canSeeAll ? null : user.wingIds;
@@ -37,3 +38,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

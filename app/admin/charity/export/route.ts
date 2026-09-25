@@ -4,8 +4,9 @@ import { koboToNaira } from "@/lib/money";
 import { toCsvDocument } from "@/lib/csv";
 import { getCharityDashboardData, resolveDashboardPeriod } from "@/lib/charity/dashboard-data";
 import { ZAKAT_CATEGORY_LABELS } from "@/lib/charity/zakat-breakdown";
+import { withRouteAuth } from "@/lib/route-auth";
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   await requireRole(["CHARITY_OFFICER"]);
 
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
@@ -61,3 +62,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

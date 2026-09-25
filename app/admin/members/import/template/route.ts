@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { IMPORT_FIELDS } from "@/lib/import/system-fields";
 import { toCsvDocument } from "@/lib/csv";
+import { withRouteAuth } from "@/lib/route-auth";
 
 // One clearly fictional example row, so the template is not just a bare
 // header line. Never real data, matching the same rule seed.ts follows.
@@ -45,7 +46,7 @@ const EXAMPLE_ROW: Record<string, string> = {
   consentBiometric: "No",
 };
 
-export async function GET() {
+async function handleGet() {
   await requireRole(["WING_ADMIN"]);
 
   const csv = toCsvDocument(
@@ -60,3 +61,5 @@ export async function GET() {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

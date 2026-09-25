@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { toCsvDocument } from "@/lib/csv";
 import { getMemberProgressReport, PROGRESS_STATUSES, PROGRESS_STATUS_LABELS } from "@/lib/members/progress-report";
 import type { MemberProgressStatus } from "@/lib/members/progress-report";
+import { withRouteAuth } from "@/lib/route-auth";
 
 const DEFAULT_STATUS: MemberProgressStatus = "NEVER_LOGGED_IN";
 
@@ -10,7 +11,7 @@ function isProgressStatus(value: string): value is MemberProgressStatus {
   return (PROGRESS_STATUSES as readonly string[]).includes(value);
 }
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const user = await requireRole(["WING_ADMIN"]);
   const isSuperAdmin = user.roles.includes("SUPER_ADMIN");
 
@@ -41,3 +42,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

@@ -5,11 +5,12 @@ import { formatLagosDateTime, formatLagosDate } from "@/lib/timezone";
 import { loadViewableMember } from "../../load-member";
 import { parseAttendanceFilter } from "../../attendance-filter";
 import { CHECK_IN_METHOD_LABELS, GATHERING_TYPE_LABELS } from "../../labels";
+import { withRouteAuth } from "@/lib/route-auth";
 
 // The attendance log on the member view, as a CSV, for the same period
 // and type filter the tab shows. Goes through the same loader as the
 // page, so role and wing scope are checked before anything is read.
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function handleGet(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const loaded = await loadViewableMember(id);
   if (!loaded) {
@@ -47,3 +48,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

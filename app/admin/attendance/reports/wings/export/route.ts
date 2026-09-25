@@ -4,8 +4,9 @@ import { canViewAllWings } from "@/lib/authorization";
 import { toCsvDocument } from "@/lib/csv";
 import { getWingAttendanceRates } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
+import { withRouteAuth } from "@/lib/route-auth";
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
   const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
   const scope: WingScope = canSeeAll ? null : user.wingIds;
@@ -34,3 +35,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

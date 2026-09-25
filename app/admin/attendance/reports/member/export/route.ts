@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { toCsvDocument } from "@/lib/csv";
 import { getMemberAttendanceHistory } from "@/lib/attendance/reports";
 import { loadReportMember } from "../actions";
+import { withRouteAuth } from "@/lib/route-auth";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -22,7 +23,7 @@ const METHOD_LABELS: Record<string, string> = {
   FACE: "Face",
 };
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   // Checked here, first, same as every other route handler, rather than
   // only relying on the check inside loadReportMember below: a request
   // with no memberId should still never get past authorization before
@@ -70,3 +71,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

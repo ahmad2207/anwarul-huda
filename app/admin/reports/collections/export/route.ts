@@ -4,8 +4,9 @@ import { koboToNaira } from "@/lib/money";
 import { toCsvDocument } from "@/lib/csv";
 import { groupCollections, loadCollectionsPayments } from "@/lib/reports/collections";
 import type { CollectionsGroupBy } from "@/lib/reports/collections";
+import { withRouteAuth } from "@/lib/route-auth";
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   await requireRole(["FINANCE_OFFICER"]);
 
   const params = request.nextUrl.searchParams;
@@ -37,3 +38,5 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export const GET = withRouteAuth(handleGet);

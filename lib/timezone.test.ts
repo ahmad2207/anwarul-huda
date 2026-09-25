@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLagosDateTimeLocal } from "./timezone";
+import { parseLagosDate, parseLagosDateTimeLocal, toLagosDateInputValue } from "./timezone";
 
 describe("parseLagosDateTimeLocal", () => {
   it("reads the value as Lagos time, an hour ahead of UTC", () => {
@@ -22,5 +22,21 @@ describe("parseLagosDateTimeLocal", () => {
   it("rejects anything that is not a datetime-local value", () => {
     expect(parseLagosDateTimeLocal("2026-09-26")).toBeNull();
     expect(parseLagosDateTimeLocal("26/09/2026 10:00")).toBeNull();
+  });
+});
+
+describe("parseLagosDate and toLagosDateInputValue", () => {
+  it("reads a date as the start of that Lagos day", () => {
+    expect(parseLagosDate("2026-01-01")?.toISOString()).toBe("2025-12-31T23:00:00.000Z");
+  });
+
+  it("rejects a date that does not exist", () => {
+    expect(parseLagosDate("2026-02-30")).toBeNull();
+    expect(parseLagosDate("2026-1-1")).toBeNull();
+  });
+
+  it("round trips through a date input value", () => {
+    const instant = parseLagosDate("2026-09-25")!;
+    expect(toLagosDateInputValue(instant)).toBe("2026-09-25");
   });
 });

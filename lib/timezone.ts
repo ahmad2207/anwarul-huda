@@ -66,3 +66,38 @@ export function parseLagosDateTimeLocal(value: string): Date | null {
   }
   return instant;
 }
+
+/** Formats a UTC instant for display in Lagos time, with en-GB wording. */
+export function formatLagos(instant: Date, options: Intl.DateTimeFormatOptions): string {
+  return instant.toLocaleString("en-GB", { ...options, timeZone: LAGOS_TIME_ZONE });
+}
+
+/** "12 Sep 2026", in Lagos time. */
+export function formatLagosDate(instant: Date): string {
+  return formatLagos(instant, { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** "12 Sep 2026, 1:30 pm", in Lagos time. */
+export function formatLagosDateTime(instant: Date): string {
+  return formatLagos(instant, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+/**
+ * Reads the "YYYY-MM-DD" value of a date input as a Lagos calendar date
+ * and returns the UTC instant of Lagos midnight at its start. Null for
+ * anything else.
+ */
+export function parseLagosDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
+  const instant = lagosMidnightUtc(year, month, day);
+  const parts = getLagosDateParts(instant);
+  return parts.year === year && parts.month === month && parts.day === day ? instant : null;
+}
+
+/** The "YYYY-MM-DD" Lagos calendar date of a UTC instant, for a date input's value. */
+export function toLagosDateInputValue(instant: Date): string {
+  const { year, month, day } = getLagosDateParts(instant);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}

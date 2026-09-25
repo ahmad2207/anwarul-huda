@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canAccessWing, canEditMemberRecords, canViewAllWings, hasAnyRole } from "./authorization";
+import {
+  canAccessWing,
+  canEditMemberRecords,
+  canViewAllWings,
+  canViewMember,
+  canViewCharityHistory,
+  hasAnyRole,
+} from "./authorization";
 
 describe("canAccessWing", () => {
   it("allows a super admin into any wing, even with no wing assignments", () => {
@@ -78,5 +85,45 @@ describe("canEditMemberRecords", () => {
     expect(
       canEditMemberRecords({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-1"] }, "wing-1"),
     ).toBe(false);
+  });
+});
+
+describe("canViewCharityHistory", () => {
+  it("allows a super admin and a charity officer", () => {
+    expect(canViewCharityHistory({ roles: ["SUPER_ADMIN"] })).toBe(true);
+    expect(canViewCharityHistory({ roles: ["CHARITY_OFFICER"] })).toBe(true);
+  });
+
+  it("denies every other role that can open a member record", () => {
+    for (const role of ["WING_ADMIN", "FINANCE_OFFICER", "ATTENDANCE_OFFICER", "CONTENT_EDITOR", "MEMBER"] as const) {
+      expect(canViewCharityHistory({ roles: [role] })).toBe(false);
+    }
+  });
+
+  it("allows a wing admin who also holds the charity officer role", () => {
+    expect(canViewCharityHistory({ roles: ["WING_ADMIN", "CHARITY_OFFICER"] })).toBe(true);
+  });
+});
+
+describe("canViewMember", () => {
+  it("lets a super admin with no wing assignment view a member in any wing", () => {
+    expect(canViewMember({ roles: ["SUPER_ADMIN"], wingIds: [] }, "wing-1")).toBe(true);
+    expect(canViewMember({ roles: ["SUPER_ADMIN"], wingIds: [] }, "wing-2")).toBe(true);
+  });
+
+  it("lets a finance officer view any wing, read only being enforced elsewhere", () => {
+    expect(canViewMember({ roles: ["FINANCE_OFFICER"], wingIds: [] }, "wing-1")).toBe(true);
+  });
+
+  it("confines a wing admin and an attendance officer to their own wings", () => {
+    expect(canViewMember({ roles: ["WING_ADMIN"], wingIds: ["wing-1"] }, "wing-1")).toBe(true);
+    expect(canViewMember({ roles: ["WING_ADMIN"], wingIds: ["wing-1"] }, "wing-2")).toBe(false);
+    expect(canViewMember({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-2"] }, "wing-1")).toBe(false);
+  });
+
+  it("gives charity officers, content editors and members no view of the register", () => {
+    for (const role of ["CHARITY_OFFICER", "CONTENT_EDITOR", "MEMBER"] as const) {
+      expect(canViewMember({ roles: [role], wingIds: ["wing-1"] }, "wing-1")).toBe(false);
+    }
   });
 });

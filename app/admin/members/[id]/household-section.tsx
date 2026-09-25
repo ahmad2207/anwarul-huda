@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { HouseholdMember } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,14 @@ function HouseholdRow({
         {entry.fullName}
         {entry.age !== null ? `, ${entry.age}` : ""}
         {entry.relationship ? ` (${entry.relationship})` : ""}
-        {entry.linkedMember ? `, linked to ${formatMemberName(entry.linkedMember)}` : ""}
+        {entry.linkedMember ? (
+          <>
+            , linked to{" "}
+            <Link href={`/admin/members/${entry.linkedMember.id}`} className="underline underline-offset-2">
+              {formatMemberName(entry.linkedMember)}
+            </Link>
+          </>
+        ) : null}
       </span>
       {canEdit ? (
         <div className="flex gap-2">

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeNigerianPhone } from "@/lib/phone";
+import { parseLagosDateTimeLocal } from "@/lib/timezone";
 
 // Shared building blocks for the member Zod schemas (registration and the
 // admin edit form both describe the same paper form, so both need the
@@ -79,4 +80,30 @@ export function optionalPhone(label: string) {
       return z.NEVER;
     }
   });
+}
+
+/**
+ * A datetime-local input ("YYYY-MM-DDTHH:mm"), read as Lagos time. The
+ * people typing it are in Lagos; z.coerce.date() or new Date() would read
+ * the same string in the server's own zone instead, which on a UTC server
+ * puts every time an hour late.
+ */
+export function lagosDateTime(requiredMessage: string, invalidMessage: string) {
+  return z
+    .string()
+    .trim()
+    .min(1, requiredMessage)
+    .transform((value, ctx) => {
+      const instant = parseLagosDateTimeLocal(value);
+      if (!instant) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: invalidMessage });
+        return z.NEVER;
+      }
+      return instant;
+    });
+}
+
+/** The same, for a field that may be left blank. */
+export function optionalLagosDateTime(invalidMessage: string) {
+  return optionalField(lagosDateTime(invalidMessage, invalidMessage));
 }

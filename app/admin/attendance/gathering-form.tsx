@@ -58,11 +58,11 @@ export function GatheringForm({ wings, branches }: { wings: Wing[]; branches: Br
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <Label className="text-xs">Starts</Label>
+        <Label className="text-xs">Starts (Lagos time)</Label>
         <Input name="startsAt" type="datetime-local" required />
       </div>
       <div className="flex flex-col gap-1">
-        <Label className="text-xs">Ends (optional)</Label>
+        <Label className="text-xs">Ends, Lagos time (optional)</Label>
         <Input name="endsAt" type="datetime-local" />
       </div>
       <Button type="submit" size="sm" disabled={isPending}>

@@ -99,7 +99,7 @@ export function ContentForm({ wings }: { wings: Wing[] }) {
           <Input name="deliveredOn" type="date" />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Publish at (optional, leave blank for immediately)</Label>
+          <Label className="text-xs">Publish at, Lagos time (optional, leave blank for immediately)</Label>
           <Input name="publishAt" type="datetime-local" />
         </div>
       </div>

@@ -9,6 +9,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { GatheringForm } from "./gathering-form";
 import { CloseGatheringButton } from "./close-gathering-button";
+import { formatLagosDateTime } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -46,7 +47,7 @@ export default async function AttendancePage() {
     },
     { key: "type", header: "Type", cell: (gathering) => TYPE_LABELS[gathering.type] ?? gathering.type },
     { key: "wing", header: "Wing", cell: (gathering) => gathering.wing?.name ?? "All wings" },
-    { key: "starts", header: "Starts", cell: (gathering) => gathering.startsAt.toLocaleString("en-NG") },
+    { key: "starts", header: "Starts", cell: (gathering) => formatLagosDateTime(gathering.startsAt) },
     { key: "checkedIn", header: "Checked in", cell: (gathering) => gathering._count.records },
     {
       key: "status",

@@ -22,11 +22,6 @@ export async function createGathering(
     return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
-  const startsAt = new Date(parsed.data.startsAt);
-  if (Number.isNaN(startsAt.getTime())) {
-    return { error: "Enter a valid start time." };
-  }
-
   const wingId = parsed.data.wingId ?? null;
 
   // A wing administrator can only ever run check-in for their own wing
@@ -47,7 +42,7 @@ export async function createGathering(
       type: parsed.data.type,
       wingId,
       branchId: parsed.data.branchId ?? null,
-      startsAt,
+      startsAt: parsed.data.startsAt,
       endsAt: parsed.data.endsAt ?? null,
     },
   });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { optionalField, optionalText, toStringList } from "@/lib/zod-helpers";
+import { optionalField, optionalLagosDateTime, optionalText, toStringList } from "@/lib/zod-helpers";
 
 export const CONTENT_TYPES = ["SERMON", "WEEKLY_BOOK", "ARTICLE", "ANNOUNCEMENT"] as const;
 
@@ -16,7 +16,7 @@ export const contentSchema = z.object({
   tags: z.array(z.string().trim().min(1)).transform((tags) => tags.map((tag) => tag.toLowerCase())),
   wingId: optionalText(50),
   deliveredOn: optionalField(z.coerce.date()),
-  publishAt: optionalField(z.coerce.date()),
+  publishAt: optionalLagosDateTime("Enter a valid date and time to publish"),
   isPublished: z.boolean(),
 });
 

@@ -13,6 +13,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { ContentForm } from "./content-form";
 import { CONTENT_TYPES } from "./schema";
+import { formatLagosDateTime } from "@/lib/timezone";
 
 const PAGE_SIZE = 20;
 
@@ -26,7 +27,7 @@ const TYPE_LABELS: Record<string, string> = {
 function statusLabel(item: Pick<ContentItem, "isPublished" | "publishAt">): string {
   if (!item.isPublished) return "Draft";
   if (item.publishAt && item.publishAt.getTime() > Date.now()) {
-    return `Scheduled for ${item.publishAt.toLocaleString("en-NG")}`;
+    return `Scheduled for ${formatLagosDateTime(item.publishAt)}`;
   }
   return "Published";
 }

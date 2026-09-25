@@ -1,13 +1,15 @@
-import type { CheckInMethod, GatheringType, Prisma } from "@prisma/client";
+import type { CheckInMethod, GatheringType, Prisma, RoleName } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { accountLockoutKey, checkAccountLockout } from "@/lib/login-lockout";
+import { canViewMemberActivity } from "@/lib/authorization";
 
 // Queries behind the tabs of the administrator member view
 // (MEMBER-HOME-AND-ADMIN-VIEW.md 2). Every function takes a member id the
 // caller has already cleared through canViewMember: the wing check
 // happens once, in app/admin/members/[id]/load-member.ts, before any of
-// these run. Charity history is the exception and carries its own check
-// (lib/members/charity-history.ts).
+// these run. Charity history and activity are the exceptions: each
+// carries its own role check, in lib/members/charity-history.ts and in
+// getMemberActivity below.
 
 /** A staff member's label wherever a name is needed: users carry no name of their own. */
 export function staffLabel(user: { email: string | null; phone: string | null } | null): string {
@@ -280,14 +282,28 @@ export async function getMemberAccess(member: {
 // Activity (2.6)
 // ---------------------------------------------------------------
 
+export class MemberActivityAccessError extends Error {
+  constructor() {
+    super("Only a super administrator can see a member's activity");
+    this.name = "MemberActivityAccessError";
+  }
+}
+
 /**
  * The audit trail for this member: changes to the member row itself and
  * to their login account. Payments and attendance have their own tabs.
+ * Super admins only (SPEC.md section 4). The check is here, in the only
+ * function that reads this trail for the member view, so no caller gets
+ * the rows without passing it, not only on the page that renders them.
  */
 export async function getMemberActivity(
+  viewer: { roles: RoleName[] },
   member: { id: string; userId: string | null },
   pagination: { page: number; pageSize: number },
 ) {
+  if (!canViewMemberActivity(viewer)) {
+    throw new MemberActivityAccessError();
+  }
   const where: Prisma.AuditLogWhereInput = {
     OR: [
       { entity: "Member", entityId: member.id },

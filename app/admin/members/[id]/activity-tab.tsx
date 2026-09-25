@@ -1,3 +1,4 @@
+import type { RoleName } from "@prisma/client";
 import { computeAuditDiff } from "@/lib/audit/diff";
 import { getMemberActivity, isHiddenAuditField, staffLabel } from "@/lib/members/member-view";
 import { formatLagosDateTime } from "@/lib/timezone";
@@ -21,15 +22,18 @@ function displayValue(value: unknown): string {
 
 // MEMBER-HOME-AND-ADMIN-VIEW.md 2.6. The member's own edits are marked
 // as theirs, distinct from anything the office did, by comparing the
-// actor to the member's own login.
+// actor to the member's own login. Super admins only (SPEC.md section 4):
+// getMemberActivity refuses anyone else before reading anything.
 export async function ActivityTab({
+  viewer,
   member,
   page,
 }: {
+  viewer: { roles: RoleName[] };
   member: { id: string; userId: string | null };
   page: number;
 }) {
-  const { entries, total } = await getMemberActivity(member, { page, pageSize: PAGE_SIZE });
+  const { entries, total } = await getMemberActivity(viewer, member, { page, pageSize: PAGE_SIZE });
 
   return (
     <div className="flex flex-col gap-3">

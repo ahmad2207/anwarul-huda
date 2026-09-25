@@ -7,6 +7,7 @@ import {
   canViewAllWings,
   canViewMember,
   canViewCharityHistory,
+  canViewMemberActivity,
   hasAnyRole,
 } from "./authorization";
 
@@ -166,5 +167,24 @@ describe("canEnrolMemberFace", () => {
 
   it("does not let a finance officer enrol, though they can view every member", () => {
     expect(canEnrolMemberFace({ roles: ["FINANCE_OFFICER"], wingIds: [] }, "wing-1")).toBe(false);
+  });
+});
+
+describe("canViewMemberActivity", () => {
+  it("allows a super admin", () => {
+    expect(canViewMemberActivity({ roles: ["SUPER_ADMIN"] })).toBe(true);
+  });
+
+  it("denies every other role, including those who can open the member's record", () => {
+    for (const role of [
+      "WING_ADMIN",
+      "FINANCE_OFFICER",
+      "ATTENDANCE_OFFICER",
+      "CHARITY_OFFICER",
+      "CONTENT_EDITOR",
+      "MEMBER",
+    ] as const) {
+      expect(canViewMemberActivity({ roles: [role] })).toBe(false);
+    }
   });
 });

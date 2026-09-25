@@ -85,6 +85,15 @@ export function canReviewFaceMatch(
 }
 
 /**
+ * Whether this user may see a member's audit trail, the Activity tab on
+ * the member view. Super admins only, matching SPEC.md section 4, where
+ * viewing the audit log is a super admin capability alone.
+ */
+export function canViewMemberActivity(user: { roles: RoleName[] }): boolean {
+  return user.roles.includes("SUPER_ADMIN");
+}
+
+/**
  * Whether a member's charity beneficiary history may be shown to this
  * user (MEMBER-HOME-AND-ADMIN-VIEW.md 2.7): charity officers and super
  * admins only. A member's need is not general administrative context, so

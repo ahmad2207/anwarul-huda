@@ -1,7 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { lagosMidnightUtc } from "@/lib/timezone";
-import { getAttendanceLog, getAttendanceStats, getMemberActivity, getMemberMoneyTotals } from "./member-view";
+import {
+  getAttendanceLog,
+  getAttendanceStats,
+  getMemberActivity,
+  getMemberMoneyTotals,
+  MemberActivityAccessError,
+} from "./member-view";
 
 // Integration tests against the real database. Dates sit in 2097 so no
 // real gathering or check-in falls inside the periods used here.
@@ -116,11 +122,21 @@ describe("getMemberMoneyTotals", () => {
 });
 
 describe("getMemberActivity", () => {
-  it("returns this member's audit entries, newest first", async () => {
+  it("refuses anyone but a super admin before reading anything", async () => {
+    await expect(
+      getMemberActivity({ roles: ["WING_ADMIN"] }, { id: memberId, userId: null }, { page: 1, pageSize: 10 }),
+    ).rejects.toBeInstanceOf(MemberActivityAccessError);
+  });
+
+  it("returns this member's audit entries, newest first, to a super admin", async () => {
     await prisma.auditLog.create({
       data: { actorId: officerId, action: "member.updated", entity: "Member", entityId: memberId, after: { occupation: "Teacher" } },
     });
-    const { entries, total } = await getMemberActivity({ id: memberId, userId: null }, { page: 1, pageSize: 10 });
+    const { entries, total } = await getMemberActivity(
+      { roles: ["SUPER_ADMIN"] },
+      { id: memberId, userId: null },
+      { page: 1, pageSize: 10 },
+    );
     expect(total).toBe(1);
     expect(entries[0].action).toBe("member.updated");
   });

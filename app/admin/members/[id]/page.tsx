@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { MemberSource, Prisma } from "@prisma/client";
-import { canEditMemberRecords, canEnrolMemberFace, canViewCharityHistory } from "@/lib/authorization";
+import {
+  canEditMemberRecords,
+  canEnrolMemberFace,
+  canViewCharityHistory,
+  canViewMemberActivity,
+} from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { formatNigerianPhoneForDisplay } from "@/lib/phone";
 import { formatMemberName } from "@/lib/members/display-name";
@@ -71,11 +76,15 @@ export default async function MemberDetailPage({
   const query = await searchParams;
   const param = (name: string) => (typeof query[name] === "string" ? (query[name] as string) : undefined);
 
-  // The charity tab is not offered at all to a viewer who may not see it,
-  // and asking for it by URL falls back to the record rather than
-  // rendering anything (2.7).
+  // The charity and activity tabs are not offered at all to a viewer who
+  // may not see them, and asking for either by URL falls back to the
+  // record rather than rendering anything (2.7, and SPEC.md section 4 for
+  // the audit trail).
   const showCharity = canViewCharityHistory(user);
-  const tabs = TABS.filter((tab) => tab.key !== "charity" || showCharity);
+  const showActivity = canViewMemberActivity(user);
+  const tabs = TABS.filter(
+    (tab) => (tab.key !== "charity" || showCharity) && (tab.key !== "activity" || showActivity),
+  );
   const requested = param("tab");
   const activeTab: TabKey = tabs.some((tab) => tab.key === requested) ? (requested as TabKey) : "record";
 
@@ -149,8 +158,8 @@ export default async function MemberDetailPage({
       {activeTab === "account" ? (
         <AccountTab member={member} canEdit={canEdit} canEnrolFace={canEnrolMemberFace(user, member.wingId)} />
       ) : null}
-      {activeTab === "activity" ? (
-        <ActivityTab member={{ id: member.id, userId: member.user?.id ?? null }} page={page} />
+      {activeTab === "activity" && showActivity ? (
+        <ActivityTab viewer={user} member={{ id: member.id, userId: member.user?.id ?? null }} page={page} />
       ) : null}
       {activeTab === "charity" && showCharity ? <CharityTab viewer={user} memberId={member.id} /> : null}
     </div>

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { toVectorLiteral } from "@/lib/face/vector-literal";
-import { matchFaceForCheckIn } from "./match-face";
+import { decideFaceMatch, matchFaceForCheckIn } from "./match-face";
 
 // Integration test against the real database: pgvector's <=> operator
 // and the wing-scoping join are exactly the kind of thing worth proving
@@ -70,8 +70,8 @@ describe("matchFaceForCheckIn", () => {
 
     const match = await matchFaceForCheckIn(embedding, mensWingId);
 
-    expect(match?.memberId).toBe(memberId);
-    expect(match?.similarity).toBeCloseTo(1, 5);
+    expect(match).toMatchObject({ kind: "match", memberId });
+    expect(match.kind === "match" && match.similarity).toBeCloseTo(1, 5);
   });
 
   it("returns no match for a clearly different embedding", async () => {
@@ -80,7 +80,7 @@ describe("matchFaceForCheckIn", () => {
 
     const match = await matchFaceForCheckIn(differentEmbedding, mensWingId);
 
-    expect(match).toBeNull();
+    expect(match).toEqual({ kind: "none" });
   });
 
   it("does not match a member enrolled in a different wing", async () => {
@@ -90,7 +90,7 @@ describe("matchFaceForCheckIn", () => {
     // The exact same embedding, scoped to a wing this member is not in.
     const match = await matchFaceForCheckIn(embedding, womensWingId);
 
-    expect(match).toBeNull();
+    expect(match).toEqual({ kind: "none" });
   });
 
   it("does not match an inactive (withdrawn) enrolment", async () => {
@@ -99,7 +99,7 @@ describe("matchFaceForCheckIn", () => {
 
     const match = await matchFaceForCheckIn(embedding, mensWingId);
 
-    expect(match).toBeNull();
+    expect(match).toEqual({ kind: "none" });
   });
 
   it("does not match a member who is no longer active", async () => {
@@ -108,7 +108,7 @@ describe("matchFaceForCheckIn", () => {
 
     const match = await matchFaceForCheckIn(embedding, mensWingId);
 
-    expect(match).toBeNull();
+    expect(match).toEqual({ kind: "none" });
   });
 
   it("matches across the whole organisation when the gathering has no wing", async () => {
@@ -117,10 +117,50 @@ describe("matchFaceForCheckIn", () => {
 
     const match = await matchFaceForCheckIn(embedding, null);
 
-    expect(match?.memberId).toBe(memberId);
+    expect(match).toMatchObject({ kind: "match", memberId });
   });
 
   it("refuses an embedding that is not exactly 1024 numbers", async () => {
     await expect(matchFaceForCheckIn([1, 2, 3], mensWingId)).rejects.toThrow();
+  });
+});
+
+describe("decideFaceMatch", () => {
+  it("is no match below the threshold", () => {
+    expect(decideFaceMatch([{ memberId: "a", similarity: 0.49 }], 0.5, 0.05)).toEqual({ kind: "none" });
+  });
+
+  it("matches a lone candidate above the threshold, with no margin to report", () => {
+    expect(decideFaceMatch([{ memberId: "a", similarity: 0.8 }], 0.5, 0.05)).toEqual({
+      kind: "match",
+      memberId: "a",
+      similarity: 0.8,
+      margin: null,
+    });
+  });
+
+  it("matches when the best stands clear of the runner-up, and reports the margin", () => {
+    const result = decideFaceMatch(
+      [
+        { memberId: "a", similarity: 0.8 },
+        { memberId: "b", similarity: 0.6 },
+      ],
+      0.5,
+      0.05,
+    );
+    expect(result).toMatchObject({ kind: "match", memberId: "a" });
+    expect(result.kind === "match" && result.margin).toBeCloseTo(0.2);
+  });
+
+  it("refuses a close call rather than picking the higher score", () => {
+    const result = decideFaceMatch(
+      [
+        { memberId: "a", similarity: 0.72 },
+        { memberId: "b", similarity: 0.7 },
+      ],
+      0.5,
+      0.05,
+    );
+    expect(result.kind).toBe("ambiguous");
   });
 });

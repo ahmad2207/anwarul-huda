@@ -26,13 +26,31 @@ export default async function AccountFacePage() {
 
   const member = await prisma.member.findUnique({
     where: { id: user.memberId },
-    select: { dateOfBirth: true, consentBiometric: true, faceEnrolmentDeferred: true },
+    select: { dateOfBirth: true, consentBiometric: true, faceEnrolmentDeferred: true, faceCheckInExcluded: true },
   });
   if (!member) {
     return (
       <p className="text-base text-muted-foreground">
         This account is not linked to a member record. Contact the office.
       </p>
+    );
+  }
+
+  // Excluded after a face match review: nothing to set up, and no prompt
+  // that treats the member as unfinished (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5).
+  if (member.faceCheckInExcluded) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
+        <p className="text-base text-muted-foreground">
+          You are checked in by name at every gathering. There is nothing you need to set up here.
+        </p>
+        <Button
+          render={<Link href="/account/record">Back to your record</Link>}
+          variant="outline"
+          className="h-11 self-start rounded-[4px] px-6 text-base"
+        />
+      </div>
     );
   }
 
@@ -93,6 +111,30 @@ export default async function AccountFacePage() {
           by name any time.
         </p>
         <WithdrawFaceEnrolmentButton />
+      </div>
+    );
+  }
+
+  // An earlier attempt is waiting for the office to review. Trying again
+  // here would only be held again, so the member is told the same thing
+  // the blocked attempt told them, and nothing more
+  // (MEMBER-HOME-AND-ADMIN-VIEW.md 3.2).
+  const heldForReview =
+    (await prisma.faceMatchCase.count({
+      where: { status: "OPEN", source: "ENROLMENT", memberAId: user.memberId },
+    })) > 0;
+  if (heldForReview) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
+        <p className="text-base text-muted-foreground">
+          The office will help you set this up at the mosque. Until then you are checked in by name.
+        </p>
+        <Button
+          render={<Link href="/account/record">Back to your record</Link>}
+          variant="outline"
+          className="h-11 self-start rounded-[4px] px-6 text-base"
+        />
       </div>
     );
   }

@@ -120,6 +120,7 @@ model User {
   importBatches            ImportBatch[]
   dismissedDuplicateFlags  MemberDuplicateFlag[]
   issuedTemporaryPasswords User[]                @relation("TemporaryPasswordIssuer")
+  decidedFaceMatchCases    FaceMatchCase[]       @relation("FaceMatchCaseDecidedBy")
 
   @@map("users")
 }
@@ -282,14 +283,20 @@ model Member {
 
   // The member's own record, section by section (MEMBER-INTERFACE.md 3.4).
   /**
+   * /**
    * Which of the nine record sections the member has saved. isRecordIncomplete clears once every RecordSection value is present here.
    */
-  completedSections RecordSection[] @default([]) @map("completed_sections")
+  completedSections       RecordSection[] @default([]) @map("completed_sections")
   /**
    * Section 9 without a completed enrolment: the member chose "I cannot do this now" rather than set up face check-in. Deferring still completes the section (MEMBER-INTERFACE.md 3.4), and puts the member on the office's enrolment worklist.
    */
-  faceEnrolmentDeferred   Boolean   @default(false) @map("face_enrolment_deferred")
-  faceEnrolmentDeferredAt DateTime? @map("face_enrolment_deferred_at") @db.Timestamptz(3)
+  faceEnrolmentDeferred   Boolean         @default(false) @map("face_enrolment_deferred")
+  faceEnrolmentDeferredAt DateTime?       @map("face_enrolment_deferred_at") @db.Timestamptz(3)
+  /**
+   * Permanently checked in by name, never by face: this member's face cannot be reliably told apart from another member's (a face match review decided they are two different people, MEMBER-HOME-AND-ADMIN-VIEW.md 3.5). Never treated as an incomplete record and never prompted about face again.
+   */
+  faceCheckInExcluded     Boolean         @default(false) @map("face_check_in_excluded")
+  faceCheckInExcludedAt   DateTime?       @map("face_check_in_excluded_at") @db.Timestamptz(3)
 
   /**
    * A light review, not an approval: the wing administrator's worklist for a record that just finished all nine sections, or that changed its name, phone or address afterwards. Set alongside, never instead of, the member's own save; nothing about the member's status or account is gated on it. Same boolean-plus-worklist shape as isRecordIncomplete.
@@ -317,6 +324,8 @@ model Member {
   faceEnrolments    FaceEnrolment[]
   duplicateFlagsAsA MemberDuplicateFlag[] @relation("DuplicateFlagMemberA")
   duplicateFlagsAsB MemberDuplicateFlag[] @relation("DuplicateFlagMemberB")
+  faceMatchCasesAsA FaceMatchCase[]       @relation("FaceMatchCaseMemberA")
+  faceMatchCasesAsB FaceMatchCase[]       @relation("FaceMatchCaseMemberB")
 
   @@index([wingId, status])
   @@index([surname, firstName])
@@ -630,18 +639,22 @@ enum CheckInMethod {
 }
 
 model AttendanceRecord {
-  id           String        @id @default(cuid())
-  gatheringId  String        @map("gathering_id")
-  memberId     String        @map("member_id")
-  checkedInAt  DateTime      @map("checked_in_at") @db.Timestamptz(3)
-  method       CheckInMethod
-  deviceId     String?       @map("device_id")
-  recordedById String?       @map("recorded_by_id")
+  id            String        @id @default(cuid())
+  gatheringId   String        @map("gathering_id")
+  memberId      String        @map("member_id")
+  checkedInAt   DateTime      @map("checked_in_at") @db.Timestamptz(3)
+  method        CheckInMethod
+  deviceId      String?       @map("device_id")
+  recordedById  String?       @map("recorded_by_id")
   /**
    * Set only when method is FACE: the cosine similarity of the match and the liveness score of the capture that produced it (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.4, "log the liveness score and the match score on every face check-in"). Never the embedding itself.
    */
-  matchScore    Float? @map("match_score")
-  livenessScore Float? @map("liveness_score")
+  matchScore    Float?        @map("match_score")
+  livenessScore Float?        @map("liveness_score")
+  /**
+   * Set only when method is FACE: how far the match stood above the runner-up (MEMBER-HOME-AND-ADMIN-VIEW.md 3.4), so B3 can tune the minimum margin on real data. Null when there was no runner-up at all.
+   */
+  matchMargin   Float?        @map("match_margin")
 
   gathering Gathering        @relation(fields: [gatheringId], references: [id])
   member    Member           @relation(fields: [memberId], references: [id])
@@ -708,21 +721,85 @@ model BiometricEnrolment {
 // has one standing exception in this codebase (the timestamptz cast
 // migration): this is a case prisma migrate dev cannot express.
 model FaceEnrolment {
-  id            String                 @id @default(cuid())
-  memberId      String                 @map("member_id")
+  id            String                      @id @default(cuid())
+  memberId      String                      @map("member_id")
   embedding     Unsupported("vector(1024)")
-  livenessScore Float                  @map("liveness_score")
-  enrolledAt    DateTime               @map("enrolled_at") @db.Timestamptz(3)
-  deviceLabel   String?                @map("device_label")
+  livenessScore Float                       @map("liveness_score")
+  enrolledAt    DateTime                    @map("enrolled_at") @db.Timestamptz(3)
+  deviceLabel   String?                     @map("device_label")
   /**
    * Always true today: re-enrolling replaces a member's row rather than accumulating a history (app/account/face/actions.ts deletes the old one and inserts the new one in the same transaction), so there is never an inactive row sitting alongside an active one. Kept as a column, not removed, since B2's matching query should still filter on it explicitly rather than assume every row present is usable.
    */
-  isActive      Boolean                @default(true) @map("is_active")
+  isActive      Boolean                     @default(true) @map("is_active")
 
   member Member @relation(fields: [memberId], references: [id])
 
   @@index([memberId])
   @@map("face_enrolments")
+}
+
+// Face uniqueness (MEMBER-HOME-AND-ADMIN-VIEW.md 3). One face, one
+// account: an enrolment too close to another member's face is not saved,
+// and a case opens here for review. The same detection catches both a
+// duplicate account and two different people check-in cannot tell apart,
+// so the case records only the pair and the score, never which of the
+// two it is: that is the review's decision. No images, no embeddings.
+
+enum FaceMatchCaseStatus {
+  OPEN
+  SAME_PERSON
+  INDISTINGUISHABLE
+  DISMISSED
+}
+
+enum FaceMatchCaseSource {
+  ENROLMENT
+  RETROSPECTIVE_SCAN
+}
+
+model FaceMatchCase {
+  id            String              @id @default(cuid())
+  /**
+   * The member whose enrolment was blocked, or for a retrospective scan, the first of the pair.
+   */
+  memberAId     String              @map("member_a_id")
+  memberBId     String              @map("member_b_id")
+  similarity    Float
+  /**
+   * The detection threshold in force when this was raised, so a case is still explainable after B3 moves the threshold.
+   */
+  thresholdUsed Float               @map("threshold_used")
+  source        FaceMatchCaseSource
+  status        FaceMatchCaseStatus @default(OPEN)
+  decisionNote  String?             @map("decision_note")
+  decidedById   String?             @map("decided_by_id")
+  decidedAt     DateTime?           @map("decided_at") @db.Timestamptz(3)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  memberA   Member @relation("FaceMatchCaseMemberA", fields: [memberAId], references: [id])
+  memberB   Member @relation("FaceMatchCaseMemberB", fields: [memberBId], references: [id])
+  decidedBy User?  @relation("FaceMatchCaseDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([status])
+  @@index([memberAId, memberBId])
+  @@map("face_match_cases")
+}
+
+// A face check-in refused because the best match stood too close to the
+// runner-up (MEMBER-HOME-AND-ADMIN-VIEW.md 3.4). Scores only, with no
+// member ids: this exists so B3 can tune the minimum margin on real data,
+// not to record who nearly matched.
+model FaceCheckInRefusal {
+  id                 String   @id @default(cuid())
+  gatheringId        String   @map("gathering_id")
+  bestSimilarity     Float    @map("best_similarity")
+  runnerUpSimilarity Float    @map("runner_up_similarity")
+  margin             Float
+  minMargin          Float    @map("min_margin")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("face_check_in_refusals")
 }
 
 // ---------------------------------------------------------------

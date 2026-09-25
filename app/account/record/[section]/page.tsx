@@ -165,6 +165,15 @@ function SectionBody({
         />
       );
     case "face":
+      // Excluded after a face match review: the section is done and
+      // nothing is asked of the member (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5).
+      if (member.faceCheckInExcluded) {
+        return (
+          <p className="text-base text-muted-foreground">
+            You are checked in by name at every gathering. There is nothing you need to do in this section.
+          </p>
+        );
+      }
       return <FaceSectionForm consentBiometric={member.consentBiometric} />;
     default:
       // Unreachable: findRecordSection only resolves the nine keys

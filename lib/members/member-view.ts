@@ -223,7 +223,9 @@ export async function getMemberMoneyTotals(memberId: string): Promise<MemberMone
 // ---------------------------------------------------------------
 
 export type FaceStatus =
+  | { kind: "excluded"; excludedAt: Date | null }
   | { kind: "enrolled"; enrolledAt: Date }
+  | { kind: "held_for_review" }
   | { kind: "deferred"; deferredAt: Date | null }
   | { kind: "not_set_up" };
 
@@ -231,8 +233,10 @@ export async function getMemberAccess(member: {
   id: string;
   faceEnrolmentDeferred: boolean;
   faceEnrolmentDeferredAt: Date | null;
+  faceCheckInExcluded: boolean;
+  faceCheckInExcludedAt: Date | null;
 }) {
-  const [user, enrolment] = await Promise.all([
+  const [user, enrolment, openCases] = await Promise.all([
     prisma.user.findUnique({
       where: { memberId: member.id },
       select: {
@@ -251,10 +255,18 @@ export async function getMemberAccess(member: {
       select: { enrolledAt: true },
       orderBy: { enrolledAt: "desc" },
     }),
+    // Whether an attempt to enrol is waiting on a face match review. Only
+    // that it is, never who with: the review queue shows that, to the
+    // people allowed to see it.
+    prisma.faceMatchCase.count({ where: { status: "OPEN", source: "ENROLMENT", memberAId: member.id } }),
   ]);
 
-  const face: FaceStatus = enrolment
+  const face: FaceStatus = member.faceCheckInExcluded
+    ? { kind: "excluded", excludedAt: member.faceCheckInExcludedAt }
+    : enrolment
     ? { kind: "enrolled", enrolledAt: enrolment.enrolledAt }
+    : openCases > 0
+    ? { kind: "held_for_review" }
     : member.faceEnrolmentDeferred
       ? { kind: "deferred", deferredAt: member.faceEnrolmentDeferredAt }
       : { kind: "not_set_up" };

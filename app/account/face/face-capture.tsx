@@ -18,7 +18,7 @@ import {
   UNCALIBRATED_MIN_LIVENESS_SCORE,
 } from "@/lib/face/thresholds";
 import { sampleBrightness } from "@/lib/face/sample-brightness";
-import { saveFaceEnrolment } from "./actions";
+import { saveFaceEnrolment, type SaveFaceEnrolmentResult } from "./actions";
 
 // SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.4: a randomly chosen action,
 // held for this long to give a real, deliberate movement time to show
@@ -57,10 +57,57 @@ const FAILURE_MESSAGES: Partial<Record<Phase, string>> = {
   "save-failed": "That could not be saved. Check your connection and try again, or leave it to the office.",
 };
 
-export function FaceCapture() {
+export interface FaceCaptureCopy {
+  title: string;
+  readyText: string;
+  enrolledTitle: string;
+  enrolledText: string;
+  doneHref: string;
+  doneLabel: string;
+  /** Where "leave it to the office" goes, and what it is called, from the ready screen and every failure. */
+  escapeHref: string;
+  escapeLabel: string;
+  readyEscapeLabel: string;
+}
+
+const MEMBER_COPY: FaceCaptureCopy = {
+  title: "Face check-in",
+  readyText: "When you are ready, we will ask you to make a small movement to confirm it is really you.",
+  enrolledTitle: "You're set up.",
+  enrolledText:
+    "You'll be marked present by face from now on. You can still be checked in by name any time, and you can remove this from your account whenever you like.",
+  doneHref: "/account/record",
+  doneLabel: "Back to your record",
+  escapeHref: "/account/record",
+  escapeLabel: "Leave it to the office",
+  readyEscapeLabel: "I cannot do this now",
+};
+
+export type FaceCaptureSave = (input: {
+  embedding: number[];
+  livenessScore: number;
+  deviceLabel?: string;
+}) => Promise<SaveFaceEnrolmentResult>;
+
+// Used by a member enrolling themselves on their own phone (the
+// defaults) and by an officer enrolling a member at the mosque
+// (app/admin/members/[id]/face), which passes its own save action, the
+// rear camera, and officer facing wording. Capture, liveness and the
+// discard point below are the same for both.
+export function FaceCapture({
+  save = saveFaceEnrolment,
+  camera = "user",
+  copy = MEMBER_COPY,
+}: {
+  save?: FaceCaptureSave;
+  camera?: "user" | "environment";
+  copy?: FaceCaptureCopy;
+} = {}) {
   const [phase, setPhase] = useState<Phase>("loading-models");
   const [challenge, setChallenge] = useState<LivenessChallenge | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveFinal, setSaveFinal] = useState(false);
+  const [mirror, setMirror] = useState(camera === "user");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const humanRef = useRef<Human | null>(null);
@@ -134,7 +181,7 @@ export function FaceCapture() {
           // front-facing camera (or that does not label one) should
           // still get whatever camera it has, not an OverconstrainedError.
           // 4:5, matched to the preview box below.
-          video: { facingMode: { ideal: "user" }, width: { ideal: 480 }, height: { ideal: 600 } },
+          video: { facingMode: { ideal: camera }, width: { ideal: 480 }, height: { ideal: 600 } },
           audio: false,
         });
         if (cancelled) {
@@ -145,6 +192,13 @@ export function FaceCapture() {
         // mounted yet at this point. attachVideo's callback ref does it
         // the instant it does.
         streamRef.current = stream;
+        // Mirror only a camera that actually faces the person holding
+        // the phone, the same test check-in uses: a rear camera asked for
+        // by an officer can fall back to a front one on a device without
+        // one. A device that does not report which way it faces is taken
+        // to be the camera that was asked for.
+        const facing = stream.getVideoTracks()[0]?.getSettings().facingMode;
+        setMirror((facing ?? camera) === "user");
         setPhase("ready");
       } catch (error) {
         if (cancelled) return;
@@ -161,7 +215,7 @@ export function FaceCapture() {
     return () => {
       cancelled = true;
     };
-  }, [phase]);
+  }, [phase, camera]);
 
   // Camera stream and video element are released whenever this
   // component leaves the page, not only on success: a member who backs
@@ -258,7 +312,7 @@ export function FaceCapture() {
 
   async function submitEnrolment(embedding: number[], livenessScore: number) {
     setPhase("saving");
-    const result = await saveFaceEnrolment({
+    const result = await save({
       embedding,
       livenessScore,
       deviceLabel: navigator.userAgent.slice(0, 200),
@@ -267,13 +321,14 @@ export function FaceCapture() {
       setPhase("enrolled");
     } else {
       setSaveError(result.error);
+      setSaveFinal(result.final ?? false);
       setPhase("save-failed");
     }
   }
 
   if (phase === "loading-models") {
     return (
-      <FaceScreen title="Face check-in">
+      <FaceScreen title={copy.title}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Spinner />
           <p className="text-base text-muted-foreground">
@@ -287,7 +342,7 @@ export function FaceCapture() {
 
   if (phase === "requesting-camera") {
     return (
-      <FaceScreen title="Face check-in">
+      <FaceScreen title={copy.title}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Spinner />
           <p className="text-base text-muted-foreground">Asking for camera access...</p>
@@ -298,18 +353,18 @@ export function FaceCapture() {
 
   if (isFailurePhase(phase)) {
     return (
-      <FaceScreen title="Face check-in">
+      <FaceScreen title={copy.title}>
         <div className="flex flex-col gap-4">
           <p className="text-base text-muted-foreground">
             {phase === "save-failed" && saveError ? saveError : FAILURE_MESSAGES[phase]}
           </p>
           <div className="flex flex-col gap-3">
-            {phase !== "permission-denied" && phase !== "no-camera" && phase !== "models-failed" ? (
+            {phase !== "permission-denied" && phase !== "no-camera" && phase !== "models-failed" && !(phase === "save-failed" && saveFinal) ? (
               <Button type="button" onClick={() => setPhase("ready")} className="h-11 rounded-[4px] px-6 text-base">
                 Try again
               </Button>
             ) : null}
-            <DeferButton />
+            <DeferButton href={copy.escapeHref} label={copy.escapeLabel} />
           </div>
         </div>
       </FaceScreen>
@@ -318,7 +373,7 @@ export function FaceCapture() {
 
   if (phase === "saving") {
     return (
-      <FaceScreen title="Face check-in">
+      <FaceScreen title={copy.title}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Spinner />
           <p className="text-base text-muted-foreground">Saving...</p>
@@ -329,15 +384,12 @@ export function FaceCapture() {
 
   if (phase === "enrolled") {
     return (
-      <FaceScreen title="Face check-in">
+      <FaceScreen title={copy.title}>
         <div className="flex flex-col gap-4">
-          <p className="text-base font-medium">You&apos;re set up.</p>
-          <p className="text-base text-muted-foreground">
-            You&apos;ll be marked present by face from now on. You can still be checked in by name any time, and
-            you can remove this from your account whenever you like.
-          </p>
+          <p className="text-base font-medium">{copy.enrolledTitle}</p>
+          <p className="text-base text-muted-foreground">{copy.enrolledText}</p>
           <Button
-            render={<Link href="/account/record">Back to your record</Link>}
+            render={<Link href={copy.doneHref}>{copy.doneLabel}</Link>}
             variant="outline"
             className="h-11 self-start rounded-[4px] px-6 text-base"
           />
@@ -347,26 +399,24 @@ export function FaceCapture() {
   }
 
   return (
-    <FaceScreen title="Face check-in">
+    <FaceScreen title={copy.title}>
       <div className="flex flex-col gap-4">
         <video
           ref={attachVideo}
           muted
           playsInline
-          // This always requests the front-facing camera (facingMode:
-          // "user" above), so a mirrored preview is what everyone
-          // expects from a selfie camera: turn your real left, your
+          // Mirrored only for a camera facing the person holding the
+          // phone (see requestCamera above): that is what everyone
+          // expects from a selfie camera, turn your real left and your
           // reflection on screen turns the same way. The raw frame human
           // reads for detection is unaffected: this is a display
           // transform only, not a change to what challengeSatisfied sees.
-          className="mx-auto aspect-[4/5] w-full max-w-xs -scale-x-100 rounded-[4px] bg-black object-cover"
+          className={`mx-auto aspect-[4/5] w-full max-w-xs rounded-[4px] bg-black object-cover ${mirror ? "-scale-x-100" : ""}`}
         />
 
         {phase === "ready" ? (
           <>
-            <p className="text-base text-muted-foreground">
-              When you are ready, we will ask you to make a small movement to confirm it is really you.
-            </p>
+            <p className="text-base text-muted-foreground">{copy.readyText}</p>
             <Button type="button" onClick={startCapture} className="h-11 self-start rounded-[4px] px-6 text-base">
               Begin
             </Button>
@@ -379,7 +429,7 @@ export function FaceCapture() {
 
         {phase === "processing" ? <p className="text-base text-muted-foreground">Checking...</p> : null}
 
-        <DeferButton label="I cannot do this now" />
+        <DeferButton href={copy.escapeHref} label={copy.readyEscapeLabel} />
       </div>
     </FaceScreen>
   );
@@ -417,12 +467,12 @@ function Spinner() {
 // nothing left to save by leaving. Calling section 9's own defer action
 // from here would wrongly flip that consent back off, exactly the dead
 // end the correction to "Set up now" was written to remove.
-function DeferButton({ label = "Leave it to the office" }: { label?: string }) {
+function DeferButton({ href, label }: { href: string; label: string }) {
   return (
     <Button
       type="button"
       variant="outline"
-      render={<Link href="/account/record">{label}</Link>}
+      render={<Link href={href}>{label}</Link>}
       className="h-11 w-full rounded-[4px] px-6 text-base"
     />
   );

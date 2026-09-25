@@ -8,7 +8,7 @@ import { writeAudit } from "@/lib/audit";
 import { checkInMember } from "@/lib/attendance/check-in";
 import { formatMemberName } from "@/lib/members/display-name";
 import { matchFaceForCheckIn } from "@/lib/face/match-face";
-import { UNCALIBRATED_MIN_LIVENESS_SCORE } from "@/lib/face/thresholds";
+import { UNCALIBRATED_MIN_LIVENESS_SCORE, UNCALIBRATED_MIN_MATCH_MARGIN } from "@/lib/face/thresholds";
 
 async function requireGatheringAccess(gatheringId: string) {
   const actor = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -173,7 +173,21 @@ export async function checkInByFace(
   }
 
   const match = await matchFaceForCheckIn(embedding, gathering.wingId);
-  if (!match) {
+  if (match.kind === "ambiguous") {
+    // Refused rather than guessed (MEMBER-HOME-AND-ADMIN-VIEW.md 3.4), and
+    // logged with scores only, no member ids, so B3 can tune the margin.
+    await prisma.faceCheckInRefusal.create({
+      data: {
+        gatheringId,
+        bestSimilarity: match.bestSimilarity,
+        runnerUpSimilarity: match.runnerUpSimilarity,
+        margin: match.margin,
+        minMargin: UNCALIBRATED_MIN_MATCH_MARGIN,
+      },
+    });
+    return {};
+  }
+  if (match.kind === "none") {
     return {};
   }
 
@@ -190,6 +204,7 @@ export async function checkInByFace(
       recordedById: actor.id,
       matchScore: match.similarity,
       livenessScore,
+      matchMargin: match.margin,
     });
     if (!outcome.alreadyCheckedIn) {
       await writeAudit(

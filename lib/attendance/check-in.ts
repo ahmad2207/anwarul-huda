@@ -8,6 +8,8 @@ export interface CheckInInput {
   /** Set only for method FACE (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 3.4: "log the liveness score and the match score on every face check-in"). */
   matchScore?: number;
   livenessScore?: number;
+  /** Set only for method FACE: how far the match stood above the runner-up (MEMBER-HOME-AND-ADMIN-VIEW.md 3.4). Null when there was no runner-up. */
+  matchMargin?: number | null;
 }
 
 export interface CheckInResult {
@@ -47,6 +49,7 @@ export async function checkInMember(
         recordedById: input.recordedById,
         matchScore: input.matchScore,
         livenessScore: input.livenessScore,
+        matchMargin: input.matchMargin ?? null,
       },
     });
     return { record: created, alreadyCheckedIn: false };

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessWing,
   canEditMemberRecords,
+  canEnrolMemberFace,
+  canReviewFaceMatch,
   canViewAllWings,
   canViewMember,
   canViewCharityHistory,
@@ -125,5 +127,44 @@ describe("canViewMember", () => {
     for (const role of ["CHARITY_OFFICER", "CONTENT_EDITOR", "MEMBER"] as const) {
       expect(canViewMember({ roles: [role], wingIds: ["wing-1"] }, "wing-1")).toBe(false);
     }
+  });
+});
+
+describe("canReviewFaceMatch", () => {
+  it("lets a super admin with no wing review any pair", () => {
+    expect(canReviewFaceMatch({ roles: ["SUPER_ADMIN"], wingIds: [] }, "wing-1", "wing-2")).toBe(true);
+  });
+
+  it("lets an attendance officer review a pair wholly within their wings", () => {
+    expect(canReviewFaceMatch({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-1"] }, "wing-1", "wing-1")).toBe(true);
+    expect(
+      canReviewFaceMatch({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-1", "wing-2"] }, "wing-1", "wing-2"),
+    ).toBe(true);
+  });
+
+  it("keeps a pair spanning another wing from an attendance officer", () => {
+    expect(canReviewFaceMatch({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-1"] }, "wing-1", "wing-2")).toBe(false);
+  });
+
+  it("gives other roles no access, even in their own wing", () => {
+    for (const role of ["WING_ADMIN", "FINANCE_OFFICER", "CHARITY_OFFICER", "CONTENT_EDITOR", "MEMBER"] as const) {
+      expect(canReviewFaceMatch({ roles: [role], wingIds: ["wing-1"] }, "wing-1", "wing-1")).toBe(false);
+    }
+  });
+});
+
+describe("canEnrolMemberFace", () => {
+  it("lets a super admin enrol anyone", () => {
+    expect(canEnrolMemberFace({ roles: ["SUPER_ADMIN"], wingIds: [] }, "wing-1")).toBe(true);
+  });
+
+  it("lets an attendance officer or wing admin enrol a member in their own wing only", () => {
+    expect(canEnrolMemberFace({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-1"] }, "wing-1")).toBe(true);
+    expect(canEnrolMemberFace({ roles: ["WING_ADMIN"], wingIds: ["wing-1"] }, "wing-1")).toBe(true);
+    expect(canEnrolMemberFace({ roles: ["ATTENDANCE_OFFICER"], wingIds: ["wing-1"] }, "wing-2")).toBe(false);
+  });
+
+  it("does not let a finance officer enrol, though they can view every member", () => {
+    expect(canEnrolMemberFace({ roles: ["FINANCE_OFFICER"], wingIds: [] }, "wing-1")).toBe(false);
   });
 });

@@ -1,12 +1,11 @@
 "use server";
 
-import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { ageInYears } from "@/lib/members/age";
-import { toVectorLiteral } from "@/lib/face/vector-literal";
+import { saveEnrolmentForMember } from "@/lib/face/save-enrolment";
 import { faceEnrolmentPayloadSchema } from "./schema";
 
 const MINIMUM_ENROLMENT_AGE = 18;
@@ -17,7 +16,8 @@ export interface SaveFaceEnrolmentInput {
   deviceLabel?: string;
 }
 
-export type SaveFaceEnrolmentResult = { ok: true } | { ok: false; error: string };
+// final: trying again from this screen cannot help, so no "Try again" is offered.
+export type SaveFaceEnrolmentResult = { ok: true } | { ok: false; error: string; final?: boolean };
 
 /**
  * The one place an embedding is ever written. Called directly from
@@ -53,50 +53,26 @@ export async function saveFaceEnrolment(input: SaveFaceEnrolmentInput): Promise<
     return { ok: false, error: "Face check-in is not available under the age of 18." };
   }
 
-  const enrolmentId = crypto.randomUUID();
-  const enrolledAt = new Date();
-  const isReEnrolment = (await prisma.faceEnrolment.count({ where: { memberId: member.id } })) > 0;
-
-  await prisma.$transaction(async (tx) => {
-    // Replaces, never accumulates: every previous embedding for this
-    // member is gone before the new one is written, in the same
-    // transaction as the insert, so this member never has two rows,
-    // and if the insert below failed, never ends up with none either.
-    await tx.faceEnrolment.deleteMany({ where: { memberId: member.id } });
-    await tx.$executeRaw`
-      INSERT INTO face_enrolments (id, member_id, embedding, liveness_score, enrolled_at, device_label, is_active)
-      VALUES (${enrolmentId}, ${member.id}, ${toVectorLiteral(parsed.data.embedding)}::vector, ${parsed.data.livenessScore}, ${enrolledAt}, ${parsed.data.deviceLabel ?? null}, true)
-    `;
-
-    // A real enrolment supersedes an earlier deferral from a previous
-    // visit, and this is also how a member drops off the enrolment
-    // worklist prompt M5 builds: that worklist queries deferred and
-    // never enrolled members, neither of which this member now is.
-    if (member.faceEnrolmentDeferred) {
-      await tx.member.update({
-        where: { id: member.id },
-        data: { faceEnrolmentDeferred: false, faceEnrolmentDeferredAt: null },
-      });
-    }
-
-    // Never the embedding itself, only that an enrolment happened, when,
-    // and with what liveness score: the same boundary section 4.4 draws
-    // for every admin screen applies here too, to the audit log.
-    await writeAudit(
-      {
-        actorId: user.id,
-        action: isReEnrolment ? "member.face_re_enrolled" : "member.face_enrolled",
-        entity: "Member",
-        entityId: member.id,
-        before: null,
-        after: { livenessScore: parsed.data.livenessScore, deviceLabel: parsed.data.deviceLabel ?? null },
-      },
-      tx,
-    );
+  const result = await saveEnrolmentForMember({
+    memberId: member.id,
+    embedding: parsed.data.embedding,
+    livenessScore: parsed.data.livenessScore,
+    deviceLabel: parsed.data.deviceLabel ?? null,
+    actorId: user.id,
+    officerAssisted: false,
   });
 
   revalidatePath("/account/face");
-  return { ok: true };
+  if (result.kind === "saved") {
+    return { ok: true };
+  }
+  if (result.kind === "excluded") {
+    return { ok: false, final: true, error: "Face check-in is not used for your account. You are checked in by name at every gathering." };
+  }
+  // Never who the face resembled (MEMBER-HOME-AND-ADMIN-VIEW.md 3.2):
+  // telling a member that is a breach of the other person's privacy, and
+  // in the fraud case, a hint on how to try again.
+  return { ok: false, final: true, error: "Setup could not be completed here. The office will help you with it at the mosque." };
 }
 
 /**

@@ -49,6 +49,42 @@ export function canViewMember(user: { roles: RoleName[]; wingIds: string[] }, me
 }
 
 /**
+ * Whether this user may enrol a member's face in person at the mosque
+ * (MEMBER-HOME-AND-ADMIN-VIEW.md 3.7): the roles that run check-in
+ * (SPEC.md section 4), for a member in a wing they cover. A finance
+ * officer can view every member but does not run check-in, so cannot
+ * enrol.
+ */
+export function canEnrolMemberFace(user: { roles: RoleName[]; wingIds: string[] }, memberWingId: string): boolean {
+  if (user.roles.includes("SUPER_ADMIN")) return true;
+  return (
+    (user.roles.includes("ATTENDANCE_OFFICER") || user.roles.includes("WING_ADMIN")) &&
+    user.wingIds.includes(memberWingId)
+  );
+}
+
+/**
+ * Whether this user may see and decide a face match case between two
+ * members (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5): super admins always, and
+ * attendance officers only when both members are in wings they are
+ * assigned to. A case spanning a wing the officer does not cover would
+ * put another wing's member's name in front of them, so it is left to a
+ * super admin.
+ */
+export function canReviewFaceMatch(
+  user: { roles: RoleName[]; wingIds: string[] },
+  memberAWingId: string,
+  memberBWingId: string,
+): boolean {
+  if (user.roles.includes("SUPER_ADMIN")) return true;
+  return (
+    user.roles.includes("ATTENDANCE_OFFICER") &&
+    user.wingIds.includes(memberAWingId) &&
+    user.wingIds.includes(memberBWingId)
+  );
+}
+
+/**
  * Whether a member's charity beneficiary history may be shown to this
  * user (MEMBER-HOME-AND-ADMIN-VIEW.md 2.7): charity officers and super
  * admins only. A member's need is not general administrative context, so

@@ -1,18 +1,21 @@
+import Link from "next/link";
 import type { RecordSection } from "@prisma/client";
 import { getMemberAccess, staffLabel } from "@/lib/members/member-view";
 import { RECORD_SECTIONS } from "@/lib/members/record-sections";
 import { formatLagosDate, formatLagosDateTime } from "@/lib/timezone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatusTag } from "@/components/status-tag";
 import { IssueLoginCard } from "./issue-login-card";
 
 // MEMBER-HOME-AND-ADMIN-VIEW.md 2.5. Face enrolment is shown as a status
-// and a date only, never the embedding. "Declined" and "flagged" from the
-// spec have no state in the schema yet: section 9 offers only set up or
-// defer, and flagging arrives with face uniqueness (F1).
+// and a date only, never the embedding. "Flagged" is shown as waiting for
+// a face match review, without naming the other member. "Declined" has
+// no state in the schema: section 9 offers only set up or defer.
 export async function AccountTab({
   member,
   canEdit,
+  canEnrolFace,
 }: {
   member: {
     id: string;
@@ -20,8 +23,12 @@ export async function AccountTab({
     completedSections: RecordSection[];
     faceEnrolmentDeferred: boolean;
     faceEnrolmentDeferredAt: Date | null;
+    faceCheckInExcluded: boolean;
+    faceCheckInExcludedAt: Date | null;
   };
   canEdit: boolean;
+  /** Whether this viewer may set up face check-in for the member in person. */
+  canEnrolFace: boolean;
 }) {
   const { user, face, lockout } = await getMemberAccess(member);
 
@@ -79,8 +86,14 @@ export async function AccountTab({
         <CardContent className="flex flex-col gap-3">
           <dl className="flex flex-col gap-1 text-sm">
             <Row label="Face check-in">
-              {face.kind === "enrolled" ? (
+              {face.kind === "excluded" ? (
+                <StatusTag tone="neutral">
+                  Checked in by name{face.excludedAt ? ` since ${formatLagosDate(face.excludedAt)}` : ""}, after a face match review
+                </StatusTag>
+              ) : face.kind === "enrolled" ? (
                 <StatusTag tone="confirmed">Enrolled {formatLagosDate(face.enrolledAt)}</StatusTag>
+              ) : face.kind === "held_for_review" ? (
+                <StatusTag tone="attention">Setup held for a face match review</StatusTag>
               ) : face.kind === "deferred" ? (
                 <StatusTag tone="attention">
                   Deferred{face.deferredAt ? ` ${formatLagosDate(face.deferredAt)}` : ""}, to be enrolled at the mosque
@@ -90,6 +103,18 @@ export async function AccountTab({
               )}
             </Row>
           </dl>
+          {canEnrolFace && face.kind !== "excluded" && face.kind !== "held_for_review" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              render={
+                <Link href={`/admin/members/${member.id}/face`}>
+                  {face.kind === "enrolled" ? "Set up face check-in again" : "Set up face check-in with the member"}
+                </Link>
+              }
+            />
+          ) : null}
           <div>
             <p className="text-sm font-medium">
               Record: {RECORD_SECTIONS.filter((section) => member.completedSections.includes(section.section)).length} of{" "}

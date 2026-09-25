@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { MemberSource, Prisma } from "@prisma/client";
-import { canEditMemberRecords, canViewCharityHistory } from "@/lib/authorization";
+import { canEditMemberRecords, canEnrolMemberFace, canViewCharityHistory } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { formatNigerianPhoneForDisplay } from "@/lib/phone";
 import { formatMemberName } from "@/lib/members/display-name";
@@ -146,7 +146,9 @@ export default async function MemberDetailPage({
           </CardContent>
         </Card>
       ) : null}
-      {activeTab === "account" ? <AccountTab member={member} canEdit={canEdit} /> : null}
+      {activeTab === "account" ? (
+        <AccountTab member={member} canEdit={canEdit} canEnrolFace={canEnrolMemberFace(user, member.wingId)} />
+      ) : null}
       {activeTab === "activity" ? (
         <ActivityTab member={{ id: member.id, userId: member.user?.id ?? null }} page={page} />
       ) : null}

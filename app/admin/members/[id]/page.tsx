@@ -12,7 +12,7 @@ import { formatNigerianPhoneForDisplay } from "@/lib/phone";
 import { formatMemberName } from "@/lib/members/display-name";
 import { RECORD_SECTIONS } from "@/lib/members/record-sections";
 import { generateMemberQrDataUrl } from "@/lib/qr/member-qr";
-import { formatLagosDate } from "@/lib/timezone";
+import { formatLagosDate, toLagosDateInputValue } from "@/lib/timezone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusTag } from "@/components/status-tag";
@@ -110,7 +110,13 @@ export default async function MemberDetailPage({
             ) : null}
           </p>
         </div>
-        {canEdit ? <StatusChangeForm memberId={member.id} currentStatus={member.status} /> : null}
+        {canEdit ? (
+          <StatusChangeForm
+            memberId={member.id}
+            currentStatus={member.status}
+            defaultDate={toLagosDateInputValue(new Date())}
+          />
+        ) : null}
       </div>
 
       {member.statusReason ? (

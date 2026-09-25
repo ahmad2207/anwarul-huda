@@ -15,7 +15,18 @@ const STATUS_OPTIONS = [
   { value: "DECEASED", label: "Deceased" },
 ] as const;
 
-export function StatusChangeForm({ memberId, currentStatus }: { memberId: string; currentStatus: string }) {
+// defaultDate is today's Lagos date, worked out on the server and passed
+// in: toISOString() here would give the UTC date, which is still
+// yesterday between midnight and 1 am in Lagos.
+export function StatusChangeForm({
+  memberId,
+  currentStatus,
+  defaultDate,
+}: {
+  memberId: string;
+  currentStatus: string;
+  defaultDate: string;
+}) {
   const [open, setOpen] = useState(false);
   const boundAction = changeMemberStatus.bind(null, memberId);
   const [state, formAction, isPending] = useActionState(boundAction, {});
@@ -52,7 +63,7 @@ export function StatusChangeForm({ memberId, currentStatus }: { memberId: string
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="effectiveDate" className="text-xs">Effective date</Label>
-          <Input id="effectiveDate" name="effectiveDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input id="effectiveDate" name="effectiveDate" type="date" defaultValue={defaultDate} />
         </div>
         <div className="flex min-w-48 flex-1 flex-col gap-1">
           <Label htmlFor="reason" className="text-xs">Reason</Label>

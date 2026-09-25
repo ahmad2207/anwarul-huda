@@ -80,3 +80,11 @@ describe("toLagosDateTimeCsvValue", () => {
     expect(toLagosDateTimeCsvValue(new Date("2026-09-25T23:15:00.000Z"))).toBe("2026-09-26 00:15");
   });
 });
+
+describe("toLagosDateInputValue between midnight and 1 am in Lagos", () => {
+  it("gives the Lagos date, while the UTC date is still the day before", () => {
+    const halfPastMidnightInLagos = new Date("2026-09-24T23:30:00.000Z");
+    expect(halfPastMidnightInLagos.toISOString().slice(0, 10)).toBe("2026-09-24");
+    expect(toLagosDateInputValue(halfPastMidnightInLagos)).toBe("2026-09-25");
+  });
+});

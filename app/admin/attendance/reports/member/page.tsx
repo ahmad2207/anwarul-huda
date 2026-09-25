@@ -13,7 +13,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { loadReportMember } from "./actions";
 import { MemberPicker } from "./member-picker";
-import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
+import { formatLagosDateTime, parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -70,7 +70,7 @@ export default async function MemberAttendanceReportPage({
     },
     { key: "type", header: "Type", cell: (row) => TYPE_LABELS[row.type] ?? row.type },
     { key: "wing", header: "Wing", cell: (row) => row.wingName },
-    { key: "checkedInAt", header: "Checked in at", cell: (row) => row.checkedInAt.toLocaleString("en-NG") },
+    { key: "checkedInAt", header: "Checked in at", cell: (row) => formatLagosDateTime(row.checkedInAt) },
     { key: "method", header: "Method", cell: (row) => METHOD_LABELS[row.method] ?? row.method },
   ];
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { toCsvDocument } from "@/lib/csv";
 import { getGatheringAttendeeList } from "@/lib/attendance/reports";
 import { withRouteAuth } from "@/lib/route-auth";
+import { toLagosDateTimeCsvValue } from "@/lib/timezone";
 
 async function handleGet(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -21,8 +22,8 @@ async function handleGet(_request: Request, { params }: { params: Promise<{ id: 
 
   const rows = await getGatheringAttendeeList(id);
   const csv = toCsvDocument(
-    ["Name", "Membership number", "Checked in at"],
-    rows.map((row) => [row.name, row.memberNumber ?? "Not yet issued", row.checkedInAt.toISOString()]),
+    ["Name", "Membership number", "Checked in at (Lagos time)"],
+    rows.map((row) => [row.name, row.memberNumber ?? "Not yet issued", toLagosDateTimeCsvValue(row.checkedInAt)]),
   );
 
   return new Response(csv, {

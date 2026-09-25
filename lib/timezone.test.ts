@@ -5,6 +5,7 @@ import {
   parseLagosDayEnd,
   parseLagosDayStart,
   toLagosDateInputValue,
+  toLagosDateTimeCsvValue,
 } from "./timezone";
 
 describe("parseLagosDateTimeLocal", () => {
@@ -67,5 +68,15 @@ describe("parseLagosDayStart and parseLagosDayEnd", () => {
     expect(parseLagosDayStart("")).toBeUndefined();
     expect(parseLagosDayEnd("not-a-date")).toBeUndefined();
     expect(parseLagosDayEnd(["2026-09-25"])).toBeUndefined();
+  });
+});
+
+describe("toLagosDateTimeCsvValue", () => {
+  it("gives the Lagos date and 24 hour time", () => {
+    expect(toLagosDateTimeCsvValue(new Date("2026-09-25T12:30:00.000Z"))).toBe("2026-09-25 13:30");
+  });
+
+  it("moves a late UTC evening onto the next Lagos day", () => {
+    expect(toLagosDateTimeCsvValue(new Date("2026-09-25T23:15:00.000Z"))).toBe("2026-09-26 00:15");
   });
 });

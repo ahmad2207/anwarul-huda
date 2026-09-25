@@ -125,3 +125,18 @@ export function parseLagosDayEnd(value: unknown): Date | undefined {
   const { year, month, day } = getLagosDateParts(start);
   return new Date(lagosMidnightUtc(year, month, day + 1).getTime() - 1);
 }
+
+/**
+ * "2026-09-25 13:30", the Lagos date and 24 hour time of a UTC instant,
+ * for a CSV column: sorts correctly in a spreadsheet and reads plainly,
+ * where an ISO timestamp would show UTC with a trailing Z.
+ */
+export function toLagosDateTimeCsvValue(instant: Date): string {
+  const time = instant.toLocaleTimeString("en-GB", {
+    timeZone: LAGOS_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return `${toLagosDateInputValue(instant)} ${time}`;
+}

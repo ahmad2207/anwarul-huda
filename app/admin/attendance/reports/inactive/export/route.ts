@@ -5,6 +5,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { getMembersNotAttendedSince, resolveWingFilter } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
 import { withRouteAuth } from "@/lib/route-auth";
+import { toLagosDateInputValue } from "@/lib/timezone";
 
 const DEFAULT_WEEKS = 4;
 const EXPORT_LIMIT = 10000; // matches the "assume ten thousand members" ceiling used elsewhere
@@ -27,7 +28,7 @@ async function handleGet(request: NextRequest) {
       `${row.surname} ${row.firstName}`,
       row.memberNumber ?? "",
       row.wingName,
-      row.lastAttendedAt ? row.lastAttendedAt.toISOString().slice(0, 10) : "Never",
+      row.lastAttendedAt ? toLagosDateInputValue(row.lastAttendedAt) : "Never",
     ]),
   );
 

@@ -6,7 +6,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { getGatheringAttendanceReport, resolveWingFilter } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
 import { withRouteAuth } from "@/lib/route-auth";
-import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
+import { parseLagosDayEnd, parseLagosDayStart, toLagosDateInputValue } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -36,7 +36,7 @@ async function handleGet(request: NextRequest) {
       row.title,
       TYPE_LABELS[row.type] ?? row.type,
       row.wingName,
-      row.startsAt.toISOString().slice(0, 10),
+      toLagosDateInputValue(row.startsAt),
       String(row.checkedInCount),
       row.isClosed ? "Closed" : "Open",
     ]),

@@ -4,7 +4,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { getMemberAttendanceHistory } from "@/lib/attendance/reports";
 import { loadReportMember } from "../actions";
 import { withRouteAuth } from "@/lib/route-auth";
-import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
+import { parseLagosDayEnd, parseLagosDayStart, toLagosDateTimeCsvValue } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -50,12 +50,12 @@ async function handleGet(request: NextRequest) {
   const rows = await getMemberAttendanceHistory(member.id, { from, to });
 
   const csv = toCsvDocument(
-    ["Gathering", "Type", "Wing", "Checked in at", "Method"],
+    ["Gathering", "Type", "Wing", "Checked in at (Lagos time)", "Method"],
     rows.map((row) => [
       row.title,
       TYPE_LABELS[row.type] ?? row.type,
       row.wingName,
-      row.checkedInAt.toISOString(),
+      toLagosDateTimeCsvValue(row.checkedInAt),
       METHOD_LABELS[row.method] ?? row.method,
     ]),
   );

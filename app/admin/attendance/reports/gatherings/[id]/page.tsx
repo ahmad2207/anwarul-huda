@@ -10,6 +10,7 @@ import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
+import { formatLagosDate, formatLagosDateTime } from "@/lib/timezone";
 
 export default async function GatheringAttendeeListPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -30,7 +31,7 @@ export default async function GatheringAttendeeListPage({ params }: { params: Pr
   const columns: DataTableColumn<GatheringAttendeeRow>[] = [
     { key: "name", header: "Name", cell: (row) => row.name },
     { key: "memberNumber", header: "Membership number", cell: (row) => row.memberNumber ?? "Not yet issued" },
-    { key: "checkedInAt", header: "Checked in at", cell: (row) => row.checkedInAt.toLocaleString("en-NG") },
+    { key: "checkedInAt", header: "Checked in at", cell: (row) => formatLagosDateTime(row.checkedInAt) },
   ];
 
   return (
@@ -38,7 +39,7 @@ export default async function GatheringAttendeeListPage({ params }: { params: Pr
       <BackLink href="/admin/attendance/reports/gatherings" label="Back to attendance per gathering" />
       <PageHeader
         title={`Attendees: ${gathering.title}`}
-        description={`${gathering.wing?.name ?? "All wings"} · ${gathering.startsAt.toLocaleDateString("en-NG")}`}
+        description={`${gathering.wing?.name ?? "All wings"} · ${formatLagosDate(gathering.startsAt)}`}
       />
 
       <div className="flex items-center justify-between">

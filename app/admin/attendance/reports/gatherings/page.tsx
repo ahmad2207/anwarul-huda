@@ -13,7 +13,7 @@ import { FormField } from "@/components/form-field";
 import { StatusTag } from "@/components/status-tag";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
-import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
+import { formatLagosDate, parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -66,7 +66,7 @@ export default async function GatheringAttendanceReportPage({
     },
     { key: "type", header: "Type", cell: (row) => TYPE_LABELS[row.type] ?? row.type },
     { key: "wing", header: "Wing", cell: (row) => row.wingName },
-    { key: "date", header: "Date", cell: (row) => row.startsAt.toLocaleDateString("en-NG") },
+    { key: "date", header: "Date", cell: (row) => formatLagosDate(row.startsAt) },
     { key: "checkedIn", header: "Checked in", cell: (row) => row.checkedInCount },
     {
       key: "status",

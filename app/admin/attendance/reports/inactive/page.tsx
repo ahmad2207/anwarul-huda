@@ -13,6 +13,7 @@ import { MemberNumber } from "@/components/member-number";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { formatMemberName } from "@/lib/members/display-name";
+import { formatLagosDate } from "@/lib/timezone";
 
 const PAGE_SIZE = 20;
 const DEFAULT_WEEKS = 4;
@@ -69,7 +70,7 @@ export default async function InactiveMembersReportPage({
     {
       key: "lastAttended",
       header: "Last attended",
-      cell: (row) => (row.lastAttendedAt ? row.lastAttendedAt.toLocaleDateString("en-NG") : "Never"),
+      cell: (row) => (row.lastAttendedAt ? formatLagosDate(row.lastAttendedAt) : "Never"),
     },
   ];
 

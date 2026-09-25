@@ -23,6 +23,15 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+// Every check-in method, so a face or fingerprint check-in is never
+// reported as manual.
+const METHOD_LABELS: Record<string, string> = {
+  MANUAL: "Manual",
+  QR_CODE: "QR code",
+  FINGERPRINT: "Fingerprint",
+  FACE: "Face",
+};
+
 export default async function MemberAttendanceReportPage({
   searchParams,
 }: {
@@ -61,7 +70,7 @@ export default async function MemberAttendanceReportPage({
     { key: "type", header: "Type", cell: (row) => TYPE_LABELS[row.type] ?? row.type },
     { key: "wing", header: "Wing", cell: (row) => row.wingName },
     { key: "checkedInAt", header: "Checked in at", cell: (row) => row.checkedInAt.toLocaleString("en-NG") },
-    { key: "method", header: "Method", cell: (row) => (row.method === "QR_CODE" ? "QR code" : "Manual") },
+    { key: "method", header: "Method", cell: (row) => METHOD_LABELS[row.method] ?? row.method },
   ];
 
   return (

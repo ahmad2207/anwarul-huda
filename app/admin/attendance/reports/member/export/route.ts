@@ -13,6 +13,15 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+// Every check-in method, so a face or fingerprint check-in is never
+// reported as manual.
+const METHOD_LABELS: Record<string, string> = {
+  MANUAL: "Manual",
+  QR_CODE: "QR code",
+  FINGERPRINT: "Fingerprint",
+  FACE: "Face",
+};
+
 export async function GET(request: NextRequest) {
   // Checked here, first, same as every other route handler, rather than
   // only relying on the check inside loadReportMember below: a request
@@ -45,7 +54,7 @@ export async function GET(request: NextRequest) {
       TYPE_LABELS[row.type] ?? row.type,
       row.wingName,
       row.checkedInAt.toISOString(),
-      row.method === "QR_CODE" ? "QR code" : "Manual",
+      METHOD_LABELS[row.method] ?? row.method,
     ]),
   );
 

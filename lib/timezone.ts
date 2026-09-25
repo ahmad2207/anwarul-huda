@@ -101,3 +101,27 @@ export function toLagosDateInputValue(instant: Date): string {
   const { year, month, day } = getLagosDateParts(instant);
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
+
+/**
+ * The start of a report's date range: Lagos midnight at the beginning of
+ * the "YYYY-MM-DD" day given. new Date() on the same string gives UTC
+ * midnight instead, an hour into the Lagos day. Undefined for a missing
+ * or malformed value, so a bad URL means "no limit", never a failed query.
+ */
+export function parseLagosDayStart(value: unknown): Date | undefined {
+  return typeof value === "string" ? (parseLagosDate(value) ?? undefined) : undefined;
+}
+
+/**
+ * The end of a report's date range: the last millisecond of the given
+ * Lagos day, for an "on or before" (lte) comparison. new Date() on the
+ * same string gives the very start of that day instead, which left the
+ * whole of the last day out of every range. Undefined for a missing or
+ * malformed value.
+ */
+export function parseLagosDayEnd(value: unknown): Date | undefined {
+  const start = parseLagosDayStart(value);
+  if (!start) return undefined;
+  const { year, month, day } = getLagosDateParts(start);
+  return new Date(lagosMidnightUtc(year, month, day + 1).getTime() - 1);
+}

@@ -12,6 +12,7 @@ import { FormField } from "@/components/form-field";
 import { Money } from "@/components/money";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const GROUP_OPTIONS: Array<{ value: CollectionsGroupBy; label: string }> = [
   { value: "period", label: "Period" },
@@ -20,12 +21,6 @@ const GROUP_OPTIONS: Array<{ value: CollectionsGroupBy; label: string }> = [
   { value: "officer", label: "Officer" },
   { value: "method", label: "Method" },
 ];
-
-function parseDate(value: string | string[] | undefined): Date | undefined {
-  if (typeof value !== "string" || !value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
 
 export default async function CollectionsReportPage({
   searchParams,
@@ -36,8 +31,8 @@ export default async function CollectionsReportPage({
   const params = await searchParams;
 
   const groupBy = (typeof params.groupBy === "string" ? params.groupBy : "period") as CollectionsGroupBy;
-  const from = parseDate(params.from);
-  const to = parseDate(params.to);
+  const from = parseLagosDayStart(params.from);
+  const to = parseLagosDayEnd(params.to);
   const wingId = typeof params.wingId === "string" ? params.wingId : "";
   const planId = typeof params.planId === "string" ? params.planId : "";
   const method = typeof params.method === "string" ? params.method : "";

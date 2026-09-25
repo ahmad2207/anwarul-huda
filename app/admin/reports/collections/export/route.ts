@@ -5,6 +5,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { groupCollections, loadCollectionsPayments } from "@/lib/reports/collections";
 import type { CollectionsGroupBy } from "@/lib/reports/collections";
 import { withRouteAuth } from "@/lib/route-auth";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 async function handleGet(request: NextRequest) {
   await requireRole(["FINANCE_OFFICER"]);
@@ -18,8 +19,8 @@ async function handleGet(request: NextRequest) {
   const method = (params.get("method") || undefined) as "CASH" | "POS" | "BANK_TRANSFER" | undefined;
 
   const payments = await loadCollectionsPayments({
-    from: fromParam ? new Date(fromParam) : undefined,
-    to: toParam ? new Date(toParam) : undefined,
+    from: parseLagosDayStart(fromParam),
+    to: parseLagosDayEnd(toParam),
     wingId,
     planId,
     method,

@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { FormField } from "@/components/form-field";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 export default async function WingAttendanceRatePage({
   searchParams,
@@ -21,8 +22,8 @@ export default async function WingAttendanceRatePage({
   const scope: WingScope = canSeeAll ? null : user.wingIds;
 
   const params = await searchParams;
-  const from = typeof params.from === "string" && params.from ? new Date(params.from) : undefined;
-  const to = typeof params.to === "string" && params.to ? new Date(params.to) : undefined;
+  const from = parseLagosDayStart(params.from);
+  const to = parseLagosDayEnd(params.to);
 
   const rows = await getWingAttendanceRates({ from, to, scope });
 

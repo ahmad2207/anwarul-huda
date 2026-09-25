@@ -13,6 +13,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { loadReportMember } from "./actions";
 import { MemberPicker } from "./member-picker";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -47,8 +48,8 @@ export default async function MemberAttendanceReportPage({
   const member = memberId ? await loadReportMember(memberId) : null;
   const rows = member
     ? await getMemberAttendanceHistory(member.id, {
-        from: from ? new Date(from) : undefined,
-        to: to ? new Date(to) : undefined,
+        from: parseLagosDayStart(from),
+        to: parseLagosDayEnd(to),
       })
     : [];
 

@@ -13,6 +13,7 @@ import { FormField } from "@/components/form-field";
 import { StatusTag } from "@/components/status-tag";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -33,8 +34,8 @@ export default async function GatheringAttendanceReportPage({
   const scope: WingScope = canSeeAll ? null : user.wingIds;
 
   const params = await searchParams;
-  const from = typeof params.from === "string" && params.from ? new Date(params.from) : undefined;
-  const to = typeof params.to === "string" && params.to ? new Date(params.to) : undefined;
+  const from = parseLagosDayStart(params.from);
+  const to = parseLagosDayEnd(params.to);
   const type = typeof params.type === "string" && params.type ? (params.type as GatheringType) : undefined;
   const requestedWingId = typeof params.wingId === "string" ? params.wingId : undefined;
   const wingId = resolveWingFilter(requestedWingId, scope);

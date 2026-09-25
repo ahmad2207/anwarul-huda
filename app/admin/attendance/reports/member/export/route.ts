@@ -4,6 +4,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { getMemberAttendanceHistory } from "@/lib/attendance/reports";
 import { loadReportMember } from "../actions";
 import { withRouteAuth } from "@/lib/route-auth";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -44,8 +45,8 @@ async function handleGet(request: NextRequest) {
     return new Response("That member could not be found, or is not in a wing you can view.", { status: 404 });
   }
 
-  const from = params.get("from") ? new Date(params.get("from")!) : undefined;
-  const to = params.get("to") ? new Date(params.get("to")!) : undefined;
+  const from = parseLagosDayStart(params.get("from"));
+  const to = parseLagosDayEnd(params.get("to"));
   const rows = await getMemberAttendanceHistory(member.id, { from, to });
 
   const csv = toCsvDocument(

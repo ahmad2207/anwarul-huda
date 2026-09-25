@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const PAGE_SIZE = 20;
 
@@ -38,8 +39,8 @@ export default async function LibraryPage({
   const typeParam = typeof params.type === "string" ? params.type : "";
   const speaker = typeof params.speaker === "string" ? params.speaker.trim() : "";
   const tag = typeof params.tag === "string" ? params.tag.trim().toLowerCase() : "";
-  const from = typeof params.from === "string" && params.from ? new Date(params.from) : undefined;
-  const to = typeof params.to === "string" && params.to ? new Date(params.to) : undefined;
+  const from = parseLagosDayStart(params.from);
+  const to = parseLagosDayEnd(params.to);
   const page = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
 
   const and: Prisma.ContentItemWhereInput[] = [

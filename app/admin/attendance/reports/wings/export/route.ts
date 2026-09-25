@@ -5,6 +5,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { getWingAttendanceRates } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
 import { withRouteAuth } from "@/lib/route-auth";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 async function handleGet(request: NextRequest) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -12,8 +13,8 @@ async function handleGet(request: NextRequest) {
   const scope: WingScope = canSeeAll ? null : user.wingIds;
 
   const params = request.nextUrl.searchParams;
-  const from = params.get("from") ? new Date(params.get("from")!) : undefined;
-  const to = params.get("to") ? new Date(params.get("to")!) : undefined;
+  const from = parseLagosDayStart(params.get("from"));
+  const to = parseLagosDayEnd(params.get("to"));
 
   const rows = await getWingAttendanceRates({ from, to, scope });
 

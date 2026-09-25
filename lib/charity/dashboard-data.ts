@@ -1,6 +1,6 @@
 import type { Fund } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getLagosDateParts, lagosMidnightUtc } from "@/lib/timezone";
+import { getLagosDateParts, lagosMidnightUtc, parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 import { getFundBalance } from "./fund-balance";
 import type { FundBalance, FundBalancePeriod } from "./fund-balance";
 import { getZakatBreakdown } from "./zakat-breakdown";
@@ -20,8 +20,10 @@ function currentMonthRange(): DateRange {
 /** Resolves the period from ?from=&to= query params, falling back to the current month for either one that is missing. */
 export function resolveDashboardPeriod(params: Record<string, string | string[] | undefined>): DateRange {
   const defaults = currentMonthRange();
-  const from = typeof params.from === "string" && params.from ? new Date(params.from) : defaults.from;
-  const to = typeof params.to === "string" && params.to ? new Date(params.to) : defaults.to;
+  // Lagos days, the whole of the last one included: the same shape as the
+  // default month above.
+  const from = parseLagosDayStart(params.from) ?? defaults.from;
+  const to = parseLagosDayEnd(params.to) ?? defaults.to;
   return { from, to };
 }
 

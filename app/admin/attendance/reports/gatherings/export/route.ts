@@ -6,6 +6,7 @@ import { toCsvDocument } from "@/lib/csv";
 import { getGatheringAttendanceReport, resolveWingFilter } from "@/lib/attendance/reports";
 import type { WingScope } from "@/lib/attendance/reports";
 import { withRouteAuth } from "@/lib/route-auth";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   JUMUAH: "Jumu'ah",
@@ -22,8 +23,8 @@ async function handleGet(request: NextRequest) {
   const scope: WingScope = canSeeAll ? null : user.wingIds;
 
   const params = request.nextUrl.searchParams;
-  const from = params.get("from") ? new Date(params.get("from")!) : undefined;
-  const to = params.get("to") ? new Date(params.get("to")!) : undefined;
+  const from = parseLagosDayStart(params.get("from"));
+  const to = parseLagosDayEnd(params.get("to"));
   const type = (params.get("type") || undefined) as GatheringType | undefined;
   const wingId = resolveWingFilter(params.get("wingId") || undefined, scope);
 

@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import { FormField } from "@/components/form-field";
 import { AuditRow } from "./audit-row";
 import type { AuditRowData } from "./audit-row";
+import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 // This table is not built on the shared DataTable primitive: each row
 // can expand into a second <tr> of field level changes directly beneath
@@ -29,8 +30,8 @@ export default async function AuditLogPage({
   const actorId = typeof params.actorId === "string" ? params.actorId : "";
   const entity = typeof params.entity === "string" ? params.entity : "";
   const action = typeof params.action === "string" ? params.action.trim() : "";
-  const from = typeof params.from === "string" && params.from ? new Date(params.from) : undefined;
-  const to = typeof params.to === "string" && params.to ? new Date(params.to) : undefined;
+  const from = parseLagosDayStart(params.from);
+  const to = parseLagosDayEnd(params.to);
   const page = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
 
   const [actors, entities] = await Promise.all([

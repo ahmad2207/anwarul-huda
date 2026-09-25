@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toLagosDateInputValue } from "@/lib/timezone";
 
+// The Lagos calendar date, not the UTC one: a period starts at Lagos
+// midnight, which is 23:00 UTC the day before, so the UTC date would show
+// (and carry into the export and print links) the day before the period.
 function toDateInputValue(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return toLagosDateInputValue(date);
 }
 
 export default async function CharityDashboardPage({

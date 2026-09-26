@@ -287,6 +287,7 @@ model Member {
   /**
    * /**
    * /**
+   * /**
    * Which of the nine record sections the member has saved. isRecordIncomplete clears once every RecordSection value is present here.
    */
   completedSections       RecordSection[] @default([]) @map("completed_sections")
@@ -1031,4 +1032,19 @@ model FaceThresholdSetting {
 
   @@index([createdAt])
   @@map("face_threshold_settings")
+}
+
+// The last number issued for a numbered series, such as a year's receipt
+// numbers (key "receipt:2026"). Advanced by one atomic upsert inside the
+// transaction that writes the numbered row, so it rolls back with that
+// row and never skips, and it never goes backwards, so a number is never
+// issued twice even if rows carrying earlier numbers are removed. It
+// replaces counting existing rows, which reissued an existing number as
+// soon as any row in the series was missing.
+model NumberSequence {
+  key        String   @id
+  lastIssued Int      @map("last_issued")
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("number_sequences")
 }

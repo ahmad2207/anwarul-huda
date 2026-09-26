@@ -9,6 +9,11 @@ import { generateReceiptNumber } from "./receipt-number";
 
 const FIXTURE_TAG = `ReceiptNumberTestFixture${Date.now()}`;
 
+// Years far in the future, owned by this file. Their counters persist in
+// number_sequences like any real year's, so they are reset around each run.
+const TEST_YEARS = [9201, 9202, 9203, 9204, 9205, 9206];
+const TEST_SEQUENCE_KEYS = TEST_YEARS.map((year) => `receipt:${year}`);
+
 function paymentFixture(overrides: { receiptNumber: string; memberId: string; collectedById: string }) {
   return {
     narration: FIXTURE_TAG,
@@ -45,10 +50,13 @@ describe("generateReceiptNumber", () => {
 
     const user = await prisma.user.findFirstOrThrow({ where: { roles: { some: { role: "SUPER_ADMIN" } } } });
     collectedById = user.id;
+
+    await prisma.numberSequence.deleteMany({ where: { key: { in: TEST_SEQUENCE_KEYS } } });
   });
 
   afterAll(async () => {
     await prisma.payment.deleteMany({ where: { narration: FIXTURE_TAG } });
+    await prisma.numberSequence.deleteMany({ where: { key: { in: TEST_SEQUENCE_KEYS } } });
     await prisma.member.deleteMany({ where: { surname: FIXTURE_TAG } });
     await prisma.$disconnect();
   });
@@ -86,5 +94,51 @@ describe("generateReceiptNumber", () => {
     );
 
     expect(new Set(numbers).size).toBe(concurrency);
+  });
+
+  it("carries on above a gap instead of reissuing a number that is already taken", async () => {
+    const year = 9205;
+    // 000002 missing, as it would be after a test clean-up, a restore or a
+    // manual correction. Counting rows gave 000003 here, which is taken.
+    await prisma.payment.createMany({
+      data: [
+        paymentFixture({ receiptNumber: `RCT/${year}/000001`, memberId, collectedById }),
+        paymentFixture({ receiptNumber: `RCT/${year}/000003`, memberId, collectedById }),
+      ],
+    });
+
+    const next = await prisma.$transaction(async (tx) => {
+      const number = await generateReceiptNumber(tx, { year });
+      await tx.payment.create({ data: paymentFixture({ receiptNumber: number, memberId, collectedById }) });
+      return number;
+    });
+    expect(next).toBe(`RCT/${year}/000004`);
+  });
+
+  it("never issues a number again after the payment carrying it is removed", async () => {
+    const year = 9206;
+    const first = await prisma.$transaction(async (tx) => {
+      const number = await generateReceiptNumber(tx, { year });
+      await tx.payment.create({ data: paymentFixture({ receiptNumber: number, memberId, collectedById }) });
+      return number;
+    });
+    await prisma.payment.deleteMany({ where: { receiptNumber: first } });
+
+    const second = await prisma.$transaction((tx) => generateReceiptNumber(tx, { year }));
+    expect(first).toBe(`RCT/${year}/000001`);
+    expect(second).toBe(`RCT/${year}/000002`);
+  });
+
+  it("leaves no gap when the payment transaction rolls back", async () => {
+    const year = 9204;
+    const before = await prisma.numberSequence.findUnique({ where: { key: `receipt:${year}` } });
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await generateReceiptNumber(tx, { year });
+        throw new Error("abandoned");
+      }),
+    ).rejects.toThrow("abandoned");
+    const after = await prisma.numberSequence.findUnique({ where: { key: `receipt:${year}` } });
+    expect(after?.lastIssued).toBe(before?.lastIssued);
   });
 });

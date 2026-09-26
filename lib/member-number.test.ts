@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { generateMemberNumber, MemberNumberError, normalizeMemberNumberInput } from "./member-number";
+import {
+  generateMemberNumber,
+  MemberNumberError,
+  normalizeMemberNumberInput,
+  reserveMemberNumberBlock,
+} from "./member-number";
 
 // These are integration tests against the real local Postgres database
 // (see vitest.config.mts). The safety property under test, no two
@@ -8,6 +13,10 @@ import { generateMemberNumber, MemberNumberError, normalizeMemberNumberInput } f
 // verified against a mock.
 
 const FIXTURE_SURNAME = "MemberNumberTestFixture";
+
+// Years far in the future, owned by this file. Their counters persist in
+// number_sequences like any real year's, so they are reset around each run.
+const TEST_SEQUENCE_KEYS = [9101, 9102, 9103, 9104, 9105, 9106, 9107].map((year) => `member:M:${year}`);
 
 function memberFixture(overrides: { wingId: string; memberNumber: string; phone: string }) {
   return {
@@ -28,14 +37,18 @@ function nextFixturePhone(): string {
 
 describe("generateMemberNumber", () => {
   let wingId: string;
+  let otherWingId: string;
 
   beforeAll(async () => {
     const wing = await prisma.wing.findUniqueOrThrow({ where: { code: "MENS" } });
     wingId = wing.id;
+    otherWingId = (await prisma.wing.findUniqueOrThrow({ where: { code: "WOMENS" } })).id;
+    await prisma.numberSequence.deleteMany({ where: { key: { in: TEST_SEQUENCE_KEYS } } });
   });
 
   afterAll(async () => {
     await prisma.member.deleteMany({ where: { surname: FIXTURE_SURNAME } });
+    await prisma.numberSequence.deleteMany({ where: { key: { in: TEST_SEQUENCE_KEYS } } });
     await prisma.$disconnect();
   });
 
@@ -93,6 +106,37 @@ describe("generateMemberNumber", () => {
     );
 
     expect(new Set(numbers).size).toBe(concurrency);
+  });
+
+  it("never gives a new member the number of someone who moved to another wing", async () => {
+    const year = 9106;
+    const first = await prisma.$transaction(async (tx) => {
+      const number = await generateMemberNumber(tx, { wingId, wingNumberLetter: "M", year });
+      await tx.member.create({ data: memberFixture({ wingId, memberNumber: number, phone: nextFixturePhone() }) });
+      return number;
+    });
+    // Moved to another wing, keeping their number, as a wing admin can do.
+    // Counting members per wing then gave the next M member 0001 again.
+    await prisma.member.updateMany({ where: { memberNumber: first }, data: { wingId: otherWingId } });
+
+    const second = await prisma.$transaction((tx) => generateMemberNumber(tx, { wingId, wingNumberLetter: "M", year }));
+    expect(first).toBe(`AHL/M/${year}/0001`);
+    expect(second).toBe(`AHL/M/${year}/0002`);
+  });
+
+  it("reserves a block above the highest number already issued, even with gaps", async () => {
+    const year = 9107;
+    await prisma.member.createMany({
+      data: [
+        memberFixture({ wingId, memberNumber: `AHL/M/${year}/0001`, phone: nextFixturePhone() }),
+        memberFixture({ wingId, memberNumber: `AHL/M/${year}/0004`, phone: nextFixturePhone() }),
+      ],
+    });
+
+    const block = await prisma.$transaction((tx) =>
+      reserveMemberNumberBlock(tx, { wingId, wingNumberLetter: "M", year, count: 3 }),
+    );
+    expect(block).toEqual([`AHL/M/${year}/0005`, `AHL/M/${year}/0006`, `AHL/M/${year}/0007`]);
   });
 });
 

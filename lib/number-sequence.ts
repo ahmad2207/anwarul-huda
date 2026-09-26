@@ -25,13 +25,31 @@ export async function nextInSequence(
   key: string,
   highestExisting: number,
 ): Promise<number> {
+  const [first] = await reserveInSequence(tx, key, highestExisting, 1);
+  return first;
+}
+
+/**
+ * The same, reserving `count` consecutive numbers at once, for a bulk
+ * import that numbers many rows in one transaction. Returns them in order.
+ */
+export async function reserveInSequence(
+  tx: Prisma.TransactionClient,
+  key: string,
+  highestExisting: number,
+  count: number,
+): Promise<number[]> {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error("count must be a whole number of at least 1");
+  }
   const rows = await tx.$queryRaw<{ last_issued: number }[]>`
     INSERT INTO number_sequences (key, last_issued, updated_at)
-    VALUES (${key}, ${highestExisting + 1}, now())
+    VALUES (${key}, CAST(${highestExisting + count} AS integer), now())
     ON CONFLICT (key) DO UPDATE
-      SET last_issued = GREATEST(number_sequences.last_issued, ${highestExisting}) + 1,
+      SET last_issued = GREATEST(number_sequences.last_issued, CAST(${highestExisting} AS integer)) + CAST(${count} AS integer),
           updated_at = now()
     RETURNING last_issued
   `;
-  return rows[0].last_issued;
+  const last = rows[0].last_issued;
+  return Array.from({ length: count }, (_, index) => last - count + 1 + index);
 }

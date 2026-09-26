@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { getLagosYear } from "@/lib/timezone";
-import { withNamedLock } from "@/lib/advisory-lock";
+import { reserveInSequence } from "@/lib/number-sequence";
 
 export class MemberNumberError extends Error {}
 
 interface GenerateMemberNumberInput {
+  /** The member's wing. Numbering itself goes by wingNumberLetter, the letter that appears in the number. */
   wingId: string;
   wingNumberLetter: string;
   /** Defaults to the current year in Africa/Lagos. Pass explicitly in tests. */
@@ -19,44 +20,39 @@ interface GenerateMemberNumberInput {
  * also writes the member row, so the number and the row it belongs to
  * commit together.
  *
- * Safe under concurrency: a Postgres advisory lock scoped to the
- * transaction serialises number generation per wing and year, so two
- * approvals happening at the same moment cannot compute the same number.
+ * Never reused (CLAUDE.md): see reserveMemberNumberBlock below.
  */
 export async function generateMemberNumber(
   tx: Prisma.TransactionClient,
   input: GenerateMemberNumberInput,
 ): Promise<string> {
-  const { wingId, wingNumberLetter } = input;
-  const year = input.year ?? getLagosYear();
-
-  if (!/^[A-Z]$/.test(wingNumberLetter)) {
-    throw new MemberNumberError(`"${wingNumberLetter}" is not a valid wing number letter`);
-  }
-
-  const [number] = await reserveMemberNumberBlock(tx, { wingId, wingNumberLetter, year, count: 1 });
+  const [number] = await reserveMemberNumberBlock(tx, { ...input, count: 1 });
   return number;
 }
 
 /**
- * Reserves `count` consecutive member numbers for a wing and year in one
- * lock, one count and no per-number query, for a caller creating many
- * members in bulk (a nominal roll import). generateMemberNumber above is
- * this with count fixed to 1: calling it in a loop for N rows costs a
- * lock acquire, a count and a create per row, three real network round
- * trips each, fully serialised by the lock's own correctness guarantee.
- * That is fine for one member at a time, but for N it is 3N sequential
- * round trips against a networked database, which is what pushed a
- * whole nominal roll file past any reasonable transaction timeout
- * regardless of how small the commit was chunked. Assigning the whole
- * block up front and letting the caller bulk-insert removes the N
- * multiplier from everything except the insert itself.
+ * Reserves `count` consecutive member numbers for a wing letter and year
+ * in one statement, for a caller creating many members in bulk (a nominal
+ * roll import), which then bulk-inserts them. generateMemberNumber above
+ * is this with count fixed to 1. Reserving the whole block up front keeps
+ * a large file from costing a round trip per member against the
+ * networked database.
+ *
+ * The numbers come from a counter per wing letter and year
+ * (lib/number-sequence.ts), not from counting members. Counting reissued
+ * numbers already in use: it counted per wing, so moving a member to
+ * another wing, number and all, dropped the old wing's count, and the
+ * next approval there was given that member's number again. A removed
+ * test row did the same. The highest number already issued under the
+ * prefix, in any wing, is read as a floor, so the counter can never fall
+ * behind it. Two approvals at the same moment serialise on the counter
+ * row, so they cannot get the same number either.
  */
 export async function reserveMemberNumberBlock(
   tx: Prisma.TransactionClient,
   input: GenerateMemberNumberInput & { count: number },
 ): Promise<string[]> {
-  const { wingId, wingNumberLetter, count } = input;
+  const { wingNumberLetter, count } = input;
   const year = input.year ?? getLagosYear();
 
   if (!/^[A-Z]$/.test(wingNumberLetter)) {
@@ -66,17 +62,17 @@ export async function reserveMemberNumberBlock(
     throw new MemberNumberError("count must be at least 1");
   }
 
-  await withNamedLock(tx, `member-number:${wingId}:${year}`);
-
   const prefix = `AHL/${wingNumberLetter}/${year}/`;
-  const issuedCount = await tx.member.count({
-    where: {
-      wingId,
-      memberNumber: { startsWith: prefix },
-    },
-  });
+  // Every member under this prefix, whatever wing they are in now.
+  const [{ highest }] = await tx.$queryRaw<{ highest: number | null }[]>`
+    SELECT MAX(CAST(substring(member_number from CAST(${prefix.length + 1} AS integer)) AS integer)) AS highest
+    FROM members
+    WHERE member_number LIKE ${`${prefix}%`}
+      AND substring(member_number from CAST(${prefix.length + 1} AS integer)) ~ '^[0-9]+$'
+  `;
 
-  return Array.from({ length: count }, (_, index) => `${prefix}${String(issuedCount + index + 1).padStart(4, "0")}`);
+  const sequence = await reserveInSequence(tx, `member:${wingNumberLetter}:${year}`, highest ?? 0, count);
+  return sequence.map((value) => `${prefix}${String(value).padStart(4, "0")}`);
 }
 
 // AHL / <wing letter> / <4 digit year> / <4 digit sequence>, with no

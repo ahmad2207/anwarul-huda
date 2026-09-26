@@ -42,13 +42,12 @@ export function createNominalRollCommitState(): NominalRollCommitState {
  * member: there is no reliable key to match one by on a nominal roll.
  *
  * Grouped by wing and bulk inserted, not one row at a time: member
- * numbers are sequenced per wing, so reserveMemberNumberBlock reserves
- * one contiguous block per wing group in a single lock and count, and
+ * numbers are sequenced per wing letter, so reserveMemberNumberBlock
+ * reserves one contiguous block per wing group in a single statement, and
  * createManyAndReturn writes the whole group in one insert. Generating
- * and inserting one row at a time cost a lock, a count and a create
- * each, three real network round trips per row, which is what made a
- * whole file's worth of rows too slow for any transaction timeout
- * regardless of chunk size.
+ * and inserting one row at a time cost several real network round trips
+ * per row, which is what made a whole file's worth of rows too slow for
+ * any transaction timeout regardless of chunk size.
  */
 export async function commitNominalRollRowsChunk(
   tx: Prisma.TransactionClient,

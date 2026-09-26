@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { withNamedLock } from "@/lib/advisory-lock";
 import { canReviewFaceMatch } from "@/lib/authorization";
-import { recordProgress } from "@/lib/members/record-sections";
+import { excludeFromFaceCheckIn } from "@/lib/face/exclusion";
 import { duplicateDetectionThreshold } from "@/lib/face/thresholds";
 
 // The face match review queue (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5). Every
@@ -131,68 +131,10 @@ export async function resolveFaceMatchCase(
 
     if (outcome === "INDISTINGUISHABLE") {
       for (const memberId of [found.memberAId, found.memberBId]) {
-        await excludeFromFaceCheckIn(tx, memberId, reviewer.id, caseId, decidedAt);
+        await excludeFromFaceCheckIn(tx, memberId, reviewer.id, { kind: "review", faceMatchCaseId: caseId }, decidedAt);
       }
     }
   });
-}
-
-async function excludeFromFaceCheckIn(
-  tx: Prisma.TransactionClient,
-  memberId: string,
-  actorId: string,
-  caseId: string,
-  at: Date,
-): Promise<void> {
-  const member = await tx.member.findUniqueOrThrow({
-    where: { id: memberId },
-    select: { completedSections: true, faceCheckInExcluded: true, faceEnrolmentDeferred: true, isRecordIncomplete: true },
-  });
-  const removedEnrolments = await tx.faceEnrolment.deleteMany({ where: { memberId } });
-
-  // Section 9 counts as done: an excluded member is never an incomplete
-  // record because of face (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5), and
-  // completing the record this way opens the same light wing review a
-  // member finishing it themselves would.
-  const completedSections = member.completedSections.includes("FACE")
-    ? member.completedSections
-    : [...member.completedSections, "FACE" as const];
-  const nowComplete = member.isRecordIncomplete && recordProgress(completedSections).isComplete;
-
-  await tx.member.update({
-    where: { id: memberId },
-    data: {
-      faceCheckInExcluded: true,
-      faceCheckInExcludedAt: at,
-      faceEnrolmentDeferred: false,
-      faceEnrolmentDeferredAt: null,
-      completedSections,
-      ...(nowComplete
-        ? {
-            isRecordIncomplete: false,
-            needsWingReview: true,
-            wingReviewReason: "Record completed",
-            wingReviewRequestedAt: at,
-          }
-        : {}),
-    },
-  });
-
-  await writeAudit(
-    {
-      actorId,
-      action: "member.face_check_in_excluded",
-      entity: "Member",
-      entityId: memberId,
-      before: {
-        faceCheckInExcluded: member.faceCheckInExcluded,
-        faceEnrolmentDeferred: member.faceEnrolmentDeferred,
-        hadFaceEnrolment: removedEnrolments.count > 0,
-      },
-      after: { faceCheckInExcluded: true, faceEnrolmentDeferred: false, hadFaceEnrolment: false, faceMatchCaseId: caseId },
-    },
-    tx,
-  );
 }
 
 /** How many nearest neighbours each enrolment is compared with during a scan. Only pairs at or above the threshold become cases. */

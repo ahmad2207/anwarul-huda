@@ -109,7 +109,6 @@ async function CompleteHome({
     memberNumber: string | null;
     wingId: string;
     completedSections: RecordSection[];
-    faceEnrolmentDeferred: boolean;
   };
 }) {
   const [attention, upcoming, attendance, serviceAreas, announcement, sermon, book] = await Promise.all([

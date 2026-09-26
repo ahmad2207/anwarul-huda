@@ -78,7 +78,7 @@ describe("getAttentionItems", () => {
   it("returns nothing outstanding for a complete, paid up member", async () => {
     const member = await createMember("Clear");
     const items = await getAttentionItems(member);
-    expect(items).toEqual({ balance: null, nextRecordSection: null, faceAwaitingSetup: false });
+    expect(items).toEqual({ balance: null, nextRecordSection: null });
   });
 
   it("totals unpaid periods and dates the balance from the oldest one", async () => {
@@ -109,9 +109,11 @@ describe("getAttentionItems", () => {
     expect(nextRecordSection?.section).toBe("CONTACT");
   });
 
-  it("flags face setup only while deferred with no enrolment", async () => {
+  it("never raises face check-in, even for a member who deferred it", async () => {
+    // The office chases it from the enrolment worklist, not the member's
+    // own screen (MEMBER-INTERFACE.md section 6).
     const member = await createMember("Deferred", { faceEnrolmentDeferred: true });
-    expect((await getAttentionItems(member)).faceAwaitingSetup).toBe(true);
+    expect(await getAttentionItems(member)).toEqual({ balance: null, nextRecordSection: null });
   });
 });
 

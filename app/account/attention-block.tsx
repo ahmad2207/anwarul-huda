@@ -47,15 +47,6 @@ export function AttentionBlock({ items }: { items: AttentionItems }) {
           </span>
         </Link>
       ) : null}
-
-      {items.faceAwaitingSetup ? (
-        <div className="rounded-[4px] border border-border bg-card p-4">
-          <p className="text-base font-medium">Face check-in</p>
-          <p className="text-sm text-muted-foreground">
-            The office will help you set this up at the mosque. Until then you are checked in by name.
-          </p>
-        </div>
-      ) : null}
     </section>
   );
 }

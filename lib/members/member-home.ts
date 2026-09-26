@@ -20,37 +20,33 @@ export interface AttentionItems {
   balance: OutstandingBalance | null;
   /** The next section to complete, when the record is not yet done. */
   nextRecordSection: RecordSectionDefinition | null;
-  /** Deferred at section 9 and not enrolled since: the office will set it up at the mosque. */
-  faceAwaitingSetup: boolean;
 }
 
 export function hasAttentionItems(items: AttentionItems): boolean {
-  return items.balance !== null || items.nextRecordSection !== null || items.faceAwaitingSetup;
+  return items.balance !== null || items.nextRecordSection !== null;
 }
 
+// Face check-in is deliberately not an item here. Once a member has
+// deferred or cannot use it, the office chases it from the enrolment
+// worklist, not the member's own screen (MEMBER-INTERFACE.md section 6: no
+// prompt, badge or reminder about face enrolment after a deferral).
 export async function getAttentionItems(member: {
   id: string;
   completedSections: RecordSection[];
-  faceEnrolmentDeferred: boolean;
 }): Promise<AttentionItems> {
   // amountPaidKobo < amountDueKobo is a column-to-column comparison
   // Prisma's query builder cannot express, so one member's own records
   // are fetched and filtered here, as the home page already did.
-  const [records, activeEnrolments] = await Promise.all([
-    prisma.contributionRecord.findMany({
-      where: { memberId: member.id },
-      select: {
-        periodStart: true,
-        amountDueKobo: true,
-        amountPaidKobo: true,
-        plan: { select: { name: true } },
-      },
-      orderBy: { periodStart: "desc" },
-    }),
-    member.faceEnrolmentDeferred
-      ? prisma.faceEnrolment.count({ where: { memberId: member.id, isActive: true } })
-      : Promise.resolve(0),
-  ]);
+  const records = await prisma.contributionRecord.findMany({
+    where: { memberId: member.id },
+    select: {
+      periodStart: true,
+      amountDueKobo: true,
+      amountPaidKobo: true,
+      plan: { select: { name: true } },
+    },
+    orderBy: { periodStart: "desc" },
+  });
 
   const unpaid = records.filter((record) => record.amountPaidKobo < record.amountDueKobo);
   const balance: OutstandingBalance | null =
@@ -72,7 +68,6 @@ export async function getAttentionItems(member: {
   return {
     balance,
     nextRecordSection: progress.isComplete ? null : progress.nextSection,
-    faceAwaitingSetup: member.faceEnrolmentDeferred && activeEnrolments === 0,
   };
 }
 

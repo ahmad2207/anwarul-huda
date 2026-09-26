@@ -225,7 +225,8 @@ export async function getMemberMoneyTotals(memberId: string): Promise<MemberMone
 // ---------------------------------------------------------------
 
 export type FaceStatus =
-  | { kind: "excluded"; excludedAt: Date | null }
+  /** Checked in by name for good: after a face match review, or because the member will not use face check-in. */
+  | { kind: "excluded"; excludedAt: Date | null; reason: "review" | "declined" }
   | { kind: "enrolled"; enrolledAt: Date }
   | { kind: "held_for_review" }
   | { kind: "deferred"; deferredAt: Date | null }
@@ -238,7 +239,7 @@ export async function getMemberAccess(member: {
   faceCheckInExcluded: boolean;
   faceCheckInExcludedAt: Date | null;
 }) {
-  const [user, enrolment, openCases] = await Promise.all([
+  const [user, enrolment, openCases, differentPeopleCases] = await Promise.all([
     prisma.user.findUnique({
       where: { memberId: member.id },
       select: {
@@ -261,10 +262,22 @@ export async function getMemberAccess(member: {
     // that it is, never who with: the review queue shows that, to the
     // people allowed to see it.
     prisma.faceMatchCase.count({ where: { status: "OPEN", source: "ENROLMENT", memberAId: member.id } }),
+    // How an exclusion came about: a review deciding this member cannot be
+    // told apart from someone else, or otherwise an officer recording that
+    // they will not use face check-in.
+    member.faceCheckInExcluded
+      ? prisma.faceMatchCase.count({
+          where: { status: "INDISTINGUISHABLE", OR: [{ memberAId: member.id }, { memberBId: member.id }] },
+        })
+      : Promise.resolve(0),
   ]);
 
   const face: FaceStatus = member.faceCheckInExcluded
-    ? { kind: "excluded", excludedAt: member.faceCheckInExcludedAt }
+    ? {
+        kind: "excluded",
+        excludedAt: member.faceCheckInExcludedAt,
+        reason: differentPeopleCases > 0 ? "review" : "declined",
+      }
     : enrolment
     ? { kind: "enrolled", enrolledAt: enrolment.enrolledAt }
     : openCases > 0

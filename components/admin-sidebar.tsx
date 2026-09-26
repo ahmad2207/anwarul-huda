@@ -54,6 +54,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ label: string; href?: 
     items: [
       { label: "Gatherings", href: "/admin/attendance" },
       { label: "Reports", href: "/admin/attendance/reports" },
+      { label: "Enrolment worklist", href: "/admin/attendance/enrolment" },
       { label: "Face match reviews", href: "/admin/attendance/face-matches" },
     ],
   },

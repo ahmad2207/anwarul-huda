@@ -47,7 +47,7 @@ export default async function OfficerFaceEnrolmentPage({ params }: { params: Pro
   if (member.faceCheckInExcluded) {
     body = (
       <p className="text-sm text-muted-foreground">
-        {name} is checked in by name at every gathering, after a face match review. Face check-in is not used for them.
+        {name} is checked in by name at every gathering. Face check-in is not used for them.
       </p>
     );
   } else if (!member.dateOfBirth) {

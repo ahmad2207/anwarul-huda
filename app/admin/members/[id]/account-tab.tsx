@@ -6,6 +6,7 @@ import { formatLagosDate, formatLagosDateTime } from "@/lib/timezone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusTag } from "@/components/status-tag";
+import { DeclineFaceForm } from "@/app/admin/attendance/enrolment/decline-form";
 import { IssueLoginCard } from "./issue-login-card";
 
 // MEMBER-HOME-AND-ADMIN-VIEW.md 2.5. Face enrolment is shown as a status
@@ -88,7 +89,8 @@ export async function AccountTab({
             <Row label="Face check-in">
               {face.kind === "excluded" ? (
                 <StatusTag tone="neutral">
-                  Checked in by name{face.excludedAt ? ` since ${formatLagosDate(face.excludedAt)}` : ""}, after a face match review
+                  Checked in by name{face.excludedAt ? ` since ${formatLagosDate(face.excludedAt)}` : ""}
+                  {face.reason === "review" ? ", after a face match review" : ", will not use face check-in"}
                 </StatusTag>
               ) : face.kind === "enrolled" ? (
                 <StatusTag tone="confirmed">Enrolled {formatLagosDate(face.enrolledAt)}</StatusTag>
@@ -104,16 +106,18 @@ export async function AccountTab({
             </Row>
           </dl>
           {canEnrolFace && face.kind !== "excluded" && face.kind !== "held_for_review" ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              render={
-                <Link href={`/admin/members/${member.id}/face`}>
-                  {face.kind === "enrolled" ? "Set up face check-in again" : "Set up face check-in with the member"}
-                </Link>
-              }
-            />
+            <div className="flex flex-col items-start gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <Link href={`/admin/members/${member.id}/face`}>
+                    {face.kind === "enrolled" ? "Set up face check-in again" : "Set up face check-in with the member"}
+                  </Link>
+                }
+              />
+              {face.kind !== "enrolled" ? <DeclineFaceForm memberId={member.id} /> : null}
+            </div>
           ) : null}
           <div>
             <p className="text-sm font-medium">

@@ -5,6 +5,7 @@ import { withNamedLock } from "@/lib/advisory-lock";
 import { toVectorLiteral } from "@/lib/face/vector-literal";
 import { decideEnrolment, type EnrolledCandidate } from "@/lib/face/enrolment-decision";
 import { duplicateDetectionThreshold } from "@/lib/face/thresholds";
+import { getFaceThresholds } from "@/lib/face/threshold-settings";
 
 // The one place a face embedding is written, for a member enrolling
 // themselves (app/account/face/actions.ts) and for an officer enrolling a
@@ -42,7 +43,9 @@ interface CandidateRow {
 
 export async function saveEnrolmentForMember(input: SaveEnrolmentInput): Promise<SaveEnrolmentResult> {
   const vector = toVectorLiteral(input.embedding);
-  const threshold = duplicateDetectionThreshold();
+  // Derived from the check-in threshold in force, so recalibrating check-in
+  // moves duplicate detection with it.
+  const threshold = duplicateDetectionThreshold((await getFaceThresholds()).matchThreshold);
 
   return prisma.$transaction(async (tx) => {
     // Detection and the save happen under one lock, so two members

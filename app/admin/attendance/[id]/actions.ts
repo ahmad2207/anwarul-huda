@@ -8,7 +8,7 @@ import { writeAudit } from "@/lib/audit";
 import { checkInMember } from "@/lib/attendance/check-in";
 import { formatMemberName } from "@/lib/members/display-name";
 import { matchFaceForCheckIn } from "@/lib/face/match-face";
-import { UNCALIBRATED_MIN_LIVENESS_SCORE, UNCALIBRATED_MIN_MATCH_MARGIN } from "@/lib/face/thresholds";
+import { UNCALIBRATED_MIN_LIVENESS_SCORE } from "@/lib/face/thresholds";
 
 async function requireGatheringAccess(gatheringId: string) {
   const actor = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
@@ -182,7 +182,7 @@ export async function checkInByFace(
         bestSimilarity: match.bestSimilarity,
         runnerUpSimilarity: match.runnerUpSimilarity,
         margin: match.margin,
-        minMargin: UNCALIBRATED_MIN_MATCH_MARGIN,
+        minMargin: match.minMargin,
       },
     });
     return {};

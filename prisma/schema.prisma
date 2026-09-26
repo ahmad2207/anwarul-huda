@@ -107,20 +107,22 @@ model User {
   wingAssignments UserWingAssignment[]
   auditEntries    AuditLog[]           @relation("AuditActor")
 
-  approvedMembers          Member[]              @relation("MemberApprovedBy")
-  collectedPayments        Payment[]             @relation("PaymentCollectedBy")
-  voidedPayments           Payment[]             @relation("PaymentVoidedBy")
-  openedCashSessions       CashSession[]         @relation("CashSessionOpenedBy")
-  closedCashSessions       CashSession[]         @relation("CashSessionClosedBy")
-  verifiedCases            CharityCase[]         @relation("CaseVerifiedBy")
-  recommendedCases         CharityCase[]         @relation("CaseRecommendedBy")
-  approvedCases            CharityCase[]         @relation("CaseApprovedBy")
-  disbursementsPaid        Disbursement[]        @relation("DisbursementPaidBy")
-  uploadedContent          ContentItem[]         @relation("ContentUploadedBy")
-  importBatches            ImportBatch[]
-  dismissedDuplicateFlags  MemberDuplicateFlag[]
-  issuedTemporaryPasswords User[]                @relation("TemporaryPasswordIssuer")
-  decidedFaceMatchCases    FaceMatchCase[]       @relation("FaceMatchCaseDecidedBy")
+  approvedMembers            Member[]                @relation("MemberApprovedBy")
+  collectedPayments          Payment[]               @relation("PaymentCollectedBy")
+  voidedPayments             Payment[]               @relation("PaymentVoidedBy")
+  openedCashSessions         CashSession[]           @relation("CashSessionOpenedBy")
+  closedCashSessions         CashSession[]           @relation("CashSessionClosedBy")
+  verifiedCases              CharityCase[]           @relation("CaseVerifiedBy")
+  recommendedCases           CharityCase[]           @relation("CaseRecommendedBy")
+  approvedCases              CharityCase[]           @relation("CaseApprovedBy")
+  disbursementsPaid          Disbursement[]          @relation("DisbursementPaidBy")
+  uploadedContent            ContentItem[]           @relation("ContentUploadedBy")
+  importBatches              ImportBatch[]
+  dismissedDuplicateFlags    MemberDuplicateFlag[]
+  issuedTemporaryPasswords   User[]                  @relation("TemporaryPasswordIssuer")
+  decidedFaceMatchCases      FaceMatchCase[]         @relation("FaceMatchCaseDecidedBy")
+  recordedCalibrationSamples FaceCalibrationSample[] @relation("FaceCalibrationRecordedBy")
+  faceThresholdChanges       FaceThresholdSetting[]
 
   @@map("users")
 }
@@ -284,6 +286,7 @@ model Member {
   // The member's own record, section by section (MEMBER-INTERFACE.md 3.4).
   /**
    * /**
+   * /**
    * Which of the nine record sections the member has saved. isRecordIncomplete clears once every RecordSection value is present here.
    */
   completedSections       RecordSection[] @default([]) @map("completed_sections")
@@ -313,19 +316,20 @@ model Member {
   approvedBy  User?        @relation("MemberApprovedBy", fields: [approvedById], references: [id])
   importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
 
-  user              User?
-  household         HouseholdMember[]     @relation("HouseholdOwner")
-  linkedInHousehold HouseholdMember[]     @relation("HouseholdLinkedMember")
-  serviceAreas      MemberServiceArea[]
-  payments          Payment[]
-  contributions     ContributionRecord[]
-  attendance        AttendanceRecord[]
-  biometricLinks    BiometricEnrolment[]
-  faceEnrolments    FaceEnrolment[]
-  duplicateFlagsAsA MemberDuplicateFlag[] @relation("DuplicateFlagMemberA")
-  duplicateFlagsAsB MemberDuplicateFlag[] @relation("DuplicateFlagMemberB")
-  faceMatchCasesAsA FaceMatchCase[]       @relation("FaceMatchCaseMemberA")
-  faceMatchCasesAsB FaceMatchCase[]       @relation("FaceMatchCaseMemberB")
+  user                   User?
+  household              HouseholdMember[]       @relation("HouseholdOwner")
+  linkedInHousehold      HouseholdMember[]       @relation("HouseholdLinkedMember")
+  serviceAreas           MemberServiceArea[]
+  payments               Payment[]
+  contributions          ContributionRecord[]
+  attendance             AttendanceRecord[]
+  biometricLinks         BiometricEnrolment[]
+  faceEnrolments         FaceEnrolment[]
+  duplicateFlagsAsA      MemberDuplicateFlag[]   @relation("DuplicateFlagMemberA")
+  duplicateFlagsAsB      MemberDuplicateFlag[]   @relation("DuplicateFlagMemberB")
+  faceMatchCasesAsA      FaceMatchCase[]         @relation("FaceMatchCaseMemberA")
+  faceMatchCasesAsB      FaceMatchCase[]         @relation("FaceMatchCaseMemberB")
+  faceCalibrationSamples FaceCalibrationSample[]
 
   @@index([wingId, status])
   @@index([surname, firstName])
@@ -623,9 +627,10 @@ model Gathering {
   isClosed  Boolean       @default(false) @map("is_closed")
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  wing    Wing?              @relation(fields: [wingId], references: [id])
-  branch  Branch?            @relation(fields: [branchId], references: [id])
-  records AttendanceRecord[]
+  wing                   Wing?                   @relation(fields: [wingId], references: [id])
+  branch                 Branch?                 @relation(fields: [branchId], references: [id])
+  records                AttendanceRecord[]
+  faceCalibrationSamples FaceCalibrationSample[]
 
   @@index([startsAt])
   @@map("gatherings")
@@ -969,4 +974,61 @@ model RateLimitCounter {
 
   @@index([expiresAt])
   @@map("rate_limit_counters")
+}
+
+// Face threshold calibration (SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md B3).
+//
+// A calibration sample is one live capture of a known member, taken at a
+// gathering in that gathering's real lighting, and immediately compared
+// with the enrolled faces. Only the resulting similarity scores are kept:
+// the capture's own embedding is discarded the moment it has been scored,
+// so calibration adds no biometric data to the database and none of the
+// consent, withdrawal or retention obligations that storing another
+// embedding would carry (section 4). Scores cannot be turned back into a
+// face.
+model FaceCalibrationSample {
+  id                       String   @id @default(cuid())
+  gatheringId              String   @map("gathering_id")
+  /**
+   * The member actually in front of the camera: the ground truth every rate is measured against.
+   */
+  memberId                 String   @map("member_id")
+  /**
+   * Similarity to this member's own enrolment. Null when they have none, which makes the sample a test of whether a stranger to the system would be wrongly matched.
+   */
+  genuineSimilarity        Float?   @map("genuine_similarity")
+  /**
+   * The two highest similarities to anyone else check-in at this gathering would have compared against. No ids: only the scores are needed.
+   */
+  bestImpostorSimilarity   Float?   @map("best_impostor_similarity")
+  secondImpostorSimilarity Float?   @map("second_impostor_similarity")
+  livenessScore            Float    @map("liveness_score")
+  recordedById             String   @map("recorded_by_id")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  gathering  Gathering @relation(fields: [gatheringId], references: [id])
+  member     Member    @relation(fields: [memberId], references: [id])
+  recordedBy User      @relation("FaceCalibrationRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([gatheringId])
+  @@map("face_calibration_samples")
+}
+
+// The check-in threshold and minimum margin, configured rather than
+// hardcoded (B3 #2). Never updated in place: each change is a new row with
+// who made it, when and why, and the latest row is the one in force. With
+// no rows at all, the uncalibrated defaults in lib/face/thresholds.ts
+// apply.
+model FaceThresholdSetting {
+  id             String   @id @default(cuid())
+  matchThreshold Float    @map("match_threshold")
+  minMargin      Float    @map("min_margin")
+  note           String
+  changedById    String   @map("changed_by_id")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  changedBy User @relation(fields: [changedById], references: [id])
+
+  @@index([createdAt])
+  @@map("face_threshold_settings")
 }

@@ -5,6 +5,7 @@ import { withNamedLock } from "@/lib/advisory-lock";
 import { canReviewFaceMatch } from "@/lib/authorization";
 import { excludeFromFaceCheckIn } from "@/lib/face/exclusion";
 import { duplicateDetectionThreshold } from "@/lib/face/thresholds";
+import { getFaceThresholds } from "@/lib/face/threshold-settings";
 
 // The face match review queue (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5). Every
 // read and every decision checks canReviewFaceMatch here, per case, so a
@@ -159,7 +160,7 @@ export async function runRetrospectiveScan(reviewer: Reviewer): Promise<{ pairsF
   if (!reviewer.roles.includes("SUPER_ADMIN")) {
     throw new FaceMatchReviewError("Only a super administrator can run a scan.");
   }
-  const threshold = duplicateDetectionThreshold();
+  const threshold = duplicateDetectionThreshold((await getFaceThresholds()).matchThreshold);
 
   return prisma.$transaction(
     async (tx) => {

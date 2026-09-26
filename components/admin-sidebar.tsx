@@ -79,7 +79,14 @@ export function AdminSidebar({ user }: { user: CurrentUser }) {
   const sections = user.roles.includes("SUPER_ADMIN")
     ? NAV_SECTIONS.map((section) =>
         section.label === "System"
-          ? { ...section, items: [...section.items, { label: "Styleguide", href: "/admin/styleguide" }] }
+          ? {
+              ...section,
+              items: [
+                ...section.items,
+                { label: "Face calibration", href: "/admin/devices/face-calibration" },
+                { label: "Styleguide", href: "/admin/styleguide" },
+              ],
+            }
           : section,
       )
     : NAV_SECTIONS;

@@ -3,6 +3,7 @@ import type { FaceMatchCaseStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { listFaceMatchCases } from "@/lib/face/match-cases";
 import { duplicateDetectionThreshold } from "@/lib/face/thresholds";
+import { getFaceThresholds } from "@/lib/face/threshold-settings";
 import { formatMemberName } from "@/lib/members/display-name";
 import { staffLabel } from "@/lib/members/member-view";
 import { formatLagosDate, formatLagosDateTime } from "@/lib/timezone";
@@ -38,7 +39,10 @@ export default async function FaceMatchReviewPage({
   const status = STATUS_TABS.find((tab) => tab.status === requested)?.status ?? "OPEN";
   const page = parsePage(typeof params.page === "string" ? params.page : undefined);
 
-  const { cases, total } = await listFaceMatchCases(reviewer, { status }, { page, pageSize: PAGE_SIZE });
+  const [{ cases, total }, thresholds] = await Promise.all([
+    listFaceMatchCases(reviewer, { status }, { page, pageSize: PAGE_SIZE }),
+    getFaceThresholds(),
+  ]);
   const isSuperAdmin = reviewer.roles.includes("SUPER_ADMIN");
 
   return (
@@ -51,7 +55,7 @@ export default async function FaceMatchReviewPage({
       <Card>
         <CardContent className="flex flex-col gap-3 pt-6 text-sm text-muted-foreground">
           <p>
-            A pair is flagged at a similarity of {duplicateDetectionThreshold().toFixed(2)} or more, just below the
+            A pair is flagged at a similarity of {duplicateDetectionThreshold(thresholds.matchThreshold).toFixed(2)} or more, just below the
             check-in threshold, because any pair above it could be confused at check-in. Twins and close relatives
             often score this high: a flag is not an accusation.
           </p>

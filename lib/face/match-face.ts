@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { UNCALIBRATED_MATCH_THRESHOLD, UNCALIBRATED_MIN_MATCH_MARGIN } from "@/lib/face/thresholds";
+import { getFaceThresholds, type FaceThresholds } from "@/lib/face/threshold-settings";
 import { toVectorLiteral } from "@/lib/face/vector-literal";
 
 const EMBEDDING_DIMENSIONS = 1024;
@@ -15,7 +16,7 @@ export type FaceMatchResult =
   /** Confident: above threshold, and far enough ahead of the runner-up. margin is null when there was no runner-up. */
   | { kind: "match"; memberId: string; similarity: number; margin: number | null }
   /** Above threshold, but too close to the runner-up to be sure which member it is. */
-  | { kind: "ambiguous"; bestSimilarity: number; runnerUpSimilarity: number; margin: number }
+  | { kind: "ambiguous"; bestSimilarity: number; runnerUpSimilarity: number; margin: number; minMargin: number }
   | { kind: "none" };
 
 /**
@@ -40,7 +41,13 @@ export function decideFaceMatch(
   }
   const margin = best.similarity - runnerUp.similarity;
   if (margin < minMargin) {
-    return { kind: "ambiguous", bestSimilarity: best.similarity, runnerUpSimilarity: runnerUp.similarity, margin };
+    return {
+      kind: "ambiguous",
+      bestSimilarity: best.similarity,
+      runnerUpSimilarity: runnerUp.similarity,
+      margin,
+      minMargin,
+    };
   }
   return { kind: "match", memberId: best.memberId, similarity: best.similarity, margin };
 }
@@ -66,7 +73,11 @@ export function decideFaceMatch(
  * The embedding parameter never appears in a log line, an error message
  * or anywhere else this function returns: only the match result does.
  */
-export async function matchFaceForCheckIn(embedding: number[], wingId: string | null): Promise<FaceMatchResult> {
+export async function matchFaceForCheckIn(
+  embedding: number[],
+  wingId: string | null,
+  thresholds?: Pick<FaceThresholds, "matchThreshold" | "minMargin">,
+): Promise<FaceMatchResult> {
   if (embedding.length !== EMBEDDING_DIMENSIONS || embedding.some((value) => !Number.isFinite(value))) {
     throw new Error(`Expected a ${EMBEDDING_DIMENSIONS} number embedding.`);
   }
@@ -88,5 +99,6 @@ export async function matchFaceForCheckIn(embedding: number[], wingId: string | 
     LIMIT 2
   `);
 
-  return decideFaceMatch(rows);
+  const { matchThreshold, minMargin } = thresholds ?? (await getFaceThresholds());
+  return decideFaceMatch(rows, matchThreshold, minMargin);
 }

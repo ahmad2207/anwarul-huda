@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
+import { updateFundRecord } from "@/lib/charity/update-fund";
 import { fundFormDataToRaw, fundSchema } from "./schema";
 
 export interface ActionState {
@@ -52,29 +53,20 @@ export async function updateFund(
     return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
-  const before = await prisma.fund.findUnique({ where: { id: fundId } });
-  if (!before) {
-    return { error: "This fund no longer exists." };
-  }
-
-  const updated = await prisma.fund.update({
-    where: { id: fundId },
-    data: {
-      name: parsed.data.name,
-      type: parsed.data.type,
-      description: parsed.data.description ?? null,
-      isActive: parsed.data.isActive,
-    },
-  });
-
-  await writeAudit({
-    actorId: actor.id,
-    action: "fund.updated",
-    entity: "Fund",
-    entityId: fundId,
-    before,
-    after: updated,
-  });
+  const result = await prisma.$transaction((tx) =>
+    updateFundRecord(
+      tx,
+      fundId,
+      {
+        name: parsed.data.name,
+        type: parsed.data.type,
+        description: parsed.data.description ?? null,
+        isActive: parsed.data.isActive,
+      },
+      actor.id,
+    ),
+  );
+  if ("error" in result) return { error: result.error };
 
   revalidatePath("/admin/charity/funds");
   return {};

@@ -69,8 +69,15 @@ export async function rollbackImportBatch(
 
   const now = new Date();
   const auditEntries: Parameters<typeof writeAuditMany>[0] = [];
+  let deactivatedCount = 0;
 
   for (const member of members) {
+    // Already inactive or deceased: nothing to undo, and a death recorded
+    // since the import must never be overwritten with "inactive".
+    if (member.status === "INACTIVE" || member.status === "DECEASED") {
+      continue;
+    }
+
     const updated = await tx.member.update({
       where: { id: member.id },
       data: {
@@ -79,6 +86,7 @@ export async function rollbackImportBatch(
         statusAt: now,
       },
     });
+    deactivatedCount += 1;
     auditEntries.push({
       actorId,
       action: "member.deactivated_via_import_rollback",
@@ -92,9 +100,25 @@ export async function rollbackImportBatch(
     // it needs its own call rather than inheriting the hook that lives
     // there.
     await deleteFaceEnrolmentsOnDeactivation(tx, member.id, "INACTIVE", actorId);
+
+    // A login issued since the import (bulk issue works from the nominal
+    // roll) is switched off with the member, as lib/members/status-change.ts
+    // does for any other deactivation, and audited as its own entity.
+    const linkedUser = await tx.user.findUnique({ where: { memberId: member.id } });
+    if (linkedUser?.isActive) {
+      await tx.user.update({ where: { id: linkedUser.id }, data: { isActive: false } });
+      auditEntries.push({
+        actorId,
+        action: "user.deactivated",
+        entity: "User",
+        entityId: linkedUser.id,
+        before: { isActive: true },
+        after: { isActive: false },
+      });
+    }
   }
 
   await writeAuditMany(auditEntries, tx);
 
-  return { deactivatedCount: members.length };
+  return { deactivatedCount };
 }

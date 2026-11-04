@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { applyMemberStatusChange } from "./status-change";
+import { applyMemberStatusChange, MemberStatusChangeError } from "./status-change";
 
 // Integration test against the real local Postgres database. Covers the
 // Phase 7 security pass finding: a member set to INACTIVE or DECEASED
@@ -165,5 +165,33 @@ describe("applyMemberStatusChange", () => {
       where: { entity: "Member", entityId: updated.id, action: "member.status_changed" },
     });
     expect(audit).not.toBeNull();
+  });
+  it("refuses to make an unapproved applicant active, leaving them pending", async () => {
+    const applicant = await prisma.member.create({
+      data: { surname: FIXTURE_TAG, firstName: "Applicant", gender: "FEMALE", status: "PENDING", source: "SELF_REGISTRATION", wingId },
+    });
+
+    await expect(
+      prisma.$transaction((tx) =>
+        applyMemberStatusChange(tx, applicant, { newStatus: "ACTIVE", reason: "Skipping approval", effectiveDate: new Date(), actorId }),
+      ),
+    ).rejects.toThrow(MemberStatusChangeError);
+
+    const after = await prisma.member.findUniqueOrThrow({ where: { id: applicant.id } });
+    expect(after.status).toBe("PENDING");
+  });
+
+  it("refuses a change made from a stale page after someone else already changed the status", async () => {
+    const { member } = await makeMemberWithUser("0091", true);
+    await prisma.member.update({ where: { id: member.id }, data: { status: "DECEASED" } });
+
+    await expect(
+      prisma.$transaction((tx) =>
+        applyMemberStatusChange(tx, member, { newStatus: "INACTIVE", reason: "Stale page", effectiveDate: new Date(), actorId }),
+      ),
+    ).rejects.toThrow(MemberStatusChangeError);
+
+    const after = await prisma.member.findUniqueOrThrow({ where: { id: member.id } });
+    expect(after.status).toBe("DECEASED");
   });
 });

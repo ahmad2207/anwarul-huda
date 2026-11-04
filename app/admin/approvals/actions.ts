@@ -32,6 +32,18 @@ export async function approveMember(formData: FormData): Promise<void> {
 
   try {
     await prisma.$transaction(async (tx) => {
+      // Claims the decision first, conditional on the record still being
+      // pending. A second approval, or a rejection, made at the same
+      // moment finds nothing to claim and stops here, so a member is never
+      // given two numbers or approved and rejected at once.
+      const claimed = await tx.member.updateMany({
+        where: { id: member.id, status: "PENDING" },
+        data: { status: "ACTIVE", approvedById: actor.id, approvedAt: new Date() },
+      });
+      if (claimed.count === 0) {
+        throw new Error("This record has already been decided.");
+      }
+
       const memberNumber = await generateMemberNumber(tx, {
         wingId: member.wingId,
         wingNumberLetter: member.wing.numberLetter,
@@ -148,15 +160,22 @@ export async function rejectMember(
     return "This record has already been decided.";
   }
 
-  await prisma.$transaction(async (tx) => {
-    const updated = await tx.member.update({
-      where: { id: member.id },
+  const decided = await prisma.$transaction(async (tx) => {
+    // Conditional on the record still being pending, for the same reason
+    // as approval above: a rejection never overwrites an approval made a
+    // moment earlier.
+    const claimed = await tx.member.updateMany({
+      where: { id: member.id, status: "PENDING" },
       data: {
         status: "REJECTED",
         statusReason: parsed.data.reason,
         statusAt: new Date(),
       },
     });
+    if (claimed.count === 0) {
+      return false;
+    }
+    const updated = await tx.member.findUniqueOrThrow({ where: { id: member.id } });
 
     await writeAudit(
       {
@@ -169,7 +188,11 @@ export async function rejectMember(
       },
       tx,
     );
+    return true;
   });
+  if (!decided) {
+    return "This record has already been decided.";
+  }
 
   revalidatePath("/admin/approvals");
   return undefined;

@@ -55,7 +55,7 @@ export default async function MemberProgressPage({
       cell: (row) => (
         <span>
           {row.completedCount} of {row.totalSections}
-          {row.nextSectionLabel ? ` — next: ${row.nextSectionLabel}` : ""}
+          {row.nextSectionLabel ? `, next: ${row.nextSectionLabel}` : ""}
         </span>
       ),
     },

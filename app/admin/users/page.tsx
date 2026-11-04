@@ -43,7 +43,7 @@ export default async function UsersPage() {
   }));
 
   const columns: DataTableColumn<StaffRow>[] = [
-    { key: "email", header: "Email", cell: (row) => row.email ?? "—" },
+    { key: "email", header: "Email", cell: (row) => row.email ?? "Not set" },
     {
       key: "roles",
       header: "Roles",

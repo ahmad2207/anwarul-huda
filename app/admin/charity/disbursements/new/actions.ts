@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { MoneyError, parseNairaText } from "@/lib/money";
-import { recordDisbursement } from "@/lib/charity/record-disbursement";
-import { uploadFile } from "@/lib/storage";
+import { checkDisbursement, recordDisbursement } from "@/lib/charity/record-disbursement";
+import { deleteFile, uploadFile } from "@/lib/storage";
 import { disbursementSchema } from "./schema";
 
 export interface DisbursementActionState {
@@ -36,27 +36,60 @@ export async function createDisbursementAction(
     return { error: error instanceof MoneyError ? error.message : "Invalid amount." };
   }
 
+  // Run every check that does not need the row locks first, so an
+  // obvious refusal never uploads a file that nothing will point to.
+  const precheck = await checkDisbursement(prisma, {
+    fundId: parsed.data.fundId,
+    caseId: parsed.data.caseId,
+    amountKobo,
+  });
+  if ("error" in precheck) {
+    return { error: precheck.error };
+  }
+
   let evidencePath: string | null = null;
   const evidenceFile = formData.get("evidence");
   if (evidenceFile instanceof File && evidenceFile.size > 0) {
     evidencePath = await uploadFile(evidenceFile, "disbursement-evidence");
   }
 
-  const result = await prisma.$transaction((tx) =>
-    recordDisbursement(tx, {
-      fundId: parsed.data.fundId,
-      caseId: parsed.data.caseId,
-      amountKobo,
-      method: parsed.data.method,
-      narration: parsed.data.narration ?? null,
-      evidencePath,
-      actorId: actor.id,
-    }),
-  );
+  let result: Awaited<ReturnType<typeof recordDisbursement>>;
+  try {
+    result = await prisma.$transaction((tx) =>
+      recordDisbursement(tx, {
+        fundId: parsed.data.fundId,
+        caseId: parsed.data.caseId,
+        amountKobo,
+        method: parsed.data.method,
+        narration: parsed.data.narration ?? null,
+        evidencePath,
+        actorId: actor.id,
+      }),
+    );
+  } catch (error) {
+    await removeOrphanEvidence(evidencePath);
+    throw error;
+  }
 
   if ("error" in result) {
+    await removeOrphanEvidence(evidencePath);
     return { error: result.error };
   }
 
   redirect(`/admin/charity/cases/${parsed.data.caseId}`);
+}
+
+/**
+ * Deletes an evidence file whose disbursement was refused, so nothing is
+ * left in storage that no record points to. A failure to delete is
+ * logged rather than shown: the person still needs to see why the
+ * disbursement itself was refused.
+ */
+async function removeOrphanEvidence(path: string | null): Promise<void> {
+  if (!path) return;
+  try {
+    await deleteFile(path);
+  } catch (error) {
+    console.error("Could not remove unused disbursement evidence", path, error);
+  }
 }

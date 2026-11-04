@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { canEditMemberRecords } from "@/lib/authorization";
 import { writeAudit } from "@/lib/audit";
-import { applyMemberStatusChange } from "@/lib/members/status-change";
+import { applyMemberStatusChange, MemberStatusChangeError } from "@/lib/members/status-change";
 import {
   householdMemberSchema,
   memberEditSchema,
@@ -138,14 +138,21 @@ export async function changeMemberStatus(
     return { error: error instanceof Error ? error.message : "You do not have permission to make this change." };
   }
 
-  await prisma.$transaction((tx) =>
-    applyMemberStatusChange(tx, before, {
-      newStatus: parsed.data.status,
-      reason: parsed.data.reason,
-      effectiveDate: parsed.data.effectiveDate ?? new Date(),
-      actorId: actor.id,
-    }),
-  );
+  try {
+    await prisma.$transaction((tx) =>
+      applyMemberStatusChange(tx, before, {
+        newStatus: parsed.data.status,
+        reason: parsed.data.reason,
+        effectiveDate: parsed.data.effectiveDate ?? new Date(),
+        actorId: actor.id,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof MemberStatusChangeError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
 
   revalidatePath(`/admin/members/${memberId}`);
   return {};

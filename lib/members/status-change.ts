@@ -2,6 +2,8 @@ import type { Member, MemberStatus, Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { deleteFaceEnrolmentsOnDeactivation } from "@/lib/face/delete-enrolments-on-deactivation";
 
+export class MemberStatusChangeError extends Error {}
+
 export interface ApplyMemberStatusChangeInput {
   newStatus: MemberStatus;
   reason: string;
@@ -28,14 +30,29 @@ export async function applyMemberStatusChange(
   before: Member,
   input: ApplyMemberStatusChangeInput,
 ): Promise<Member> {
-  const updated = await tx.member.update({
-    where: { id: before.id },
+  // An applicant becomes a member only through approval, which issues the
+  // member number, records the approver and runs the duplicate check. A
+  // status change must not be a way around that.
+  if (before.status === "PENDING" || before.status === "REJECTED") {
+    throw new MemberStatusChangeError(
+      "This person has not been approved as a member. Use the approvals queue instead.",
+    );
+  }
+
+  // Conditional on the status the officer saw, so two changes made at the
+  // same moment cannot both apply with one silently overwriting the other.
+  const changed = await tx.member.updateMany({
+    where: { id: before.id, status: before.status },
     data: {
       status: input.newStatus,
       statusReason: input.reason,
       statusAt: input.effectiveDate,
     },
   });
+  if (changed.count === 0) {
+    throw new MemberStatusChangeError("This member's status has changed since you opened the page. Reload and try again.");
+  }
+  const updated = await tx.member.findUniqueOrThrow({ where: { id: before.id } });
 
   await writeAudit(
     {

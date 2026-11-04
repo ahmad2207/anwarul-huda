@@ -17,6 +17,7 @@ describe("recordDisbursement", () => {
   let sadaqahFundId: string;
   let caseWithCategoryId: string;
   let caseWithoutCategoryId: string;
+  let memberId: string;
 
   beforeAll(async () => {
     const actor = await prisma.user.findFirstOrThrow({ where: { roles: { some: { role: "SUPER_ADMIN" } } } });
@@ -26,6 +27,35 @@ describe("recordDisbursement", () => {
     zakatFundId = zakatFund.id;
     const sadaqahFund = await prisma.fund.create({ data: { name: `${FIXTURE_TAG} sadaqah`, type: "SADAQAH" } });
     sadaqahFundId = sadaqahFund.id;
+
+    // Both funds need money in them: a disbursement can never take a
+    // fund below zero.
+    const wing = await prisma.wing.findUniqueOrThrow({ where: { code: "MENS" } });
+    const member = await prisma.member.create({
+      data: {
+        surname: FIXTURE_TAG,
+        firstName: "Donor",
+        gender: "MALE",
+        phone: "+2348066660002",
+        status: "ACTIVE",
+        source: "ADMIN_ENTRY",
+        wingId: wing.id,
+      },
+    });
+    memberId = member.id;
+    for (const [suffix, fundId] of [["Z", zakatFundId], ["S", sadaqahFundId]] as const) {
+      await prisma.payment.create({
+        data: {
+          receiptNumber: `${FIXTURE_TAG}-${suffix}`,
+          memberId,
+          fundId,
+          amountKobo: 200000,
+          method: "CASH",
+          paidAt: new Date(),
+          collectedById: actorId,
+        },
+      });
+    }
 
     const withCategory = await prisma.charityCase.create({
       data: {
@@ -65,6 +95,8 @@ describe("recordDisbursement", () => {
       where: { caseId: { in: fixtureCases.map((c) => c.id) } },
     });
     await prisma.charityCase.deleteMany({ where: { reference: { contains: FIXTURE_TAG } } });
+    await prisma.payment.deleteMany({ where: { memberId } });
+    await prisma.member.delete({ where: { id: memberId } });
     await prisma.fund.deleteMany({ where: { id: { in: [zakatFundId, sadaqahFundId] } } });
     await prisma.$disconnect();
   });
@@ -184,5 +216,69 @@ describe("recordDisbursement", () => {
         )
       `,
     ).rejects.toThrow(/zakat/i);
+  });
+
+  it("refuses a disbursement that would take a case past its approved amount", async () => {
+    const capped = await prisma.charityCase.create({
+      data: {
+        reference: `${FIXTURE_TAG}-CAPPED`,
+        beneficiaryName: "Beneficiary E",
+        needDescription: "Need",
+        requestedKobo: 30000,
+        status: "APPROVED",
+        approvedKobo: 30000,
+      },
+    });
+    const pay = (amountKobo: number) =>
+      prisma.$transaction((tx) =>
+        recordDisbursement(tx, {
+          fundId: sadaqahFundId,
+          caseId: capped.id,
+          amountKobo,
+          method: "CASH",
+          narration: null,
+          evidencePath: null,
+          actorId,
+        }),
+      );
+
+    expect("disbursement" in (await pay(20000))).toBe(true);
+    const over = await pay(20000);
+    expect("error" in over).toBe(true);
+    if ("error" in over) expect(over.error).toMatch(/approved amount/i);
+    expect("disbursement" in (await pay(10000))).toBe(true);
+
+    const total = await prisma.disbursement.aggregate({ where: { caseId: capped.id }, _sum: { amountKobo: true } });
+    expect(total._sum.amountKobo).toBe(30000);
+  });
+
+  it("refuses a disbursement larger than the fund balance", async () => {
+    const bigCase = await prisma.charityCase.create({
+      data: {
+        reference: `${FIXTURE_TAG}-BIG`,
+        beneficiaryName: "Beneficiary F",
+        needDescription: "Need",
+        requestedKobo: 10000000,
+        zakatCategory: "MASAKIN",
+        status: "APPROVED",
+        approvedKobo: 10000000,
+      },
+    });
+
+    const result = await prisma.$transaction((tx) =>
+      recordDisbursement(tx, {
+        fundId: zakatFundId,
+        caseId: bigCase.id,
+        amountKobo: 5000000,
+        method: "CASH",
+        narration: null,
+        evidencePath: null,
+        actorId,
+      }),
+    );
+
+    expect("error" in result).toBe(true);
+    if ("error" in result) expect(result.error).toMatch(/not enough money in this fund.*Available: ₦/i);
+    expect(await prisma.disbursement.count({ where: { caseId: bigCase.id } })).toBe(0);
   });
 });

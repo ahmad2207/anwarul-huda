@@ -1,8 +1,10 @@
-import type { CharityCase, Prisma, ZakatCategory } from "@prisma/client";
+import type { CaseStatus, CharityCase, Prisma, ZakatCategory } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { generateCaseReference } from "@/lib/case-reference";
 
 export type WorkflowResult = { error: string } | { case: CharityCase };
+
+export const CASE_CHANGED_ERROR = "This case has changed since you opened it. Reload and try again.";
 
 export interface CreateCaseInput {
   beneficiaryName: string;
@@ -50,6 +52,45 @@ export async function createCase(tx: Prisma.TransactionClient, input: CreateCase
   return created;
 }
 
+/**
+ * Locks the case row and reads it fresh inside the transaction. Every
+ * rule below is checked against this fresh row, never against the copy
+ * the caller loaded earlier, which may already be out of date. If the
+ * caller's copy no longer matches the row's status, someone else has
+ * moved the case on in the meantime and the caller must reload.
+ */
+async function lockFreshCase(
+  tx: Prisma.TransactionClient,
+  snapshot: CharityCase,
+): Promise<{ error: string } | { fresh: CharityCase }> {
+  await tx.$queryRaw`SELECT id FROM charity_cases WHERE id = ${snapshot.id} FOR UPDATE`;
+  const fresh = await tx.charityCase.findUnique({ where: { id: snapshot.id } });
+  if (!fresh) return { error: "This case no longer exists." };
+  if (fresh.status !== snapshot.status) return { error: CASE_CHANGED_ERROR };
+  return { fresh };
+}
+
+/**
+ * Moves a case from one status to the next only if it is still in the
+ * expected status. A conditional update, so even without the row lock
+ * two people acting at once can never both succeed.
+ */
+async function transition(
+  tx: Prisma.TransactionClient,
+  fresh: CharityCase,
+  expected: CaseStatus[],
+  data: Prisma.CharityCaseUncheckedUpdateManyInput,
+  extraWhere: Prisma.CharityCaseWhereInput = {},
+): Promise<{ error: string } | { updated: CharityCase }> {
+  const result = await tx.charityCase.updateMany({
+    where: { id: fresh.id, status: { in: expected }, ...extraWhere },
+    data,
+  });
+  if (result.count !== 1) return { error: CASE_CHANGED_ERROR };
+  const updated = await tx.charityCase.findUniqueOrThrow({ where: { id: fresh.id } });
+  return { updated };
+}
+
 export async function verifyCase(
   tx: Prisma.TransactionClient,
   charityCase: CharityCase,
@@ -58,25 +99,30 @@ export async function verifyCase(
   if (charityCase.status !== "DRAFT") {
     return { error: "Only a draft case can be verified." };
   }
+  const locked = await lockFreshCase(tx, charityCase);
+  if ("error" in locked) return locked;
+  const { fresh } = locked;
 
-  const updated = await tx.charityCase.update({
-    where: { id: charityCase.id },
-    data: { status: "VERIFIED", verifiedById: actorId, verifiedAt: new Date() },
+  const moved = await transition(tx, fresh, ["DRAFT"], {
+    status: "VERIFIED",
+    verifiedById: actorId,
+    verifiedAt: new Date(),
   });
+  if ("error" in moved) return moved;
 
   await writeAudit(
     {
       actorId,
       action: "charity_case.verified",
       entity: "CharityCase",
-      entityId: charityCase.id,
-      before: charityCase,
-      after: updated,
+      entityId: fresh.id,
+      before: fresh,
+      after: moved.updated,
     },
     tx,
   );
 
-  return { case: updated };
+  return { case: moved.updated };
 }
 
 export async function recommendCase(
@@ -91,25 +137,38 @@ export async function recommendCase(
   if (recommendedKobo <= 0) {
     return { error: "Enter a recommended amount greater than zero." };
   }
+  const locked = await lockFreshCase(tx, charityCase);
+  if ("error" in locked) return locked;
+  const { fresh } = locked;
 
-  const updated = await tx.charityCase.update({
-    where: { id: charityCase.id },
-    data: { status: "RECOMMENDED", recommendedById: actorId, recommendedAt: new Date(), recommendedKobo },
+  // Separation of duty (CLAUDE.md domain rule 4), from the other side:
+  // someone who has already approved this case can never be recorded as
+  // its recommender after the fact.
+  if (fresh.approvedById === actorId) {
+    return { error: "The person who approved this case cannot also recommend it." };
+  }
+
+  const moved = await transition(tx, fresh, ["VERIFIED"], {
+    status: "RECOMMENDED",
+    recommendedById: actorId,
+    recommendedAt: new Date(),
+    recommendedKobo,
   });
+  if ("error" in moved) return moved;
 
   await writeAudit(
     {
       actorId,
       action: "charity_case.recommended",
       entity: "CharityCase",
-      entityId: charityCase.id,
-      before: charityCase,
-      after: updated,
+      entityId: fresh.id,
+      before: fresh,
+      after: moved.updated,
     },
     tx,
   );
 
-  return { case: updated };
+  return { case: moved.updated };
 }
 
 export async function approveCase(
@@ -122,43 +181,47 @@ export async function approveCase(
   if (charityCase.status !== "RECOMMENDED") {
     return { error: "Only a recommended case can be approved." };
   }
-  // Separation of duty (CLAUDE.md domain rule 4): the person who
-  // recommended a case can never also be the one who approves it, even
-  // though a super admin's role would technically pass either step's
-  // role check on its own. Checked here, against the actual person, not
-  // the role.
-  if (charityCase.recommendedById === actorId) {
-    return { error: "The person who recommended this case cannot also approve it." };
-  }
   if (approvedKobo <= 0) {
     return { error: "Enter an approved amount greater than zero." };
   }
+  const locked = await lockFreshCase(tx, charityCase);
+  if ("error" in locked) return locked;
+  const { fresh } = locked;
 
-  const updated = await tx.charityCase.update({
-    where: { id: charityCase.id },
-    data: {
-      status: "APPROVED",
-      approvedById: actorId,
-      approvedAt: new Date(),
-      approvedKobo,
-      decisionNote,
-    },
-  });
+  // Separation of duty (CLAUDE.md domain rule 4): the person who
+  // recommended a case can never also be the one who approves it, even
+  // though a super admin's role would technically pass either step's
+  // role check on its own. Checked here, against the actual person on
+  // the fresh row, not the role and not the caller's earlier copy.
+  if (!fresh.recommendedById || fresh.recommendedById === actorId) {
+    return { error: "The person who recommended this case cannot also approve it." };
+  }
+
+  const moved = await transition(
+    tx,
+    fresh,
+    ["RECOMMENDED"],
+    { status: "APPROVED", approvedById: actorId, approvedAt: new Date(), approvedKobo, decisionNote },
+    { recommendedById: { not: actorId } },
+  );
+  if ("error" in moved) return moved;
 
   await writeAudit(
     {
       actorId,
       action: "charity_case.approved",
       entity: "CharityCase",
-      entityId: charityCase.id,
-      before: charityCase,
-      after: updated,
+      entityId: fresh.id,
+      before: fresh,
+      after: moved.updated,
     },
     tx,
   );
 
-  return { case: updated };
+  return { case: moved.updated };
 }
+
+const REJECTABLE: CaseStatus[] = ["DRAFT", "VERIFIED", "RECOMMENDED"];
 
 export async function rejectCase(
   tx: Prisma.TransactionClient,
@@ -166,28 +229,32 @@ export async function rejectCase(
   actorId: string,
   reason: string,
 ): Promise<WorkflowResult> {
-  if (!["DRAFT", "VERIFIED", "RECOMMENDED"].includes(charityCase.status)) {
+  if (!REJECTABLE.includes(charityCase.status)) {
     return { error: "This case has already been decided and cannot be rejected." };
   }
+  const locked = await lockFreshCase(tx, charityCase);
+  if ("error" in locked) return locked;
+  const { fresh } = locked;
 
-  const updated = await tx.charityCase.update({
-    where: { id: charityCase.id },
-    data: { status: "REJECTED", decisionNote: reason },
-  });
+  // The conditional update only matches an undecided case, so a case
+  // that has been approved or paid out can never be rejected, however
+  // the two requests interleave.
+  const moved = await transition(tx, fresh, REJECTABLE, { status: "REJECTED", decisionNote: reason });
+  if ("error" in moved) return moved;
 
   await writeAudit(
     {
       actorId,
       action: "charity_case.rejected",
       entity: "CharityCase",
-      entityId: charityCase.id,
-      before: charityCase,
-      after: updated,
+      entityId: fresh.id,
+      before: fresh,
+      after: moved.updated,
     },
     tx,
   );
 
-  return { case: updated };
+  return { case: moved.updated };
 }
 
 export async function closeCase(
@@ -198,23 +265,24 @@ export async function closeCase(
   if (charityCase.status !== "DISBURSED") {
     return { error: "Only a disbursed case can be closed." };
   }
+  const locked = await lockFreshCase(tx, charityCase);
+  if ("error" in locked) return locked;
+  const { fresh } = locked;
 
-  const updated = await tx.charityCase.update({
-    where: { id: charityCase.id },
-    data: { status: "CLOSED" },
-  });
+  const moved = await transition(tx, fresh, ["DISBURSED"], { status: "CLOSED" });
+  if ("error" in moved) return moved;
 
   await writeAudit(
     {
       actorId,
       action: "charity_case.closed",
       entity: "CharityCase",
-      entityId: charityCase.id,
-      before: charityCase,
-      after: updated,
+      entityId: fresh.id,
+      before: fresh,
+      after: moved.updated,
     },
     tx,
   );
 
-  return { case: updated };
+  return { case: moved.updated };
 }

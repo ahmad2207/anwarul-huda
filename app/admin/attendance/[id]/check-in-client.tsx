@@ -18,7 +18,7 @@ interface RecentEntry {
   memberName: string;
   memberNumber: string | null;
   alreadyCheckedIn: boolean;
-  status: "synced" | "pending";
+  status: "synced" | "pending" | "failed";
   recordId: string | null;
   tempId: string | null;
 }
@@ -106,8 +106,18 @@ export function CheckInClient({
             : await checkInByMemberNumber(gatheringId, item.memberNumber ?? "");
 
           if (result.error) {
+            // A real rejection, not a connectivity problem: retrying will
+            // never succeed, so it leaves the queue and is shown as failed
+            // in the list below, where it stays visible. Stopping here
+            // instead would leave every check-in queued after it stuck.
+            queue = dequeue(window.localStorage, gatheringId, item.tempId);
+            setPendingCount(queue.length);
+            setCount((c) => Math.max(0, c - 1));
+            setRecent((current) =>
+              current.map((entry) => (entry.tempId === item.tempId ? { ...entry, status: "failed", tempId: null } : entry)),
+            );
             setMessage(`Could not sync check-in for ${item.memberName}: ${result.error}`);
-            break; // a real rejection, not a connectivity problem: stop and let the officer see it
+            continue;
           }
 
           queue = dequeue(window.localStorage, gatheringId, item.tempId);
@@ -257,6 +267,8 @@ export function CheckInClient({
 
   function handleUndo(entry: RecentEntry) {
     setRecent((current) => current.filter((e) => e.key !== entry.key));
+    // A failed entry was never counted once it failed; just clear it.
+    if (entry.status === "failed") return;
     setCount((c) => Math.max(0, c - 1));
 
     if (entry.status === "pending" && entry.tempId) {
@@ -382,6 +394,10 @@ export function CheckInClient({
                   ) : entry.status === "pending" ? (
                     <span className="ml-1">
                       <StatusTag tone="attention">Pending sync</StatusTag>
+                    </span>
+                  ) : entry.status === "failed" ? (
+                    <span className="ml-1">
+                      <StatusTag tone="alert">Not saved</StatusTag>
                     </span>
                   ) : (
                     <span className="ml-1">

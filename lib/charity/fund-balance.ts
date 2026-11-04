@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export interface FundBalancePeriod {
@@ -26,34 +27,40 @@ export interface FundBalance {
  * voiding one automatically corrects a fund's balance without this
  * function needing to know anything about voiding.
  */
-export async function getFundBalance(fundId: string, period: FundBalancePeriod = {}): Promise<FundBalance> {
-  const fund = await prisma.fund.findUniqueOrThrow({ where: { id: fundId } });
+export async function getFundBalance(
+  fundId: string,
+  period: FundBalancePeriod = {},
+  // Pass a transaction client to read the balance inside the same
+  // transaction that holds the fund row lock (lib/charity/record-disbursement.ts).
+  db: PrismaClient | Prisma.TransactionClient = prisma,
+): Promise<FundBalance> {
+  const fund = await db.fund.findUniqueOrThrow({ where: { id: fundId } });
 
   const [openingReceived, openingDisbursed, periodReceived, periodDisbursed, beneficiaries] = await Promise.all([
     // Opening balance: everything before the period started. With no
     // "from", there is no prior period, so opening is simply zero and
     // these two queries are skipped rather than run unconstrained.
     period.from
-      ? prisma.payment.aggregate({
+      ? db.payment.aggregate({
           where: { fundId, status: "CONFIRMED", paidAt: { lt: period.from } },
           _sum: { amountKobo: true },
         })
       : null,
     period.from
-      ? prisma.disbursement.aggregate({
+      ? db.disbursement.aggregate({
           where: { fundId, paidAt: { lt: period.from } },
           _sum: { amountKobo: true },
         })
       : null,
-    prisma.payment.aggregate({
+    db.payment.aggregate({
       where: { fundId, status: "CONFIRMED", ...paidAtWithin(period) },
       _sum: { amountKobo: true },
     }),
-    prisma.disbursement.aggregate({
+    db.disbursement.aggregate({
       where: { fundId, ...paidAtWithin(period) },
       _sum: { amountKobo: true },
     }),
-    prisma.disbursement.findMany({
+    db.disbursement.findMany({
       where: { fundId, ...paidAtWithin(period) },
       distinct: ["caseId"],
       select: { caseId: true },

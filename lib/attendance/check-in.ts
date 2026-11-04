@@ -39,9 +39,14 @@ export async function checkInMember(
     return { record: existing, alreadyCheckedIn: true };
   }
 
-  try {
-    const created = await tx.attendanceRecord.create({
-      data: {
+  // INSERT ... ON CONFLICT DO NOTHING (createMany with skipDuplicates),
+  // not a create that catches the unique violation: in Postgres a failed
+  // insert aborts the whole transaction, so the old catch-and-read-back
+  // could never run and a double tap showed the officer an error. Here a
+  // race simply inserts nothing, and the row that won is read back.
+  const inserted = await tx.attendanceRecord.createMany({
+    data: [
+      {
         gatheringId: input.gatheringId,
         memberId: input.memberId,
         checkedInAt: new Date(),
@@ -51,29 +56,11 @@ export async function checkInMember(
         livenessScore: input.livenessScore,
         matchMargin: input.matchMargin ?? null,
       },
-    });
-    return { record: created, alreadyCheckedIn: false };
-  } catch (error) {
-    // A genuine race: two taps (or a tap and a QR scan) for the same
-    // member arriving at almost the same moment both pass the check
-    // above before either has committed. The unique constraint catches
-    // it; fetch and return the row that won, rather than surfacing the
-    // race as an error to the officer.
-    if (isUniqueConstraintError(error)) {
-      const record = await tx.attendanceRecord.findUniqueOrThrow({
-        where: { gatheringId_memberId: { gatheringId: input.gatheringId, memberId: input.memberId } },
-      });
-      return { record, alreadyCheckedIn: true };
-    }
-    throw error;
-  }
-}
-
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "P2002"
-  );
+    ],
+    skipDuplicates: true,
+  });
+  const record = await tx.attendanceRecord.findUniqueOrThrow({
+    where: { gatheringId_memberId: { gatheringId: input.gatheringId, memberId: input.memberId } },
+  });
+  return { record, alreadyCheckedIn: inserted.count === 0 };
 }

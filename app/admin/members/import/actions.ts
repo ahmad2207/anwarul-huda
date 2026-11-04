@@ -181,6 +181,36 @@ export async function commitImport(
     return { error: "This import batch has no confirmed column mapping." };
   }
 
+  // Claims the batch before writing a single row, conditional on nobody
+  // else having claimed it. A double click, or two officers committing
+  // the same batch, otherwise imported every member twice with two sets
+  // of member numbers. committedAt is set here as the claim and set again
+  // when the commit finishes; it is cleared if the commit fails.
+  const claimed = await prisma.importBatch.updateMany({
+    where: { id: batch.id, status: "PREVIEWED", committedAt: null },
+    data: { committedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return { error: "This batch is already being committed. Refresh the page to see the result." };
+  }
+
+  try {
+    return await commitClaimedImport(batch, { ...staging, mapping: staging.mapping }, duplicateActions, actor);
+  } catch (error) {
+    await prisma.importBatch.updateMany({
+      where: { id: batch.id, status: "PREVIEWED" },
+      data: { committedAt: null },
+    });
+    throw error;
+  }
+}
+
+async function commitClaimedImport(
+  batch: NonNullable<Awaited<ReturnType<typeof loadOwnedBatch>>["batch"]>,
+  staging: StagedImportData & { mapping: Record<string, string | null> },
+  duplicateActions: Record<number, DuplicateAction>,
+  actor: Awaited<ReturnType<typeof requireRole>>,
+): Promise<CommitResult> {
   const wings = await prisma.wing.findMany({ select: { id: true, numberLetter: true } });
 
   if (batch.mode === "NOMINAL_ROLL") {

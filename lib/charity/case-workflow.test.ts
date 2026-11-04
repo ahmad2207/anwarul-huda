@@ -36,7 +36,15 @@ describe("case workflow", () => {
   });
 
   afterAll(async () => {
-    await prisma.charityCase.deleteMany({ where: { reference: { contains: FIXTURE_TAG } } });
+    // Case references are generated (CASE/2026/000123), so the fixture
+    // cases are found by their tagged beneficiary name instead.
+    const cases = await prisma.charityCase.findMany({
+      where: { beneficiaryName: { contains: FIXTURE_TAG } },
+      select: { id: true },
+    });
+    const caseIds = cases.map((c) => c.id);
+    await prisma.auditLog.deleteMany({ where: { OR: [{ entityId: { in: caseIds } }, { actorId: officerBId }] } });
+    await prisma.charityCase.deleteMany({ where: { id: { in: caseIds } } });
     await prisma.user.delete({ where: { id: officerBId } });
     await prisma.$disconnect();
   });
@@ -141,5 +149,54 @@ describe("case workflow", () => {
     const created = await freshCase();
     const result = await prisma.$transaction((tx) => closeCase(tx, created, officerAId));
     expect("error" in result).toBe(true);
+  });
+
+  it("double approval only succeeds once when two approvals arrive at the same moment", async () => {
+    const created = await freshCase();
+    const verified = await prisma.$transaction((tx) => verifyCase(tx, created, officerAId));
+    const verifiedCase = (verified as { case: typeof created }).case;
+    const recommended = await prisma.$transaction((tx) =>
+      recommendCase(tx, verifiedCase, officerAId, 50000),
+    );
+    const recommendedCase = (recommended as { case: typeof created }).case;
+
+    // Both start from the same copy of the case, as two browser tabs would.
+    const approve = () =>
+      prisma.$transaction((tx) => approveCase(tx, recommendedCase, officerBId, 50000, null), {
+        timeout: 30000,
+        maxWait: 30000,
+      });
+    const settled = await Promise.allSettled([approve(), approve()]);
+
+    const succeeded = settled.filter((s) => s.status === "fulfilled" && "case" in s.value);
+    const refused = settled.filter((s) => s.status === "fulfilled" && "error" in s.value);
+    expect(succeeded).toHaveLength(1);
+    expect(refused).toHaveLength(1);
+    const refusal = refused[0];
+    if (refusal.status === "fulfilled" && "error" in refusal.value) {
+      expect(refusal.value.error).toMatch(/changed since you opened it/i);
+    }
+
+    const approvals = await prisma.auditLog.count({
+      where: { entity: "CharityCase", entityId: created.id, action: "charity_case.approved" },
+    });
+    expect(approvals).toBe(1);
+  });
+
+  it("refuses to reject a case once it has been approved", async () => {
+    const created = await freshCase();
+    const verified = await prisma.$transaction((tx) => verifyCase(tx, created, officerAId));
+    const verifiedCase = (verified as { case: typeof created }).case;
+    const recommended = await prisma.$transaction((tx) =>
+      recommendCase(tx, verifiedCase, officerAId, 50000),
+    );
+    const recommendedCase = (recommended as { case: typeof created }).case;
+    await prisma.$transaction((tx) => approveCase(tx, recommendedCase, officerBId, 50000, null));
+
+    // A stale copy still says RECOMMENDED, but the row is now APPROVED.
+    const result = await prisma.$transaction((tx) => rejectCase(tx, recommendedCase, officerAId, "Too late"));
+    expect("error" in result).toBe(true);
+    const row = await prisma.charityCase.findUniqueOrThrow({ where: { id: created.id } });
+    expect(row.status).toBe("APPROVED");
   });
 });

@@ -20,29 +20,56 @@ export interface RegistrationState {
   error?: string;
   success?: boolean;
   firstName?: string;
+  /**
+   * What was submitted, sent back with an error so the form can put it
+   * back: React resets an uncontrolled form after its action, and losing
+   * thirty typed fields to one mistake is how a registration gets
+   * abandoned. Passwords are never echoed back.
+   */
+  values?: Record<string, string | string[]>;
+}
+
+const NEVER_ECHOED = new Set(["password", "confirmPassword"]);
+
+function submittedValues(formData: FormData): Record<string, string | string[]> {
+  const values: Record<string, string | string[]> = {};
+  for (const key of new Set(formData.keys())) {
+    if (NEVER_ECHOED.has(key) || key.startsWith("$ACTION")) continue;
+    const entries = formData.getAll(key).filter((entry): entry is string => typeof entry === "string");
+    values[key] = entries.length === 1 && key !== "serviceAreaIds" ? entries[0] : entries;
+  }
+  return values;
 }
 
 export async function submitRegistration(
   _previousState: RegistrationState,
   formData: FormData,
 ): Promise<RegistrationState> {
+  const values = submittedValues(formData);
+
+  // Validated first, and only a registration that passes validation
+  // counts towards the limit: a typo in a phone number should not use
+  // up one of the six attempts a household has in an hour.
+  const parsed = registrationSchema.safeParse(registrationFormDataToRaw(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the form and try again.", values };
+  }
+
   const ip = await getClientIp();
   const rateLimit = await checkRateLimit(`register:${ip}`, REGISTRATION_LIMIT, REGISTRATION_WINDOW_SECONDS);
   if (!rateLimit.allowed) {
     const minutes = Math.ceil((rateLimit.retryAfterSeconds ?? REGISTRATION_WINDOW_SECONDS) / 60);
-    return { error: `Too many attempts from this connection. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.` };
-  }
-
-  const parsed = registrationSchema.safeParse(registrationFormDataToRaw(formData));
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Please check the form and try again." };
+    return {
+      error: `Too many attempts from this connection. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+      values,
+    };
   }
 
   const data = parsed.data;
 
   const wing = await prisma.wing.findUnique({ where: { id: data.wingId } });
   if (!wing) {
-    return { error: "Choose a valid wing." };
+    return { error: "Choose a valid wing.", values };
   }
 
   const passwordHash = await bcrypt.hash(data.password, PASSWORD_HASH_ROUNDS);
@@ -130,8 +157,8 @@ export async function submitRegistration(
     return { success: true, firstName: member.firstName! };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { error: "This phone number or email is already registered." };
+      return { error: "This phone number or email is already registered.", values };
     }
-    return { error: "Something went wrong saving your registration. Try again." };
+    return { error: "Something went wrong saving your registration. Try again.", values };
   }
 }

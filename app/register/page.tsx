@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PublicFrame } from "@/components/member/public-frame";
 import { RegisterForm } from "./register-form";
 
 // Public route, no auth check: this is where a prospective member signs
@@ -30,8 +31,8 @@ export default async function RegisterPage() {
   ]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
+    <PublicFrame wide>
       <RegisterForm wings={wings} branches={branches} serviceAreas={serviceAreas} />
-    </div>
+    </PublicFrame>
   );
 }

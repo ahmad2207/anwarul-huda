@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { formatNaira } from "@/lib/money";
+import { ArrowRight } from "lucide-react";
 import { formatMonthYear, hasAttentionItems, type AttentionItems } from "@/lib/members/member-home";
-import { Button } from "@/components/ui/button";
+import { BalanceCard } from "@/components/member/balance-card";
+import { SectionHeading, memberLinkCardClass } from "@/components/member/card";
+import { StatusTag } from "@/components/status-tag";
 
 // Rendered first on the complete home so a member never scrolls past a
 // sermon to learn they are in arrears (MEMBER-HOME-AND-ADMIN-VIEW.md
@@ -13,38 +15,32 @@ export function AttentionBlock({ items }: { items: AttentionItems }) {
 
   return (
     <section aria-labelledby="attention-heading" className="flex flex-col gap-3">
-      <h2 id="attention-heading" className="text-base font-medium">
-        Needs your attention
-      </h2>
+      <SectionHeading id="attention-heading">Needs your attention</SectionHeading>
 
-      {/* The one warm card (DESIGN.md 4.2), now shown only when there is
-          a balance to carry. */}
       {items.balance ? (
-        <div className="rounded-[4px] bg-navy-900 p-5 text-white">
-          <p className="text-sm uppercase tracking-wide text-white/60">Outstanding</p>
-          <p className="mt-1 font-mono text-3xl font-semibold text-amber-500">
-            {formatNaira(items.balance.totalKobo)}
-          </p>
-          <p className="mt-1 text-base text-white/70">
-            {items.balance.planNames.join(", ")}, since {formatMonthYear(items.balance.since)}
-          </p>
-          <Button
-            render={<Link href="/account/payments">View payments</Link>}
-            variant="outline"
-            className="mt-3 h-11 rounded-[4px] border-white/30 bg-transparent px-5 text-base text-white hover:bg-white/10 hover:text-white"
-          />
-        </div>
+        <BalanceCard
+          amountKobo={items.balance.totalKobo}
+          label="Your outstanding dues"
+          detail={`For ${items.balance.planNames.join(", ")}, since ${formatMonthYear(items.balance.since)}`}
+          action={
+            <Link
+              href="/account/payments"
+              className="inline-flex h-12 items-center gap-2 rounded-[14px] border border-white/35 bg-white/10 px-5 text-base font-semibold text-white hover:bg-white/20"
+            >
+              View payments
+              <ArrowRight className="size-5" aria-hidden="true" />
+            </Link>
+          }
+        />
       ) : null}
 
       {items.nextRecordSection ? (
-        <Link
-          href={`/account/record/${items.nextRecordSection.key}`}
-          className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border bg-card p-4 hover:bg-muted/30"
-        >
-          <span className="text-base font-medium">Your record is not finished</span>
-          <span className="text-sm text-muted-foreground">
-            Next: {items.nextRecordSection.label.toLowerCase()}
+        <Link href={`/account/record/${items.nextRecordSection.key}`} className={memberLinkCardClass}>
+          <span className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-base font-semibold text-ink">Your record is not finished</span>
+            <StatusTag tone="attention">To do</StatusTag>
           </span>
+          <span className="text-base text-ink-2">Next: {items.nextRecordSection.label.toLowerCase()}</span>
         </Link>
       ) : null}
     </section>

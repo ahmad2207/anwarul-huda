@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
+import { CheckboxRow, FormError, SectionActions } from "@/components/member/form";
+import { useRememberedForm } from "@/components/member/use-remembered-form";
 import { saveConsentSection } from "./actions";
 
 // Separate from section 9's consentBiometric (MEMBER-INTERFACE.md 3.4:
@@ -16,38 +16,25 @@ export function ConsentSectionForm({
   consentDirectory: boolean;
   consentComms: boolean;
 }) {
-  const [error, formAction, isPending] = useActionState(saveConsentSection, undefined);
+  const { state: error, formAction, isPending, checked } = useRememberedForm(saveConsentSection, undefined);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <label className="flex items-start gap-3 text-base">
-        <input
-          type="checkbox"
-          name="consentRecords"
-          defaultChecked={consentRecords}
-          className="mt-1 size-5 shrink-0"
-        />
-        I consent to my record being kept
-      </label>
-      <label className="flex items-start gap-3 text-base">
-        <input
-          type="checkbox"
-          name="consentDirectory"
-          defaultChecked={consentDirectory}
-          className="mt-1 size-5 shrink-0"
-        />
-        I consent to being listed in the members directory
-      </label>
-      <label className="flex items-start gap-3 text-base">
-        <input type="checkbox" name="consentComms" defaultChecked={consentComms} className="mt-1 size-5 shrink-0" />
-        I consent to receiving communications
-      </label>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="sr-only">Your consent</legend>
+        <CheckboxRow name="consentRecords" defaultChecked={checked("consentRecords", consentRecords)}>
+          I consent to my record being kept
+        </CheckboxRow>
+        <CheckboxRow name="consentDirectory" defaultChecked={checked("consentDirectory", consentDirectory)}>
+          I consent to being listed in the members directory
+        </CheckboxRow>
+        <CheckboxRow name="consentComms" defaultChecked={checked("consentComms", consentComms)}>
+          I consent to receiving communications
+        </CheckboxRow>
+      </fieldset>
 
-      {error ? <p className="text-base text-destructive">{error}</p> : null}
-
-      <Button type="submit" disabled={isPending} className="h-11 self-start rounded-[4px] px-6 text-base">
-        {isPending ? "Saving..." : "Save and continue"}
-      </Button>
+      <FormError>{error}</FormError>
+      <SectionActions isPending={isPending} />
     </form>
   );
 }

@@ -312,11 +312,21 @@ export function FaceCapture({
 
   async function submitEnrolment(embedding: number[], livenessScore: number) {
     setPhase("saving");
-    const result = await save({
-      embedding,
-      livenessScore,
-      deviceLabel: navigator.userAgent.slice(0, 200),
-    });
+    let result: SaveFaceEnrolmentResult;
+    try {
+      result = await save({
+        embedding,
+        livenessScore,
+        deviceLabel: navigator.userAgent.slice(0, 200),
+      });
+    } catch {
+      // A dropped connection or a server error: never leave the member
+      // stuck on "Saving...". The retry button stays available.
+      setSaveError(null);
+      setSaveFinal(false);
+      setPhase("save-failed");
+      return;
+    }
     if (result.ok) {
       setPhase("enrolled");
     } else {
@@ -331,7 +341,7 @@ export function FaceCapture({
       <FaceScreen title={copy.title}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Spinner />
-          <p className="text-base text-muted-foreground">
+          <p className="text-base text-ink-2">
             Getting ready. This downloads about 8MB, so it can take a moment on mobile data. It only happens
             this once.
           </p>
@@ -345,7 +355,7 @@ export function FaceCapture({
       <FaceScreen title={copy.title}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Spinner />
-          <p className="text-base text-muted-foreground">Asking for camera access...</p>
+          <p className="text-base text-ink-2">Asking for camera access...</p>
         </div>
       </FaceScreen>
     );
@@ -355,12 +365,12 @@ export function FaceCapture({
     return (
       <FaceScreen title={copy.title}>
         <div className="flex flex-col gap-4">
-          <p className="text-base text-muted-foreground">
+          <p className="text-base text-ink-2">
             {phase === "save-failed" && saveError ? saveError : FAILURE_MESSAGES[phase]}
           </p>
           <div className="flex flex-col gap-3">
             {phase !== "permission-denied" && phase !== "no-camera" && phase !== "models-failed" && !(phase === "save-failed" && saveFinal) ? (
-              <Button type="button" onClick={() => setPhase("ready")} className="h-11 rounded-[4px] px-6 text-base">
+              <Button type="button" onClick={() => setPhase("ready")} className="h-12 rounded-[14px] px-6 text-base">
                 Try again
               </Button>
             ) : null}
@@ -376,7 +386,7 @@ export function FaceCapture({
       <FaceScreen title={copy.title}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Spinner />
-          <p className="text-base text-muted-foreground">Saving...</p>
+          <p className="text-base text-ink-2">Saving...</p>
         </div>
       </FaceScreen>
     );
@@ -387,11 +397,12 @@ export function FaceCapture({
       <FaceScreen title={copy.title}>
         <div className="flex flex-col gap-4">
           <p className="text-base font-medium">{copy.enrolledTitle}</p>
-          <p className="text-base text-muted-foreground">{copy.enrolledText}</p>
+          <p className="text-base text-ink-2">{copy.enrolledText}</p>
           <Button
+            nativeButton={false}
             render={<Link href={copy.doneHref}>{copy.doneLabel}</Link>}
             variant="outline"
-            className="h-11 self-start rounded-[4px] px-6 text-base"
+            className="h-12 self-start rounded-[14px] px-6 text-base"
           />
         </div>
       </FaceScreen>
@@ -411,13 +422,13 @@ export function FaceCapture({
           // reflection on screen turns the same way. The raw frame human
           // reads for detection is unaffected: this is a display
           // transform only, not a change to what challengeSatisfied sees.
-          className={`mx-auto aspect-[4/5] w-full max-w-xs rounded-[4px] bg-black object-cover ${mirror ? "-scale-x-100" : ""}`}
+          className={`mx-auto aspect-[4/5] w-full max-w-xs rounded-[14px] bg-black object-cover ${mirror ? "-scale-x-100" : ""}`}
         />
 
         {phase === "ready" ? (
           <>
-            <p className="text-base text-muted-foreground">{copy.readyText}</p>
-            <Button type="button" onClick={startCapture} className="h-11 self-start rounded-[4px] px-6 text-base">
+            <p className="text-base text-ink-2">{copy.readyText}</p>
+            <Button type="button" onClick={startCapture} className="h-12 self-start rounded-[14px] px-6 text-base">
               Begin
             </Button>
           </>
@@ -427,7 +438,7 @@ export function FaceCapture({
           <p className="text-lg font-medium text-navy-900">{challenge.instruction}</p>
         ) : null}
 
-        {phase === "processing" ? <p className="text-base text-muted-foreground">Checking...</p> : null}
+        {phase === "processing" ? <p className="text-base text-ink-2">Checking...</p> : null}
 
         <DeferButton href={copy.escapeHref} label={copy.readyEscapeLabel} />
       </div>
@@ -442,7 +453,7 @@ function isFailurePhase(phase: Phase): phase is keyof typeof FAILURE_MESSAGES {
 function FaceScreen({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-navy-900">{title}</h1>
+      <h1 className="font-heading text-2xl font-semibold text-navy-900">{title}</h1>
       {children}
     </div>
   );
@@ -472,8 +483,9 @@ function DeferButton({ href, label }: { href: string; label: string }) {
     <Button
       type="button"
       variant="outline"
+      nativeButton={false}
       render={<Link href={href}>{label}</Link>}
-      className="h-11 w-full rounded-[4px] px-6 text-base"
+      className="h-12 w-full rounded-[14px] px-6 text-base"
     />
   );
 }

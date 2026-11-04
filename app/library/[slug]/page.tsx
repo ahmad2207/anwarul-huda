@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronLeft, ExternalLink } from "lucide-react";
+import { memberCardClass } from "@/components/member/card";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canViewContent } from "@/lib/content/visibility";
@@ -20,7 +23,7 @@ const COVER_URL_EXPIRY_SECONDS = 300;
 export default async function ContentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await getCurrentUser();
   if (!user.memberId) {
-    return <p className="text-base text-muted-foreground">This account is not linked to a member record.</p>;
+    return <p className="text-base text-ink-2">This account is not linked to a member record.</p>;
   }
 
   const { slug } = await params;
@@ -40,25 +43,25 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
   const coverUrl = item.coverPath ? await createSignedFileUrl(item.coverPath, COVER_URL_EXPIRY_SECONDS) : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-sm text-muted-foreground">{TYPE_LABELS[item.type] ?? item.type}</p>
-        <h1 className="text-xl font-semibold">{item.title}</h1>
-        <p className="text-base text-muted-foreground">
+    <article className="flex flex-col gap-5">
+      <Link href="/library" className="inline-flex min-h-11 items-center gap-1 self-start text-base font-medium text-navy-700 underline-offset-4 hover:underline">
+        <ChevronLeft className="size-5" aria-hidden="true" />
+        All books
+      </Link>
+
+      <div className="flex flex-col gap-1">
+        <p className="text-base font-medium text-navy-700">{TYPE_LABELS[item.type] ?? item.type}</p>
+        <h1 className="font-heading text-2xl font-semibold leading-tight text-navy-900">{item.title}</h1>
+        <p className="text-base text-ink-2">
           {item.author ?? "Unknown"}
-          {item.deliveredOn ? ` · ${formatLagosDate(item.deliveredOn)}` : ""}
+          {item.deliveredOn ? `, ${formatLagosDate(item.deliveredOn)}` : ""}
         </p>
       </div>
 
       {coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- a signed, short lived URL from private storage, not a static asset next/image can optimise
-        <img src={coverUrl} alt="" className="max-h-64 w-auto rounded-md border object-contain" />
+        <img src={coverUrl} alt="" className="max-h-72 w-auto self-start rounded-[14px] object-contain shadow-warm" />
       ) : null}
-
-      {item.summary ? <p className="text-base">{item.summary}</p> : null}
-      {item.body ? <p className="whitespace-pre-wrap text-base">{item.body}</p> : null}
-
-      {item.tags.length > 0 ? <p className="text-sm text-muted-foreground">{item.tags.join(", ")}</p> : null}
 
       {item.filePath ? <FileButton contentId={item.id} filePath={item.filePath} /> : null}
 
@@ -67,11 +70,21 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
           href={item.externalUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex h-11 items-center self-start text-base font-medium underline"
+          className="inline-flex min-h-11 items-center gap-2 self-start text-base font-semibold text-navy-700 underline underline-offset-4"
         >
+          <ExternalLink className="size-5" aria-hidden="true" />
           Watch video
         </a>
       ) : null}
-    </div>
+
+      {item.summary || item.body ? (
+        <div className={`${memberCardClass} flex max-w-[70ch] flex-col gap-3 p-5`}>
+          {item.summary ? <p className="text-base font-medium">{item.summary}</p> : null}
+          {item.body ? <p className="whitespace-pre-wrap text-base">{item.body}</p> : null}
+        </div>
+      ) : null}
+
+      {item.tags.length > 0 ? <p className="text-sm text-ink-2">{item.tags.join(", ")}</p> : null}
+    </article>
   );
 }

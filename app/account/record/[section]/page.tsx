@@ -33,7 +33,7 @@ export default async function RecordSectionPage({ params }: { params: Promise<{ 
   const user = await getCurrentUser();
   if (!user.memberId) {
     return (
-      <p className="text-base text-muted-foreground">
+      <p className="text-base text-ink-2">
         This account is not linked to a member record. Contact the office.
       </p>
     );
@@ -52,7 +52,7 @@ export default async function RecordSectionPage({ params }: { params: Promise<{ 
   });
   if (!member) {
     return (
-      <p className="text-base text-muted-foreground">
+      <p className="text-base text-ink-2">
         This account is not linked to a member record. Contact the office.
       </p>
     );
@@ -66,11 +66,19 @@ export default async function RecordSectionPage({ params }: { params: Promise<{ 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-muted-foreground">
-          {definition.order} of {RECORD_SECTIONS.length}
+      <div className="flex flex-col gap-2">
+        <p className="text-base font-medium text-ink-2">
+          Section {definition.order} of {RECORD_SECTIONS.length}
         </p>
-        <h1 className="text-xl font-semibold text-navy-900">{definition.label}</h1>
+        <h1 className="font-heading text-2xl font-semibold leading-tight text-navy-900">{definition.label}</h1>
+        <div className="flex gap-1" aria-hidden="true">
+          {RECORD_SECTIONS.map((step) => (
+            <span
+              key={step.key}
+              className={`h-1.5 flex-1 rounded-full ${step.order <= definition.order ? "bg-navy-900" : "bg-paper-dim"}`}
+            />
+          ))}
+        </div>
       </div>
 
       <SectionBody sectionKey={definition.key} member={member} branches={branches} serviceAreas={serviceAreas} />
@@ -172,7 +180,7 @@ function SectionBody({
       // nothing is asked of the member (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5).
       if (member.faceCheckInExcluded) {
         return (
-          <p className="text-base text-muted-foreground">
+          <p className="text-base text-ink-2">
             You are checked in by name at every gathering. There is nothing you need to do in this section.
           </p>
         );

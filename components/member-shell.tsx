@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import { MemberBottomNav } from "@/components/member-bottom-nav";
+import { GlowLogo, Wordmark } from "@/components/member/brand";
 import { AuthenticationError, getCurrentUser } from "@/lib/auth";
 
 // The shared shell for every member facing page (/account/*, /library/*).
@@ -32,30 +33,29 @@ export async function MemberShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-[17px]">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-2 bg-navy-900 px-3 text-white">
-        <Link href="/account" className="flex min-w-0 items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a small static asset, not one next/image needs to optimise */}
-          <img src="/logo.png" alt="" width={28} height={28} className="shrink-0" />
-          <span className="min-w-0 truncate text-base font-semibold">Anwaru-l-Huda League</span>
-        </Link>
-        {/* MEMBER-INTERFACE.md 3.1: settings sits in the header, not the
-            bar, and is the only control here. /account/settings now
-            holds sign out, since a member leaves the account from
-            settings, not from a second button living beside the gear. */}
-        <Link
-          href="/account/settings"
-          aria-label="Settings"
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white"
-        >
-          <Settings className="size-5" aria-hidden="true" />
-        </Link>
+    <div className="member-area flex min-h-screen flex-col bg-paper text-ink">
+      <header className="on-navy sticky top-0 z-20 bg-gradient-to-b from-navy-950 to-navy-900 text-white shadow-[0_6px_20px_-12px_rgba(4,20,40,0.6)]">
+        <div className="mx-auto flex h-16 w-full max-w-2xl items-center justify-between gap-2 px-4">
+          <Link href="/account" className="flex min-h-11 min-w-0 items-center gap-3 rounded-[14px]">
+            <GlowLogo size={36} />
+            <Wordmark className="min-w-0 truncate text-lg" />
+          </Link>
+          {/* MEMBER-INTERFACE.md 3.1: settings sits in the header, not the
+              bar, and is the only control here. /account/settings holds
+              sign out. */}
+          <Link
+            href="/account/settings"
+            aria-label="Settings"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white"
+          >
+            <Settings className="size-6" aria-hidden="true" />
+          </Link>
+        </div>
       </header>
 
-      {/* pb-28: clears the fixed bottom nav's own height (min-h-14, plus
-          the device's safe area) so the last thing on a page is never
-          hidden behind it. */}
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 pb-28">{children}</main>
+      {/* pb-32: clears the fixed bottom nav (plus the device safe area)
+          so the last thing on a page is never hidden behind it. */}
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6 pb-32">{children}</main>
 
       <MemberBottomNav />
     </div>

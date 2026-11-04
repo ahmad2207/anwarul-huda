@@ -6,15 +6,13 @@ import { BookOpen, FileText, Home, Wallet } from "lucide-react";
 
 // MEMBER-INTERFACE.md 3.1: four destinations, thumb reachable, always
 // visible, because a hamburger menu is neither. Attendance and face are
-// reached from Home and from the record, not from here: four is the
-// limit before the labels stop being readable at 17px.
+// reached from Home and from the record, not from here.
 //
-// "Books" points at /library, not /account/library: the routing table
-// in 3.1 names the destination /account/library, but /library already
-// exists as its own route from an earlier phase, wrapped in this same
-// shell already. Moving it under /account is a bigger, separate change
-// (it has its own nested routes) than this task asked for, so this
-// links to what already exists rather than silently restructuring it.
+// "Books" points at /library, which already exists as its own route
+// wrapped in this same shell, rather than /account/library.
+//
+// The current destination is shown by more than colour (DESIGN.md 2):
+// a lit amber dot above the icon, bolder label text, and aria-current.
 const DESTINATIONS = [
   { href: "/account", label: "Home", icon: Home, isActive: (path: string) => path === "/account" },
   {
@@ -38,7 +36,7 @@ export function MemberBottomNav() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-navy-900 pb-[env(safe-area-inset-bottom)]"
+      className="on-navy fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-navy-950 to-navy-900 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-14px_rgba(4,20,40,0.7)]"
     >
       <div className="mx-auto flex max-w-2xl">
         {DESTINATIONS.map((item) => {
@@ -49,15 +47,20 @@ export function MemberBottomNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              // min-h-14 (56px): comfortably past the 44px minimum, since
-              // this is the one control used with a thumb while walking
-              // in, not a mouse.
-              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors ${
-                active ? "text-amber-500" : "text-white/60 hover:text-white/80"
+              className={`relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 rounded-[14px] pt-2.5 pb-2 text-sm transition-colors ${
+                active ? "font-bold text-white" : "font-medium text-white/70 hover:text-white"
               }`}
             >
-              <Icon className="size-6" aria-hidden="true" />
-              {item.label}
+              <span
+                aria-hidden="true"
+                className={`absolute top-1 size-1.5 rounded-full ${
+                  active ? "bg-amber-500 shadow-[0_0_10px_3px_rgba(255,151,0,0.6)]" : "bg-transparent"
+                }`}
+              />
+              <Icon className={`size-6 ${active ? "text-amber-300" : ""}`} aria-hidden="true" strokeWidth={active ? 2.4 : 1.8} />
+              <span className={active ? "underline decoration-amber-500 decoration-2 underline-offset-4" : ""}>
+                {item.label}
+              </span>
             </Link>
           );
         })}

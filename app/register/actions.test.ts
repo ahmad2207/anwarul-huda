@@ -123,4 +123,22 @@ describe("submitRegistration", () => {
     const member = await prisma.member.findFirst({ where: { surname } });
     expect(member).toBeNull();
   });
+
+  it("does not count a registration that fails validation towards the rate limit, and sends back what was typed", async () => {
+    const wing = await prisma.wing.findUniqueOrThrow({ where: { code: "WOMENS" } });
+    const surname = `${SURNAME_PREFIX}Typo`;
+
+    const result = await submitRegistration(
+      {},
+      buildFormData({ wingId: wing.id, surname, confirmPassword: "a different password" }),
+    );
+
+    expect(result.error).toBeTruthy();
+    expect(result.values?.surname).toBe(surname);
+    expect(result.values?.password).toBeUndefined();
+    expect(result.values?.confirmPassword).toBeUndefined();
+
+    const counter = await prisma.rateLimitCounter.findFirst({ where: { key: "register:unknown" } });
+    expect(counter).toBeNull();
+  });
 });

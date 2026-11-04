@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthenticationError, getCurrentUser } from "@/lib/auth";
+import { PublicFrame } from "@/components/member/public-frame";
 import { ChangePasswordForm } from "./change-password-form";
 
 // Deliberately outside both app/admin's and MemberShell's layout trees:
@@ -18,8 +19,8 @@ export default async function ChangePasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+    <PublicFrame>
       <ChangePasswordForm forced={user.mustChangePassword} />
-    </div>
+    </PublicFrame>
   );
 }

@@ -1,10 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FormError, SectionActions, SelectField } from "@/components/member/form";
+import { useRememberedForm } from "@/components/member/use-remembered-form";
 import { saveAboutSection } from "./actions";
 
 function toDateInputValue(date: Date | null): string {
@@ -29,92 +26,51 @@ export function AboutSectionForm({
   stateOfOrigin: string | null;
   languages: string[];
 }) {
-  const [error, formAction, isPending] = useActionState(saveAboutSection, undefined);
+  const { state: error, formAction, isPending, value } = useRememberedForm(saveAboutSection, undefined);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="dateOfBirth">Date of birth</Label>
-        <Input
-          id="dateOfBirth"
-          name="dateOfBirth"
-          type="date"
-          defaultValue={toDateInputValue(dateOfBirth)}
-          className="h-11 text-base"
-        />
-      </div>
+      <Field
+        label="Date of birth"
+        id="dateOfBirth"
+        type="date"
+        defaultValue={value("dateOfBirth", toDateInputValue(dateOfBirth))}
+      />
+      <SelectField
+        label="Gender"
+        id="gender"
+        required
+        defaultValue={value("gender", gender)}
+        options={[
+          { value: "MALE", label: "Male" },
+          { value: "FEMALE", label: "Female" },
+        ]}
+      />
+      <SelectField
+        label="Marital status"
+        id="maritalStatus"
+        placeholder="Not stated"
+        defaultValue={value("maritalStatus", maritalStatus ?? "")}
+        options={[
+          { value: "SINGLE", label: "Single" },
+          { value: "MARRIED", label: "Married" },
+          { value: "DIVORCED", label: "Divorced" },
+          { value: "WIDOWED", label: "Widowed" },
+        ]}
+      />
+      <Field label="Occupation" id="occupation" defaultValue={value("occupation", occupation ?? "")} />
+      <Field label="Nationality" id="nationality" defaultValue={value("nationality", nationality ?? "")} />
+      <Field label="State of origin" id="stateOfOrigin" defaultValue={value("stateOfOrigin", stateOfOrigin ?? "")} />
+      <Field
+        label="Languages spoken"
+        id="languages"
+        placeholder="Yoruba, English"
+        hint="Separate more than one with a comma."
+        defaultValue={value("languages", languages.join(", "))}
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="gender">Gender</Label>
-        <select
-          id="gender"
-          name="gender"
-          defaultValue={gender}
-          required
-          className="h-11 rounded-[4px] border border-input bg-background px-3 text-base"
-        >
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="maritalStatus">Marital status</Label>
-        <select
-          id="maritalStatus"
-          name="maritalStatus"
-          defaultValue={maritalStatus ?? ""}
-          className="h-11 rounded-[4px] border border-input bg-background px-3 text-base"
-        >
-          <option value="">Not stated</option>
-          <option value="SINGLE">Single</option>
-          <option value="MARRIED">Married</option>
-          <option value="DIVORCED">Divorced</option>
-          <option value="WIDOWED">Widowed</option>
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="occupation">Occupation</Label>
-        <Input id="occupation" name="occupation" defaultValue={occupation ?? ""} className="h-11 text-base" />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nationality">Nationality</Label>
-        <Input id="nationality" name="nationality" defaultValue={nationality ?? ""} className="h-11 text-base" />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="stateOfOrigin">State of origin</Label>
-        <Input id="stateOfOrigin" name="stateOfOrigin" defaultValue={stateOfOrigin ?? ""} className="h-11 text-base" />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="languages">Languages spoken</Label>
-        <Input
-          id="languages"
-          name="languages"
-          defaultValue={languages.join(", ")}
-          placeholder="Yoruba, English"
-          className="h-11 text-base"
-        />
-        <p className="text-sm text-muted-foreground">Separate more than one with a comma.</p>
-      </div>
-
-      {error ? <p className="text-base text-destructive">{error}</p> : null}
-
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={isPending} className="h-11 rounded-[4px] px-6 text-base">
-          {isPending ? "Saving..." : "Save and continue"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isPending}
-          render={<Link href="/account/record">Cancel</Link>}
-          className="h-11 rounded-[4px] px-6 text-base"
-        />
-      </div>
+      <FormError>{error}</FormError>
+      <SectionActions isPending={isPending} />
     </form>
   );
 }

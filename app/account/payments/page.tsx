@@ -1,10 +1,13 @@
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/page-header";
-import { StatusTag } from "@/components/status-tag";
 import { formatLagosDate } from "@/lib/timezone";
+import { StatusTag } from "@/components/status-tag";
+import { BalanceCard } from "@/components/member/balance-card";
+import { PageTitle, SectionHeading, memberCardClass } from "@/components/member/card";
+import { Pager } from "@/components/member/pager";
+
+const PAGE_SIZE = 20;
 
 const METHOD_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -12,93 +15,102 @@ const METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
 };
 
-export default async function MyContributionsPage() {
+export default async function MyContributionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getCurrentUser();
 
   if (!user.memberId) {
-    return (
-      <p className="text-base text-muted-foreground">
-        This account is not linked to a member record.
-      </p>
-    );
+    return <p className="text-base text-ink-2">This account is not linked to a member record.</p>;
   }
 
-  const [payments, records] = await Promise.all([
-    prisma.payment.findMany({
-      where: { memberId: user.memberId },
-      include: { plan: true, fund: true },
-      orderBy: { paidAt: "desc" },
-      take: 100,
-    }),
+  const params = await searchParams;
+  const requestedPage = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
+
+  const [total, records] = await Promise.all([
+    prisma.payment.count({ where: { memberId: user.memberId } }),
     prisma.contributionRecord.findMany({
       where: { memberId: user.memberId },
-      include: { plan: true },
+      select: { amountDueKobo: true, amountPaidKobo: true },
     }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+
+  const payments = await prisma.payment.findMany({
+    where: { memberId: user.memberId },
+    include: { plan: { select: { name: true } }, fund: { select: { name: true } } },
+    orderBy: { paidAt: "desc" },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
 
   const outstandingKobo = records
     .filter((record) => record.amountPaidKobo < record.amountDueKobo)
     .reduce((sum, record) => sum + (record.amountDueKobo - record.amountPaidKobo), 0);
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="My contributions" description="Your payment history and outstanding balance." />
+    <div className="flex flex-col gap-6">
+      <PageTitle lead="What you owe, and every payment the office has recorded for you.">Payments</PageTitle>
 
-      {/* DESIGN.md section 4.2: the one warm card carrying the number
-          that matters most, everything else on this page stays plain.
-          Outstanding is arrears, not a failure, so a balance owed still
-          reads in amber (attention), never alert; paid up reads in white. */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 to-navy-800 p-6 text-white">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full bg-amber-500/35 blur-3xl"
-        />
-        <p className="relative font-mono text-xs tracking-wide text-white/60 uppercase">Outstanding balance</p>
-        <p
-          className={`relative mt-2 font-mono text-4xl font-semibold ${
-            outstandingKobo > 0 ? "text-amber-500" : "text-white"
-          }`}
-        >
-          {formatNaira(outstandingKobo)}
-        </p>
-        <p className="relative mt-1 text-sm text-white/70">
-          {outstandingKobo > 0 ? "Catch up whenever you can." : "You're paid up. Jazakumullahu khairan."}
-        </p>
-      </div>
+      {/* DESIGN.md 4.2: the one warm card, the same one Home shows.
+          Outstanding is arrears, not a failure, so a balance owed reads
+          as attention, never alert. */}
+      <BalanceCard
+        amountKobo={outstandingKobo}
+        label="Your outstanding dues"
+        detail={
+          outstandingKobo > 0
+            ? "Dues not yet paid across your contribution plans. Catch up whenever you can."
+            : "You are fully paid up. Jazakumullahu khairan."
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-medium">Payment history</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {payments.map((payment) => (
-            <div
-              key={payment.id}
-              className="flex min-h-11 items-center justify-between rounded-md border p-3 text-base"
-            >
-              <div>
-                <p className="font-medium">{payment.plan?.name ?? payment.fund?.name ?? "General"}</p>
-                <p className="text-sm text-muted-foreground">
-                  {payment.receiptNumber} &middot; {formatLagosDate(payment.paidAt)} &middot;{" "}
-                  {METHOD_LABELS[payment.method] ?? payment.method}
-                  {payment.status === "VOIDED" ? (
-                    <>
-                      {" "}
-                      &middot; <StatusTag tone="alert">Voided</StatusTag>
-                    </>
-                  ) : null}
-                </p>
-              </div>
-              <span className={payment.status === "VOIDED" ? "text-muted-foreground line-through" : ""}>
-                {formatNaira(payment.amountKobo)}
-              </span>
-            </div>
-          ))}
-          {payments.length === 0 ? (
-            <p className="text-base text-muted-foreground">No payments recorded yet.</p>
-          ) : null}
-        </CardContent>
-      </Card>
+      <section aria-labelledby="history-heading" className="flex flex-col gap-3">
+        <SectionHeading id="history-heading">Payment history</SectionHeading>
+
+        {payments.length === 0 ? (
+          <p className="text-base text-ink-2">
+            No payments recorded yet. When you pay the office, your receipt will appear here.
+          </p>
+        ) : (
+          <ul className={`${memberCardClass} divide-y divide-border overflow-hidden`}>
+            {payments.map((payment) => {
+              const voided = payment.status === "VOIDED";
+              return (
+                <li key={payment.id} className="flex items-start justify-between gap-3 p-4">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <p className="text-base font-semibold">{payment.plan?.name ?? payment.fund?.name ?? "General"}</p>
+                    <p className="text-sm text-ink-2">
+                      {formatLagosDate(payment.paidAt)}, {METHOD_LABELS[payment.method] ?? payment.method}
+                    </p>
+                    <p className="text-sm text-ink-2">
+                      Receipt <span className="font-mono">{payment.receiptNumber}</span>
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <span
+                      className={`font-mono text-base font-semibold tabular-nums ${voided ? "text-ink-2 line-through" : "text-ink"}`}
+                    >
+                      {formatNaira(payment.amountKobo)}
+                    </span>
+                    {voided ? (
+                      <StatusTag tone="alert">Voided</StatusTag>
+                    ) : (
+                      <StatusTag tone="confirmed">Paid</StatusTag>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <Pager page={page} totalPages={totalPages} hrefFor={(target) => `/account/payments?page=${target}`} />
+      </section>
     </div>
   );
 }

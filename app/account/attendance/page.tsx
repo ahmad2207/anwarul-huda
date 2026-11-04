@@ -1,11 +1,11 @@
-import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatGatheringWhen } from "@/lib/members/member-home";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FormField } from "@/components/form-field";
+import { Search } from "lucide-react";
+import { PageTitle, memberCardClass } from "@/components/member/card";
+import { inputClass, primaryButtonClass } from "@/components/member/form";
+import { Pager } from "@/components/member/pager";
 
 const PAGE_SIZE = 20;
 
@@ -28,7 +28,7 @@ export default async function MyAttendancePage({
 }) {
   const user = await getCurrentUser();
   if (!user.memberId) {
-    return <p className="text-base text-muted-foreground">This account is not linked to a member record.</p>;
+    return <p className="text-base text-ink-2">This account is not linked to a member record.</p>;
   }
 
   const params = await searchParams;
@@ -65,28 +65,32 @@ export default async function MyAttendancePage({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-navy-900">Your attendance</h1>
+    <div className="flex flex-col gap-6">
+      <PageTitle lead="Every gathering you have been checked in at, newest first.">Your attendance</PageTitle>
 
-      <form method="get" className="flex items-end gap-2">
-        <FormField label="Search by gathering" htmlFor="q" className="flex-1">
-          <Input id="q" name="q" defaultValue={q} className="h-11 text-base" />
-        </FormField>
-        <Button type="submit" className="h-11 rounded-[4px] px-5 text-base">
+      <form method="get" role="search" className="flex items-end gap-2">
+        <div className="flex flex-1 flex-col gap-1.5">
+          <label htmlFor="q" className="text-base font-medium">
+            Search by gathering
+          </label>
+          <input id="q" name="q" type="search" defaultValue={q} className={inputClass} />
+        </div>
+        <button type="submit" className={primaryButtonClass}>
+          <Search className="size-5" aria-hidden="true" />
           Search
-        </Button>
+        </button>
       </form>
 
       {records.length === 0 ? (
-        <p className="text-base text-muted-foreground">
+        <p className="text-base text-ink-2">
           {q ? "No gatherings match that search." : "No attendance recorded yet."}
         </p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className={`${memberCardClass} divide-y divide-border overflow-hidden`}>
           {records.map((record) => (
-            <li key={record.id} className="rounded-[4px] border border-border bg-card p-3">
-              <p className="text-base font-medium">{record.gathering.title}</p>
-              <p className="text-sm text-muted-foreground">
+            <li key={record.id} className="p-4">
+              <p className="text-base font-semibold">{record.gathering.title}</p>
+              <p className="text-base text-ink-2">
                 {TYPE_LABELS[record.gathering.type] ?? record.gathering.type},{" "}
                 {formatGatheringWhen(record.gathering.startsAt)}
               </p>
@@ -95,27 +99,7 @@ export default async function MyAttendancePage({
         </ul>
       )}
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-between text-base">
-          <span className="text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              disabled={page <= 1}
-              className="h-11 rounded-[4px] px-4 text-base"
-              render={<Link href={pageHref(Math.max(1, page - 1))}>Previous</Link>}
-            />
-            <Button
-              variant="outline"
-              disabled={page >= totalPages}
-              className="h-11 rounded-[4px] px-4 text-base"
-              render={<Link href={pageHref(Math.min(totalPages, page + 1))}>Next</Link>}
-            />
-          </div>
-        </div>
-      ) : null}
+      <Pager page={page} totalPages={totalPages} hrefFor={pageHref} />
     </div>
   );
 }

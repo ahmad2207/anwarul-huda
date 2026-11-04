@@ -1,19 +1,29 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { recordProgress } from "@/lib/members/record-sections";
+import { MemberCard, PageTitle } from "@/components/member/card";
+import { primaryButtonClass } from "@/components/member/form";
 
 // MEMBER-INTERFACE.md 3.6: reached exactly once, right after the forced
 // password change on a member's very first login (see the redirect in
 // app/change-password/actions.ts), never on a voluntary later change.
-// Shown inside the normal member shell, bottom nav included, rather than
-// a bare screen outside it: unlike /change-password, nothing here needs
-// to worry about being redirected back to itself, so there is no reason
-// to hide the chrome a member is about to start using.
-export default function AccountWelcomePage() {
+// Shown inside the normal member shell, bottom nav included.
+export default async function AccountWelcomePage() {
+  const user = await getCurrentUser();
+  const member = user.memberId
+    ? await prisma.member.findUnique({ where: { id: user.memberId }, select: { completedSections: true } })
+    : null;
+  // Get started goes straight to the first section still to do.
+  const next = member ? recordProgress(member.completedSections).nextSection : null;
+  const startHref = next ? `/account/record/${next.key}` : "/account/record";
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-navy-900">Assalamu alaikum, and welcome</h1>
+      <PageTitle>Assalamu alaikum, and welcome</PageTitle>
 
-      <div className="flex flex-col gap-3 text-base text-muted-foreground">
+      <MemberCard className="flex flex-col gap-3 text-base text-ink-2">
         <p>
           This is your own account with the league: your record, your payments, and the sermons and
           books the league shares.
@@ -23,13 +33,13 @@ export default function AccountWelcomePage() {
           contact details are right, and who to list as next of kin, so the next few screens ask you
           for that, one short section at a time. You can stop and come back whenever you like.
         </p>
-        <p>Only the office can see what you enter.</p>
-      </div>
+        <p className="font-medium text-ink">Only the office can see what you enter.</p>
+      </MemberCard>
 
-      <Button
-        render={<Link href="/account/record">Get started</Link>}
-        className="h-11 self-start rounded-[4px] px-6 text-base"
-      />
+      <Link href={startHref} className={`${primaryButtonClass} self-start`}>
+        Get started
+        <ArrowRight className="size-5" aria-hidden="true" />
+      </Link>
     </div>
   );
 }

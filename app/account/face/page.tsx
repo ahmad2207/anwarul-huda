@@ -18,7 +18,7 @@ export default async function AccountFacePage() {
   const user = await getCurrentUser();
   if (!user.memberId) {
     return (
-      <p className="text-base text-muted-foreground">
+      <p className="text-base text-ink-2">
         This account is not linked to a member record. Contact the office.
       </p>
     );
@@ -30,7 +30,7 @@ export default async function AccountFacePage() {
   });
   if (!member) {
     return (
-      <p className="text-base text-muted-foreground">
+      <p className="text-base text-ink-2">
         This account is not linked to a member record. Contact the office.
       </p>
     );
@@ -41,14 +41,15 @@ export default async function AccountFacePage() {
   if (member.faceCheckInExcluded) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
-        <p className="text-base text-muted-foreground">
+        <h1 className="font-heading text-2xl font-semibold text-navy-900">Face check-in</h1>
+        <p className="text-base text-ink-2">
           You are checked in by name at every gathering. There is nothing you need to set up here.
         </p>
         <Button
+          nativeButton={false}
           render={<Link href="/account/record">Back to your record</Link>}
           variant="outline"
-          className="h-11 self-start rounded-[4px] px-6 text-base"
+          className="h-12 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );
@@ -66,15 +67,16 @@ export default async function AccountFacePage() {
   if (!member.dateOfBirth) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
-        <p className="text-base text-muted-foreground">
+        <h1 className="font-heading text-2xl font-semibold text-navy-900">Face check-in</h1>
+        <p className="text-base text-ink-2">
           We need your date of birth on file before this can be set up. Add it in the About you section of your
           record, then come back here.
         </p>
         <Button
+          nativeButton={false}
           render={<Link href="/account/record/about">Go to About you</Link>}
           variant="outline"
-          className="h-11 self-start rounded-[4px] px-6 text-base"
+          className="h-12 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );
@@ -83,19 +85,20 @@ export default async function AccountFacePage() {
   if (ageInYears(member.dateOfBirth) < MINIMUM_ENROLMENT_AGE) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
+        <h1 className="font-heading text-2xl font-semibold text-navy-900">Face check-in</h1>
         {/* SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md 4.7: blocked outright, not
             merely discouraged, until the committee makes a separate
             decision about guardian consent for members under 18. */}
-        <p className="text-base text-muted-foreground">
+        <p className="text-base text-ink-2">
           Face check-in is not available under the age of 18. The league&apos;s committee has not yet decided how
           this should work for younger members, so it stays off until they do. You can still be checked in by
           name at any gathering.
         </p>
         <Button
+          nativeButton={false}
           render={<Link href="/account/record">Back to your record</Link>}
           variant="outline"
-          className="h-11 self-start rounded-[4px] px-6 text-base"
+          className="h-12 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );
@@ -105,8 +108,8 @@ export default async function AccountFacePage() {
   if (isEnrolled) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
-        <p className="text-base text-muted-foreground">
+        <h1 className="font-heading text-2xl font-semibold text-navy-900">Face check-in</h1>
+        <p className="text-base text-ink-2">
           You&apos;re set up. You&apos;ll be marked present by face from now on, and you can still be checked in
           by name any time.
         </p>
@@ -126,14 +129,15 @@ export default async function AccountFacePage() {
   if (heldForReview) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-navy-900">Face check-in</h1>
-        <p className="text-base text-muted-foreground">
+        <h1 className="font-heading text-2xl font-semibold text-navy-900">Face check-in</h1>
+        <p className="text-base text-ink-2">
           The office will help you set this up at the mosque. Until then you are checked in by name.
         </p>
         <Button
+          nativeButton={false}
           render={<Link href="/account/record">Back to your record</Link>}
           variant="outline"
-          className="h-11 self-start rounded-[4px] px-6 text-base"
+          className="h-12 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );

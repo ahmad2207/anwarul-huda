@@ -1,15 +1,22 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import type { HouseholdMember } from "@prisma/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
+import {
+  Field,
+  FormError,
+  SectionActions,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/member/form";
+import { useRememberedForm } from "@/components/member/use-remembered-form";
 import {
   addOwnHouseholdMember,
   updateOwnHouseholdMember,
   removeOwnHouseholdMember,
   completeHouseholdSection,
+  type HouseholdActionState,
 } from "./actions";
 
 type HouseholdMemberWithLink = HouseholdMember & {
@@ -19,19 +26,22 @@ type HouseholdMemberWithLink = HouseholdMember & {
   } | null;
 };
 
+const smallButtonClass =
+  "inline-flex h-11 items-center gap-1.5 rounded-[14px] border border-border bg-white px-4 text-base font-medium transition-colors disabled:opacity-60";
+
 export function HouseholdSectionForm({ household }: { household: HouseholdMemberWithLink[] }) {
   const [, completeAction, isCompleting] = useActionState(completeHouseholdSection, undefined);
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-base text-muted-foreground">Spouse or spouses, children and others who live with you.</p>
+      <p className="text-base text-ink-2">Spouse or spouses, children and others who live with you.</p>
 
       {household.length === 0 ? (
-        <p className="text-base text-muted-foreground">
+        <p className="rounded-[14px] bg-paper-dim/70 p-4 text-base text-ink-2">
           Nobody added yet. If you live alone, there is nothing to add here, just continue below.
         </p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {household.map((entry) => (
             <HouseholdRow key={entry.id} entry={entry} />
           ))}
@@ -41,9 +51,7 @@ export function HouseholdSectionForm({ household }: { household: HouseholdMember
       <HouseholdAddForm />
 
       <form action={completeAction}>
-        <Button type="submit" disabled={isCompleting} className="h-11 rounded-[4px] px-6 text-base">
-          {isCompleting ? "Saving..." : "Save and continue"}
-        </Button>
+        <SectionActions isPending={isCompleting} />
       </form>
     </div>
   );
@@ -51,65 +59,67 @@ export function HouseholdSectionForm({ household }: { household: HouseholdMember
 
 function HouseholdRow({ entry }: { entry: HouseholdMemberWithLink }) {
   const [editing, setEditing] = useState(false);
-  const boundUpdate = updateOwnHouseholdMember.bind(null, entry.id);
-  const [state, formAction, isPending] = useActionState(boundUpdate, {});
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [isRemoving, startRemoving] = useTransition();
+
+  // Closes the edit form once the save has gone through.
+  const update = async (previousState: HouseholdActionState, formData: FormData) => {
+    const result = await updateOwnHouseholdMember(entry.id, previousState, formData);
+    if (!result.error) setEditing(false);
+    return result;
+  };
+  const { state, formAction, isPending, value } = useRememberedForm(update, {} as HouseholdActionState);
+
+  function remove() {
+    setRemoveError(null);
+    const formData = new FormData();
+    formData.set("householdMemberId", entry.id);
+    startRemoving(async () => {
+      try {
+        await removeOwnHouseholdMember(formData);
+      } catch {
+        setRemoveError("That could not be removed. Check your connection and try again.");
+      }
+    });
+  }
+
+  const prefix = `household-${entry.id}`;
 
   if (editing) {
     return (
-      <li className="rounded-[4px] border border-border p-3">
-        <form action={formAction} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`household-${entry.id}-fullName`}>Full name</Label>
-            <Input
-              id={`household-${entry.id}-fullName`}
-              name="fullName"
-              defaultValue={entry.fullName}
-              required
-              className="h-11 text-base"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`household-${entry.id}-age`}>Age</Label>
-            <Input
-              id={`household-${entry.id}-age`}
-              name="age"
-              type="number"
-              defaultValue={entry.age?.toString() ?? ""}
-              className="h-11 w-24 text-base"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`household-${entry.id}-relationship`}>Relationship</Label>
-            <Input
-              id={`household-${entry.id}-relationship`}
-              name="relationship"
-              defaultValue={entry.relationship ?? ""}
-              className="h-11 text-base"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`household-${entry.id}-linkedMemberNumber`}>Their member number, if they have one</Label>
-            <Input
-              id={`household-${entry.id}-linkedMemberNumber`}
-              name="linkedMemberNumber"
-              defaultValue={entry.linkedMember?.memberNumber ?? ""}
-              placeholder="AHL/M/2026/0001"
-              className="h-11 text-base"
-            />
-          </div>
-          {state.error ? <p className="text-base text-destructive">{state.error}</p> : null}
-          <div className="flex items-center gap-3">
-            <Button type="submit" disabled={isPending} className="h-11 rounded-[4px] px-6 text-base">
+      <li className="rounded-[14px] bg-card p-4 shadow-warm">
+        <form action={formAction} className="flex flex-col gap-4">
+          <Field label="Full name" id={`${prefix}-fullName`} name="fullName" required defaultValue={value("fullName", entry.fullName)} />
+          <Field
+            label="Age"
+            id={`${prefix}-age`}
+            name="age"
+            type="number"
+            inputMode="numeric"
+            className="max-w-32"
+            defaultValue={value("age", entry.age?.toString() ?? "")}
+          />
+          <Field
+            label="Relationship"
+            id={`${prefix}-relationship`}
+            name="relationship"
+            defaultValue={value("relationship", entry.relationship ?? "")}
+          />
+          <Field
+            label="Their member number, if they have one"
+            id={`${prefix}-linkedMemberNumber`}
+            name="linkedMemberNumber"
+            placeholder="AHL/M/2026/0001"
+            defaultValue={value("linkedMemberNumber", entry.linkedMember?.memberNumber ?? "")}
+          />
+          <FormError>{state.error}</FormError>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" disabled={isPending} className={primaryButtonClass}>
               {isPending ? "Saving..." : "Save"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 rounded-[4px] px-6 text-base"
-              onClick={() => setEditing(false)}
-            >
+            </button>
+            <button type="button" disabled={isPending} className={secondaryButtonClass} onClick={() => setEditing(false)}>
               Cancel
-            </Button>
+            </button>
           </div>
         </form>
       </li>
@@ -117,58 +127,76 @@ function HouseholdRow({ entry }: { entry: HouseholdMemberWithLink }) {
   }
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] border border-border bg-paper-dim p-3">
-      <span className="text-base">
-        {entry.fullName}
-        {entry.age !== null ? `, ${entry.age}` : ""}
-        {entry.relationship ? ` (${entry.relationship})` : ""}
-        {entry.linkedMember?.memberNumber ? `, member number ${entry.linkedMember.memberNumber}` : ""}
-      </span>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
-          Edit
-        </Button>
-        <form action={removeOwnHouseholdMember}>
-          <input type="hidden" name="householdMemberId" value={entry.id} />
-          <Button type="submit" variant="destructive" size="sm">
-            Remove
-          </Button>
-        </form>
+    <li className="flex flex-col gap-3 rounded-[14px] bg-card p-4 shadow-warm">
+      <div>
+        <p className="text-base font-semibold">
+          {entry.fullName}
+          {entry.age !== null ? `, ${entry.age}` : ""}
+        </p>
+        {entry.relationship ? <p className="text-base text-ink-2">{entry.relationship}</p> : null}
+        {entry.linkedMember?.memberNumber ? (
+          <p className="text-sm text-ink-2">
+            Member number <span className="font-mono">{entry.linkedMember.memberNumber}</span>
+          </p>
+        ) : null}
       </div>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={`${smallButtonClass} text-navy-900 hover:bg-paper-dim/60`} onClick={() => setEditing(true)}>
+          <Pencil className="size-4" aria-hidden="true" />
+          Edit
+        </button>
+        <button
+          type="button"
+          disabled={isRemoving}
+          className={`${smallButtonClass} text-alert hover:bg-alert-soft`}
+          onClick={remove}
+        >
+          <Trash2 className="size-4" aria-hidden="true" />
+          {isRemoving ? "Removing..." : "Remove"}
+        </button>
+      </div>
+      <FormError>{removeError}</FormError>
     </li>
   );
 }
 
 function HouseholdAddForm() {
-  const [state, formAction, isPending] = useActionState(addOwnHouseholdMember, {});
+  const { state, formAction, isPending, value, successCount } = useRememberedForm(
+    addOwnHouseholdMember,
+    {} as HouseholdActionState,
+    (result) => !result.error,
+  );
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-[4px] border border-dashed border-border p-3">
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="household-add-fullName">Full name</Label>
-        <Input id="household-add-fullName" name="fullName" required className="h-11 text-base" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="household-add-age">Age</Label>
-        <Input id="household-add-age" name="age" type="number" className="h-11 w-24 text-base" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="household-add-relationship">Relationship</Label>
-        <Input id="household-add-relationship" name="relationship" className="h-11 text-base" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="household-add-linkedMemberNumber">Their member number, if they have one</Label>
-        <Input
-          id="household-add-linkedMemberNumber"
-          name="linkedMemberNumber"
-          placeholder="AHL/M/2026/0001"
-          className="h-11 text-base"
-        />
-      </div>
-      {state.error ? <p className="text-base text-destructive">{state.error}</p> : null}
-      <Button type="submit" disabled={isPending} className="h-11 self-start rounded-[4px] px-6 text-base">
+    <form
+      key={successCount}
+      action={formAction}
+      className="flex flex-col gap-4 rounded-[14px] border-2 border-dashed border-border bg-white/60 p-4"
+    >
+      <p className="font-heading text-lg font-semibold text-navy-900">Add someone</p>
+      <Field label="Full name" id="household-add-fullName" name="fullName" required defaultValue={value("fullName", "")} />
+      <Field
+        label="Age"
+        id="household-add-age"
+        name="age"
+        type="number"
+        inputMode="numeric"
+        className="max-w-32"
+        defaultValue={value("age", "")}
+      />
+      <Field label="Relationship" id="household-add-relationship" name="relationship" defaultValue={value("relationship", "")} />
+      <Field
+        label="Their member number, if they have one"
+        id="household-add-linkedMemberNumber"
+        name="linkedMemberNumber"
+        placeholder="AHL/M/2026/0001"
+        defaultValue={value("linkedMemberNumber", "")}
+      />
+      <FormError>{state.error}</FormError>
+      <button type="submit" disabled={isPending} className={`${secondaryButtonClass} self-start`}>
+        <UserPlus className="size-5" aria-hidden="true" />
         {isPending ? "Adding..." : "Add household member"}
-      </Button>
+      </button>
     </form>
   );
 }

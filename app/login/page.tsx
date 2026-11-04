@@ -1,9 +1,11 @@
+import { PublicFrame } from "@/components/member/public-frame";
 import { LoginForm } from "./login-form";
 
+// The login lockup is one of the four places Arabic appears (DESIGN.md 3).
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+    <PublicFrame showArabic>
       <LoginForm />
-    </div>
+    </PublicFrame>
   );
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireMember } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { markSectionComplete } from "@/lib/members/mark-section-complete";
+import { recordProgress } from "@/lib/members/record-sections";
 import { householdMemberSchema } from "@/app/admin/members/[id]/schema";
 import {
   nameSectionSchema,
@@ -48,10 +49,16 @@ async function flagWingReview(memberId: string, userId: string, reason: string):
   });
 }
 
-function afterSave(): never {
+// "Save and continue" goes on to the next section still to do
+// (MEMBER-INTERFACE.md 3.6), and back to the contents list once every
+// section is done, which is also where a member correcting one section
+// of a finished record expects to land.
+async function afterSave(memberId: string): Promise<never> {
   revalidatePath("/account/record");
   revalidatePath("/account");
-  redirect("/account/record");
+  const member = await prisma.member.findUnique({ where: { id: memberId }, select: { completedSections: true } });
+  const next = member ? recordProgress(member.completedSections).nextSection : null;
+  redirect(next ? `/account/record/${next.key}` : "/account/record");
 }
 
 export async function saveNameSection(
@@ -105,7 +112,7 @@ export async function saveNameSection(
     await flagWingReview(memberId, userId, "Name changed after the record was completed.");
   }
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 export async function saveAboutSection(
@@ -162,7 +169,7 @@ export async function saveAboutSection(
     after: parsed.data,
   });
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 export async function saveContactSection(
@@ -235,7 +242,7 @@ export async function saveContactSection(
     await flagWingReview(memberId, userId, `${changedLabels.join(" and ")} changed after the record was completed.`);
   }
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 // Section 4: Household. Each row is its own immediate action, the same
@@ -394,7 +401,7 @@ export async function completeHouseholdSection(): Promise<void> {
   });
   await markSectionComplete(memberId, userId, "HOUSEHOLD");
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 // Section 5: Your membership. Wing, membership status, member number
@@ -443,7 +450,7 @@ export async function saveMembershipSection(
     after: parsed.data,
   });
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 export async function saveServiceSection(
@@ -500,7 +507,7 @@ export async function saveServiceSection(
     after: parsed.data,
   });
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 export async function saveNextOfKinSection(
@@ -543,7 +550,7 @@ export async function saveNextOfKinSection(
     after: parsed.data,
   });
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 export async function saveConsentSection(
@@ -584,7 +591,7 @@ export async function saveConsentSection(
     after: parsed.data,
   });
 
-  afterSave();
+  return afterSave(memberId);
 }
 
 // The two outcomes of section 9 live as separate actions, each its own
@@ -682,5 +689,5 @@ export async function deferFaceEnrolment(
   // consent gate), and consentBiometric is false immediately above, so
   // sending a member there after deferring would just bounce them
   // straight back here.
-  afterSave();
+  return afterSave(memberId);
 }

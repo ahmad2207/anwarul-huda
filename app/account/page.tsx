@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RecordSection } from "@prisma/client";
+import { ArrowRight, CalendarDays, ChevronRight } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { firstNameForGreeting } from "@/lib/members/display-name";
@@ -13,27 +14,20 @@ import {
   getServiceAreaNames,
   getUpcomingGatherings,
 } from "@/lib/members/member-home";
-import { Button } from "@/components/ui/button";
+import { MemberCard, PageTitle, SectionHeading, memberLinkCardClass } from "@/components/member/card";
+import { primaryButtonClass } from "@/components/member/form";
 import { AttentionBlock } from "./attention-block";
 
 export default async function AccountHomePage() {
   const user = await getCurrentUser();
 
   if (!user.memberId) {
-    return (
-      <p className="text-base text-muted-foreground">
-        This account is not linked to a member record. Contact the office.
-      </p>
-    );
+    return <NotLinked />;
   }
 
   const member = await prisma.member.findUnique({ where: { id: user.memberId } });
   if (!member) {
-    return (
-      <p className="text-base text-muted-foreground">
-        This account is not linked to a member record. Contact the office.
-      </p>
-    );
+    return <NotLinked />;
   }
 
   const greetingName = firstNameForGreeting(member);
@@ -46,6 +40,12 @@ export default async function AccountHomePage() {
   return <CompleteHome greeting={greeting} member={member} />;
 }
 
+function NotLinked() {
+  return (
+    <p className="text-base text-ink-2">This account is not linked to a member record. Contact the office.</p>
+  );
+}
+
 function IncompleteHome({
   greeting,
   completedSections,
@@ -55,37 +55,47 @@ function IncompleteHome({
 }) {
   const progress = recordProgress(completedSections);
   const progressPercent = Math.round((progress.completedCount / progress.total) * 100);
+  // MEMBER-INTERFACE.md 3.6: Continue goes straight to the next section
+  // still to do, not to the contents list.
+  const continueHref = progress.nextSection ? `/account/record/${progress.nextSection.key}` : "/account/record";
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-navy-900">{greeting}</h1>
+      <PageTitle>{greeting}</PageTitle>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-base font-medium">
-          Your record is {progress.completedCount} of {progress.total} done
-        </p>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="presentation">
-          <div className="h-full rounded-full bg-amber-800" style={{ width: `${progressPercent}%` }} />
+      <MemberCard className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <p id="progress-label" className="font-heading text-lg font-semibold text-navy-900">
+            Your record is {progress.completedCount} of {progress.total} done
+          </p>
+          <div
+            className="h-3 w-full overflow-hidden rounded-full bg-paper-dim"
+            role="progressbar"
+            aria-labelledby="progress-label"
+            aria-valuemin={0}
+            aria-valuemax={progress.total}
+            aria-valuenow={progress.completedCount}
+          >
+            <div className="h-full rounded-full bg-navy-900" style={{ width: `${progressPercent}%` }} />
+          </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-3">
         {progress.nextSection ? (
-          <p className="text-base text-muted-foreground">Next: {progress.nextSection.label.toLowerCase()}</p>
+          <p className="text-base text-ink-2">Next: {progress.nextSection.label.toLowerCase()}</p>
         ) : null}
-        <Button
-          render={<Link href="/account/record">Continue</Link>}
-          className="h-11 self-start rounded-[4px] px-6 text-base"
-        />
-      </div>
+        <Link href={continueHref} className={`${primaryButtonClass} self-start`}>
+          Continue
+          <ArrowRight className="size-5" aria-hidden="true" />
+        </Link>
+      </MemberCard>
 
       {/* The explanation stays visible the whole time a record is
           incomplete (MEMBER-INTERFACE.md 3.2), not just on first visit:
           a member who does not understand why is a member who will not
           finish. */}
-      <div className="rounded-[4px] border border-border bg-card p-4">
-        <p className="text-base font-medium">Why we are asking</p>
-        <p className="mt-1 text-base text-muted-foreground">
+      <div className="rounded-[14px] bg-paper-dim/70 p-5">
+        <p className="font-heading text-lg font-semibold text-navy-900">Why we are asking</p>
+        <p className="mt-1 text-base text-ink-2">
           The league is building a complete record of every member. Only the office can see what you
           enter.
         </p>
@@ -122,10 +132,10 @@ async function CompleteHome({
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-navy-900">{greeting}</h1>
-        <p className="font-mono text-sm text-muted-foreground">{member.memberNumber ?? "Not yet issued"}</p>
+    <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-1">
+        <PageTitle>{greeting}</PageTitle>
+        <p className="font-mono text-base text-ink-2">{member.memberNumber ?? "Member number not yet issued"}</p>
       </div>
 
       <AttentionBlock items={attention} />
@@ -133,13 +143,16 @@ async function CompleteHome({
       {upcoming.length > 0 ? (
         <HomeSection title="What is next">
           {upcoming.map((gathering) => (
-            <div key={gathering.id} className="rounded-[4px] border border-border bg-card p-3">
-              <p className="text-base font-medium">{gathering.title}</p>
-              <p className="text-sm text-muted-foreground">
-                {formatGatheringWhen(gathering.startsAt)}
-                {gathering.branchName ? `, ${gathering.branchName}` : ""}
-              </p>
-            </div>
+            <MemberCard key={gathering.id} className="flex items-start gap-3 p-4">
+              <CalendarDays className="mt-0.5 size-5 shrink-0 text-navy-700" aria-hidden="true" />
+              <div>
+                <p className="text-base font-semibold">{gathering.title}</p>
+                <p className="text-base text-ink-2">
+                  {formatGatheringWhen(gathering.startsAt)}
+                  {gathering.branchName ? `, ${gathering.branchName}` : ""}
+                </p>
+              </div>
+            </MemberCard>
           ))}
         </HomeSection>
       ) : null}
@@ -148,14 +161,14 @@ async function CompleteHome({
           (MEMBER-HOME-AND-ADMIN-VIEW.md 1.3). Shown even at 0 of 0, since
           "when did I last attend" is still worth answering. */}
       <HomeSection title="Your attendance">
-        <Link
-          href="/account/attendance"
-          className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border bg-card p-3 hover:bg-muted/30"
-        >
-          <span className="text-base">
-            {attendance.attendedThisMonth} of {attendance.heldThisMonth} gatherings this month
+        <Link href="/account/attendance" className={memberLinkCardClass}>
+          <span className="flex items-center justify-between gap-2">
+            <span className="text-base font-semibold">
+              {attendance.attendedThisMonth} of {attendance.heldThisMonth} gatherings this month
+            </span>
+            <ChevronRight className="size-5 shrink-0 text-ink-2" aria-hidden="true" />
           </span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-base text-ink-2">
             {attendance.lastAttendedAt
               ? `Last attended ${formatDayMonth(attendance.lastAttendedAt)}`
               : "No attendance recorded yet"}
@@ -165,7 +178,9 @@ async function CompleteHome({
 
       {serviceAreas.length > 0 ? (
         <HomeSection title="Your service">
-          <p className="text-base">{serviceAreas.join(", ")}</p>
+          <MemberCard className="p-4">
+            <p className="text-base">{serviceAreas.join(", ")}</p>
+          </MemberCard>
         </HomeSection>
       ) : null}
 
@@ -195,8 +210,8 @@ async function CompleteHome({
 
 function HomeSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-base font-medium">{title}</h2>
+    <section className="flex flex-col gap-3">
+      <SectionHeading>{title}</SectionHeading>
       {children}
     </section>
   );
@@ -204,12 +219,9 @@ function HomeSection({ title, children }: { title: string; children: React.React
 
 function ContentLink({ slug, title, detail }: { slug: string; title: string; detail: string }) {
   return (
-    <Link
-      href={`/library/${slug}`}
-      className="flex min-h-11 flex-col justify-center rounded-[4px] border border-border p-3 text-base hover:bg-muted/30"
-    >
-      <span className="font-medium">{title}</span>
-      <span className="line-clamp-2 text-sm text-muted-foreground">{detail}</span>
+    <Link href={`/library/${slug}`} className={memberLinkCardClass}>
+      <span className="text-base font-semibold">{title}</span>
+      <span className="line-clamp-2 text-base text-ink-2">{detail}</span>
     </Link>
   );
 }

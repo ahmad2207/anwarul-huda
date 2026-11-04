@@ -1,10 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FormError, SectionActions } from "@/components/member/form";
+import { useRememberedForm } from "@/components/member/use-remembered-form";
 import { saveNextOfKinSection } from "./actions";
 
 export function NextOfKinSectionForm({
@@ -18,55 +15,17 @@ export function NextOfKinSectionForm({
   nokPhone: string | null;
   nokAltPhone: string | null;
 }) {
-  const [error, formAction, isPending] = useActionState(saveNextOfKinSection, undefined);
+  const { state: error, formAction, isPending, value } = useRememberedForm(saveNextOfKinSection, undefined);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nokName">Name</Label>
-        <Input id="nokName" name="nokName" defaultValue={nokName ?? ""} className="h-11 text-base" />
-      </div>
+      <Field label="Name" id="nokName" defaultValue={value("nokName", nokName ?? "")} />
+      <Field label="Relationship" id="nokRelationship" defaultValue={value("nokRelationship", nokRelationship ?? "")} />
+      <Field label="Phone" id="nokPhone" type="tel" defaultValue={value("nokPhone", nokPhone ?? "")} />
+      <Field label="Alternative phone" id="nokAltPhone" type="tel" defaultValue={value("nokAltPhone", nokAltPhone ?? "")} />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nokRelationship">Relationship</Label>
-        <Input
-          id="nokRelationship"
-          name="nokRelationship"
-          defaultValue={nokRelationship ?? ""}
-          className="h-11 text-base"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nokPhone">Phone</Label>
-        <Input id="nokPhone" name="nokPhone" type="tel" defaultValue={nokPhone ?? ""} className="h-11 text-base" />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nokAltPhone">Alternative phone</Label>
-        <Input
-          id="nokAltPhone"
-          name="nokAltPhone"
-          type="tel"
-          defaultValue={nokAltPhone ?? ""}
-          className="h-11 text-base"
-        />
-      </div>
-
-      {error ? <p className="text-base text-destructive">{error}</p> : null}
-
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={isPending} className="h-11 rounded-[4px] px-6 text-base">
-          {isPending ? "Saving..." : "Save and continue"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isPending}
-          render={<Link href="/account/record">Cancel</Link>}
-          className="h-11 rounded-[4px] px-6 text-base"
-        />
-      </div>
+      <FormError>{error}</FormError>
+      <SectionActions isPending={isPending} />
     </form>
   );
 }

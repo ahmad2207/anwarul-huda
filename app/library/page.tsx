@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, Search } from "lucide-react";
+import { PageTitle, memberLinkCardClass } from "@/components/member/card";
+import { Field, SelectField, inputClass, primaryButtonClass, secondaryButtonClass } from "@/components/member/form";
+import { Pager } from "@/components/member/pager";
 import { formatLagosDate, parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const PAGE_SIZE = 20;
@@ -27,7 +27,7 @@ export default async function LibraryPage({
 
   if (!user.memberId) {
     return (
-      <p className="text-base text-muted-foreground">This account is not linked to a member record.</p>
+      <p className="text-base text-ink-2">This account is not linked to a member record.</p>
     );
   }
 
@@ -104,116 +104,85 @@ export default async function LibraryPage({
     return `/library?${next.toString()}`;
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Library</h1>
-        <p className="text-base text-muted-foreground">Sermons, weekly books and articles.</p>
-      </div>
+  const fromParam = typeof params.from === "string" ? params.from : "";
+  const toParam = typeof params.to === "string" ? params.to : "";
+  const moreFiltersActive = Boolean(typeParam || speaker || tag || fromParam || toParam);
 
-      <Card>
-        <CardContent className="pt-6">
-          <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex min-w-40 flex-1 flex-col gap-1">
-              <Label className="text-sm">Search</Label>
-              <Input name="q" defaultValue={q} placeholder="Title or summary..." className="h-11 text-base" />
+  return (
+    <div className="flex flex-col gap-6">
+      <PageTitle lead="Sermons, the weekly book and articles from the league.">Books</PageTitle>
+
+      <form method="get" role="search" className="flex flex-col gap-3">
+        <div className="flex items-end gap-2">
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label htmlFor="library-q" className="text-base font-medium">
+              Search by title or summary
+            </label>
+            <input id="library-q" name="q" type="search" defaultValue={q} className={inputClass} />
+          </div>
+          <button type="submit" className={primaryButtonClass}>
+            <Search className="size-5" aria-hidden="true" />
+            Search
+          </button>
+        </div>
+
+        <details open={moreFiltersActive} className="group rounded-[14px] bg-card shadow-warm">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden justify-between gap-2 rounded-[14px] px-4 text-base font-medium text-navy-900">
+            More filters
+            <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2">
+            <SelectField
+              label="Type"
+              id="type"
+              placeholder="All types"
+              defaultValue={typeParam}
+              options={CONTENT_TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type] }))}
+            />
+            <Field label="Speaker or author" id="speaker" defaultValue={speaker} />
+            <Field label="Tag" id="tag" defaultValue={tag} />
+            <div className="hidden sm:block" />
+            <Field label="From" id="from" type="date" defaultValue={fromParam} />
+            <Field label="To" id="to" type="date" defaultValue={toParam} />
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <button type="submit" className={primaryButtonClass}>
+                Apply filters
+              </button>
+              {moreFiltersActive || q ? (
+                <Link href="/library" className={secondaryButtonClass}>
+                  Clear all
+                </Link>
+              ) : null}
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm">Type</Label>
-              <select
-                name="type"
-                defaultValue={typeParam}
-                className="h-11 rounded-md border border-input bg-background px-2 text-base"
-              >
-                <option value="">All types</option>
-                {CONTENT_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm">Speaker or author</Label>
-              <Input name="speaker" defaultValue={speaker} className="h-11 text-base" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm">Tag</Label>
-              <Input name="tag" defaultValue={tag} className="h-11 text-base" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm">From</Label>
-              <Input
-                type="date"
-                name="from"
-                defaultValue={typeof params.from === "string" ? params.from : ""}
-                className="h-11 text-base"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm">To</Label>
-              <Input
-                type="date"
-                name="to"
-                defaultValue={typeof params.to === "string" ? params.to : ""}
-                className="h-11 text-base"
-              />
-            </div>
-            <Button type="submit" className="h-11 px-5 text-base">
-              Filter
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </details>
+      </form>
 
       {/* Text only, no cover images here: keeps this list light on a slow connection. Covers show on the item's own page. */}
-      <div className="flex flex-col gap-2">
-        {items.map((item) => (
-          <Link
-            key={item.id}
-            href={`/library/${item.slug}`}
-            className="flex min-h-11 flex-col gap-1 rounded-md border p-4 text-base hover:bg-muted/30"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-medium">{item.title}</span>
-              <span className="text-sm text-muted-foreground">{TYPE_LABELS[item.type] ?? item.type}</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {item.author ?? "Unknown"}
-              {item.deliveredOn ? ` · ${formatLagosDate(item.deliveredOn)}` : ""}
-            </p>
-            {item.summary ? <p className="text-muted-foreground">{item.summary}</p> : null}
-            {item.tags.length > 0 ? (
-              <p className="text-sm text-muted-foreground">{item.tags.join(", ")}</p>
-            ) : null}
-          </Link>
-        ))}
-        {items.length === 0 ? (
-          <p className="text-base text-muted-foreground">Nothing matches this search.</p>
-        ) : null}
-      </div>
+      {items.length === 0 ? (
+        <p className="text-base text-ink-2">
+          {q || moreFiltersActive ? "Nothing matches this search. Try fewer words, or clear the filters." : "Nothing has been shared yet."}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {items.map((item) => (
+            <li key={item.id}>
+              <Link href={`/library/${item.slug}`} className={`${memberLinkCardClass} gap-1`}>
+                <span className="text-sm font-medium text-navy-700">{TYPE_LABELS[item.type] ?? item.type}</span>
+                <span className="font-heading text-lg font-semibold text-navy-900">{item.title}</span>
+                <span className="text-base text-ink-2">
+                  {item.author ?? "Unknown"}
+                  {item.deliveredOn ? `, ${formatLagosDate(item.deliveredOn)}` : ""}
+                </span>
+                {item.summary ? <span className="line-clamp-3 text-base text-ink">{item.summary}</span> : null}
+                {item.tags.length > 0 ? <span className="text-sm text-ink-2">{item.tags.join(", ")}</span> : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-between text-base">
-          <span className="text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              disabled={page <= 1}
-              className="h-11 px-5 text-base"
-              render={<Link href={pageHref(Math.max(1, page - 1))}>Previous</Link>}
-            />
-            <Button
-              variant="outline"
-              disabled={page >= totalPages}
-              className="h-11 px-5 text-base"
-              render={<Link href={pageHref(Math.min(totalPages, page + 1))}>Next</Link>}
-            />
-          </div>
-        </div>
-      ) : null}
+      <Pager page={page} totalPages={totalPages} hrefFor={pageHref} />
     </div>
   );
 }

@@ -21,7 +21,7 @@ export function WithdrawFaceEnrolmentButton() {
         type="button"
         variant="outline"
         onClick={() => setConfirming(true)}
-        className="h-12 rounded-[14px] px-6 text-base"
+        className="h-11 rounded-[14px] px-6 text-base"
       >
         Remove face check-in
       </Button>
@@ -41,7 +41,7 @@ export function WithdrawFaceEnrolmentButton() {
           variant="destructive"
           disabled={isPending}
           onClick={() => startTransition(() => withdrawFaceEnrolment())}
-          className="h-12 rounded-[14px] px-6 text-base"
+          className="h-11 rounded-[14px] px-6 text-base"
         >
           {isPending ? "Removing..." : "Yes, remove it"}
         </Button>
@@ -50,7 +50,7 @@ export function WithdrawFaceEnrolmentButton() {
           variant="ghost"
           disabled={isPending}
           onClick={() => setConfirming(false)}
-          className="h-12 rounded-[14px] px-6 text-base"
+          className="h-11 rounded-[14px] px-6 text-base"
         >
           Cancel
         </Button>

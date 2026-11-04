@@ -35,10 +35,10 @@ export async function MemberShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="member-area flex min-h-screen flex-col bg-paper text-ink">
       <header className="on-navy sticky top-0 z-20 bg-gradient-to-b from-navy-950 to-navy-900 text-white shadow-[0_6px_20px_-12px_rgba(4,20,40,0.6)]">
-        <div className="mx-auto flex h-16 w-full max-w-2xl items-center justify-between gap-2 px-4">
+        <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-2 px-4">
           <Link href="/account" className="flex min-h-11 min-w-0 items-center gap-3 rounded-[14px]">
-            <GlowLogo size={36} />
-            <Wordmark className="min-w-0 truncate text-lg" />
+            <GlowLogo size={30} />
+            <Wordmark className="min-w-0 truncate text-base" />
           </Link>
           {/* MEMBER-INTERFACE.md 3.1: settings sits in the header, not the
               bar, and is the only control here. /account/settings holds
@@ -48,14 +48,14 @@ export async function MemberShell({ children }: { children: React.ReactNode }) {
             aria-label="Settings"
             className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white"
           >
-            <Settings className="size-6" aria-hidden="true" />
+            <Settings className="size-5" aria-hidden="true" />
           </Link>
         </div>
       </header>
 
       {/* pb-32: clears the fixed bottom nav (plus the device safe area)
           so the last thing on a page is never hidden behind it. */}
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6 pb-32">{children}</main>
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-5 pb-28">{children}</main>
 
       <MemberBottomNav />
     </div>

@@ -127,7 +127,7 @@ export default async function LibraryPage({
         </div>
 
         <details open={moreFiltersActive} className="group rounded-[14px] bg-card shadow-warm">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden justify-between gap-2 rounded-[14px] px-4 text-base font-medium text-navy-900">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden justify-between gap-2 rounded-[14px] px-4 text-base font-medium text-navy-900">
             More filters
             <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>

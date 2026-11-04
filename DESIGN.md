@@ -86,7 +86,7 @@ Three bases, because the three surfaces have different jobs:
 | Surface | Base | Why |
 |---|---|---|
 | Admin desk | 14px | Dense tables, laptop, an officer working at speed |
-| Member area | 17px | Mid-range Android, wide age range, held at arm's length |
+| Member area | 15px | Mid-range Android, wide age range. Reduced from 17px at the organisation's request, November 2026; tap targets stay 44px |
 | Check-in | 20px minimum | Standing, one hand, glanced at rather than read |
 
 Scale ratio 1.25. Line length capped at 70 characters. Sentence case throughout. No tracked-out capitals as labels.
@@ -123,7 +123,7 @@ Fixed left rail, a `navy-950`-to-`navy-900` gradient, logo at the top. Rows 40px
 
 Mid-range Android, slow connection, possibly an elderly member. A member has about four things to do, so this is not a dashboard.
 
-Single column, 17px base, generous spacing, large tap targets, no sidebar. One warm navy-to-amber card carries the number that matters most (the outstanding balance); everything under it stays plain and readable. Plain language with no system vocabulary.
+Single column, 15px base, comfortable spacing, 44px tap targets, no sidebar. One warm navy-to-amber card carries the number that matters most (the outstanding balance); everything under it stays plain and readable. Plain language with no system vocabulary.
 
 Keep the payload light. No chart libraries on member routes.
 

@@ -49,7 +49,7 @@ export default async function AccountFacePage() {
           nativeButton={false}
           render={<Link href="/account/record">Back to your record</Link>}
           variant="outline"
-          className="h-12 self-start rounded-[14px] px-6 text-base"
+          className="h-11 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );
@@ -76,7 +76,7 @@ export default async function AccountFacePage() {
           nativeButton={false}
           render={<Link href="/account/record/about">Go to About you</Link>}
           variant="outline"
-          className="h-12 self-start rounded-[14px] px-6 text-base"
+          className="h-11 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );
@@ -98,7 +98,7 @@ export default async function AccountFacePage() {
           nativeButton={false}
           render={<Link href="/account/record">Back to your record</Link>}
           variant="outline"
-          className="h-12 self-start rounded-[14px] px-6 text-base"
+          className="h-11 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );
@@ -137,7 +137,7 @@ export default async function AccountFacePage() {
           nativeButton={false}
           render={<Link href="/account/record">Back to your record</Link>}
           variant="outline"
-          className="h-12 self-start rounded-[14px] px-6 text-base"
+          className="h-11 self-start rounded-[14px] px-6 text-base"
         />
       </div>
     );

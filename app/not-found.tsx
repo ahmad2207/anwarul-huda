@@ -14,7 +14,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="inline-flex h-12 items-center justify-center rounded-[14px] bg-navy-950 px-6 text-base font-semibold text-white hover:bg-navy-800"
+        className="inline-flex h-11 items-center justify-center rounded-[14px] bg-navy-950 px-6 text-base font-semibold text-white hover:bg-navy-800"
       >
         Go to the start
       </Link>

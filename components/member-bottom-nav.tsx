@@ -47,7 +47,7 @@ export function MemberBottomNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 rounded-[14px] pt-2.5 pb-2 text-sm transition-colors ${
+              className={`relative flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-[14px] pt-2 pb-1.5 text-xs transition-colors ${
                 active ? "font-bold text-white" : "font-medium text-white/70 hover:text-white"
               }`}
             >
@@ -57,7 +57,7 @@ export function MemberBottomNav() {
                   active ? "bg-amber-500 shadow-[0_0_10px_3px_rgba(255,151,0,0.6)]" : "bg-transparent"
                 }`}
               />
-              <Icon className={`size-6 ${active ? "text-amber-300" : ""}`} aria-hidden="true" strokeWidth={active ? 2.4 : 1.8} />
+              <Icon className={`size-5 ${active ? "text-amber-300" : ""}`} aria-hidden="true" strokeWidth={active ? 2.4 : 1.8} />
               <span className={active ? "underline decoration-amber-500 decoration-2 underline-offset-4" : ""}>
                 {item.label}
               </span>

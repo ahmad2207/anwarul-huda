@@ -9,13 +9,13 @@ import { cn } from "cn";
 // sizes here never depend on admin defaults.
 
 export const inputClass =
-  "h-12 w-full min-w-0 rounded-[14px] border border-border bg-white px-4 text-base text-ink shadow-[inset_0_1px_2px_rgb(74_52_18/6%)] placeholder:text-ink-2/70 disabled:cursor-not-allowed disabled:opacity-60";
+  "h-11 w-full min-w-0 rounded-xl border border-border bg-white px-3.5 text-base text-ink shadow-[inset_0_1px_2px_rgb(74_52_18/6%)] placeholder:text-ink-2/70 disabled:cursor-not-allowed disabled:opacity-60";
 
 export const primaryButtonClass =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-navy-950 px-6 text-base font-semibold text-white shadow-[0_8px_18px_-8px_rgba(4,20,40,0.5)] transition-colors hover:bg-navy-800 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-navy-950 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_-8px_rgba(4,20,40,0.5)] transition-colors hover:bg-navy-800 disabled:cursor-not-allowed disabled:opacity-60";
 
 export const secondaryButtonClass =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-[14px] border border-border bg-white px-6 text-base font-semibold text-navy-900 transition-colors hover:bg-paper-dim/60 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-5 text-sm font-semibold text-navy-900 transition-colors hover:bg-paper-dim/60 disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Field({
   label,
@@ -32,7 +32,7 @@ export function Field({
   const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="text-base font-medium text-ink">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
         {label}
         {inputProps.required ? <span className="text-ink-2"> (required)</span> : null}
       </label>
@@ -65,7 +65,7 @@ export function SelectField({
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="text-base font-medium text-ink">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
         {label}
         {required ? <span className="text-ink-2"> (required)</span> : null}
       </label>

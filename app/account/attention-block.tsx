@@ -25,7 +25,7 @@ export function AttentionBlock({ items }: { items: AttentionItems }) {
           action={
             <Link
               href="/account/payments"
-              className="inline-flex h-12 items-center gap-2 rounded-[14px] border border-white/35 bg-white/10 px-5 text-base font-semibold text-white hover:bg-white/20"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/35 bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
             >
               View payments
               <ArrowRight className="size-5" aria-hidden="true" />

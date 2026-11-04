@@ -20,7 +20,7 @@ import "./globals.css";
 // paper the office hands to a member, falling back to whatever font the
 // browser substitutes for the one missing glyph.
 const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-sans",
+  variable: "--font-jakarta",
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700", "800"],
 });
@@ -32,13 +32,13 @@ const fraunces = Fraunces({
 });
 
 const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
-  variable: "--font-arabic",
+  variable: "--font-plex-arabic",
   subsets: ["arabic"],
   weight: ["400", "500", "600"],
 });
 
 const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-mono",
+  variable: "--font-plex-mono",
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600"],
 });

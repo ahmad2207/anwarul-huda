@@ -35,14 +35,14 @@ export default function GlobalErrorBoundary({
         <button
           type="button"
           onClick={() => reset()}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-navy-950 px-6 text-base font-semibold text-white hover:bg-navy-800"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-navy-950 px-6 text-base font-semibold text-white hover:bg-navy-800"
         >
           <RotateCcw className="size-5" aria-hidden="true" />
           Try again
         </button>
         <Link
           href="/"
-          className="inline-flex h-12 items-center justify-center rounded-[14px] border border-border bg-white px-6 text-base font-semibold text-navy-900 hover:bg-paper-dim/60"
+          className="inline-flex h-11 items-center justify-center rounded-[14px] border border-border bg-white px-6 text-base font-semibold text-navy-900 hover:bg-paper-dim/60"
         >
           Go to the start
         </Link>

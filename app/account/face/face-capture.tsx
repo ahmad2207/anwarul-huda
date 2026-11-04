@@ -370,7 +370,7 @@ export function FaceCapture({
           </p>
           <div className="flex flex-col gap-3">
             {phase !== "permission-denied" && phase !== "no-camera" && phase !== "models-failed" && !(phase === "save-failed" && saveFinal) ? (
-              <Button type="button" onClick={() => setPhase("ready")} className="h-12 rounded-[14px] px-6 text-base">
+              <Button type="button" onClick={() => setPhase("ready")} className="h-11 rounded-[14px] px-6 text-base">
                 Try again
               </Button>
             ) : null}
@@ -402,7 +402,7 @@ export function FaceCapture({
             nativeButton={false}
             render={<Link href={copy.doneHref}>{copy.doneLabel}</Link>}
             variant="outline"
-            className="h-12 self-start rounded-[14px] px-6 text-base"
+            className="h-11 self-start rounded-[14px] px-6 text-base"
           />
         </div>
       </FaceScreen>
@@ -428,7 +428,7 @@ export function FaceCapture({
         {phase === "ready" ? (
           <>
             <p className="text-base text-ink-2">{copy.readyText}</p>
-            <Button type="button" onClick={startCapture} className="h-12 self-start rounded-[14px] px-6 text-base">
+            <Button type="button" onClick={startCapture} className="h-11 self-start rounded-[14px] px-6 text-base">
               Begin
             </Button>
           </>
@@ -485,7 +485,7 @@ function DeferButton({ href, label }: { href: string; label: string }) {
       variant="outline"
       nativeButton={false}
       render={<Link href={href}>{label}</Link>}
-      className="h-12 w-full rounded-[14px] px-6 text-base"
+      className="h-11 w-full rounded-[14px] px-6 text-base"
     />
   );
 }

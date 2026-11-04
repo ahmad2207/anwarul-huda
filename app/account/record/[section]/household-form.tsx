@@ -5,7 +5,6 @@ import type { HouseholdMember } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatMemberName } from "@/lib/members/display-name";
 import {
   addOwnHouseholdMember,
   updateOwnHouseholdMember,
@@ -17,9 +16,6 @@ type HouseholdMemberWithLink = HouseholdMember & {
   linkedMember: {
     id: string;
     memberNumber: string | null;
-    surname: string | null;
-    firstName: string | null;
-    fullNameAsWritten: string | null;
   } | null;
 };
 
@@ -126,7 +122,7 @@ function HouseholdRow({ entry }: { entry: HouseholdMemberWithLink }) {
         {entry.fullName}
         {entry.age !== null ? `, ${entry.age}` : ""}
         {entry.relationship ? ` (${entry.relationship})` : ""}
-        {entry.linkedMember ? `, linked to ${formatMemberName(entry.linkedMember)}` : ""}
+        {entry.linkedMember?.memberNumber ? `, member number ${entry.linkedMember.memberNumber}` : ""}
       </span>
       <div className="flex gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>

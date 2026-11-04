@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { canEditMemberRecords, canViewAllWings } from "@/lib/authorization";
+import { canEditMemberRecords } from "@/lib/authorization";
 import { formatMemberName } from "@/lib/members/display-name";
 import { IssueLoginError, issueLoginForMember } from "@/lib/members/issue-login";
 
@@ -100,10 +100,13 @@ export type BulkReissueState = BulkIssueLoginState;
  */
 export async function bulkReissueAllLogins(): Promise<BulkReissueState> {
   const actor = await requireRole(["WING_ADMIN"]);
-  const wingScope = canViewAllWings(actor) ? {} : { wingId: { in: actor.wingIds } };
+  // Editing logins is a wing admin power, so only a super admin covers
+  // every wing here. canViewAllWings would also let a wing admin who is a
+  // finance officer reissue every wing's passwords.
+  const wingScope = actor.roles.includes("SUPER_ADMIN") ? {} : { wingId: { in: actor.wingIds } };
 
   const members = await prisma.member.findMany({
-    where: { ...wingScope, user: { isNot: null } },
+    where: { ...wingScope, status: "ACTIVE", user: { isNot: null } },
     include: { user: true },
   });
 

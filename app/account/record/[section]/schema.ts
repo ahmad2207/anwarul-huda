@@ -61,7 +61,7 @@ export const serviceSectionSchema = z.object({
   islamicEducation: optionalText(500),
   otherSkills: optionalText(500),
   availability: z.preprocess(toStringList, z.array(z.string().max(100))),
-  serviceAreaIds: z.array(z.string()),
+  serviceAreaIds: z.array(z.string()).max(50, "Choose fewer service areas."),
 });
 
 // Section 7: Next of kin.

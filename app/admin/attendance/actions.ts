@@ -30,7 +30,7 @@ export async function createGathering(
   // would create a gathering nobody with "own wing" access could ever
   // check anyone in to (an attendance officer or super admin still
   // could, but the wing admin who made it could not).
-  if (!canViewAllWings(actor) && !actor.roles.includes("ATTENDANCE_OFFICER")) {
+  if (!canViewAllWings(actor)) {
     if (!wingId || !actor.wingIds.includes(wingId)) {
       return { error: "Choose your own wing for this gathering." };
     }
@@ -72,7 +72,6 @@ export async function closeGathering(gatheringId: string): Promise<void> {
   }
   if (
     !canViewAllWings(actor) &&
-    !actor.roles.includes("ATTENDANCE_OFFICER") &&
     (!gathering.wingId || !actor.wingIds.includes(gathering.wingId))
   ) {
     throw new Error("You do not have access to this gathering.");

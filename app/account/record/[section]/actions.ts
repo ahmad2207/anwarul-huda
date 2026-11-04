@@ -2,11 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import type { RecordSection } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
-import { recordProgress } from "@/lib/members/record-sections";
+import { markSectionComplete } from "@/lib/members/mark-section-complete";
 import { householdMemberSchema } from "@/app/admin/members/[id]/schema";
 import {
   nameSectionSchema,
@@ -20,58 +19,13 @@ import {
 } from "./schema";
 
 async function currentMemberId(): Promise<{ userId: string; memberId: string }> {
-  const user = await getCurrentUser();
+  const user = await requireMember();
   if (!user.memberId) {
     throw new Error("This account is not linked to a member record.");
   }
   return { userId: user.id, memberId: user.memberId };
 }
 
-// Every section save adds its own RecordSection value once, never
-// twice: completedSections is read first rather than pushed
-// unconditionally, so revisiting and re-saving an already completed
-// section does not grow the array. Completing the ninth and last
-// section clears isRecordIncomplete and opens the wing administrator's
-// light review (MEMBER-INTERFACE.md 3.4, M3 #9): a review, not an
-// approval, so nothing about the member's status changes here.
-export async function markSectionComplete(memberId: string, userId: string, section: RecordSection): Promise<void> {
-  const member = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-    select: { completedSections: true },
-  });
-  if (member.completedSections.includes(section)) {
-    return;
-  }
-
-  const completedSections = [...member.completedSections, section];
-  const isNowComplete = recordProgress(completedSections).isComplete;
-
-  await prisma.member.update({
-    where: { id: memberId },
-    data: {
-      completedSections: { push: section },
-      ...(isNowComplete
-        ? {
-            isRecordIncomplete: false,
-            needsWingReview: true,
-            wingReviewReason: "Record completed",
-            wingReviewRequestedAt: new Date(),
-          }
-        : {}),
-    },
-  });
-
-  if (isNowComplete) {
-    await writeAudit({
-      actorId: userId,
-      action: "member.record_completed",
-      entity: "Member",
-      entityId: memberId,
-      before: { isRecordIncomplete: true },
-      after: { isRecordIncomplete: false, needsWingReview: true },
-    });
-  }
-}
 
 // M3 #10: once complete, a change to phone, address or name flags the
 // member on the same worklist rather than gating the change behind
@@ -692,24 +646,36 @@ export async function deferFaceEnrolment(
 ): Promise<string | undefined> {
   /* eslint-enable @typescript-eslint/no-unused-vars */
   const { userId, memberId } = await currentMemberId();
-  const before = await prisma.member.findUniqueOrThrow({
+  const member = await prisma.member.findUniqueOrThrow({
     where: { id: memberId },
-    select: { consentBiometric: true, faceEnrolmentDeferred: true },
+    select: { consentBiometric: true, faceEnrolmentDeferred: true, _count: { select: { faceEnrolments: true } } },
   });
+  const hadFaceEnrolment = member._count.faceEnrolments > 0;
 
-  await prisma.member.update({
-    where: { id: memberId },
-    data: { faceEnrolmentDeferred: true, faceEnrolmentDeferredAt: new Date(), consentBiometric: false },
+  // Deferring records consent as withdrawn, so any face pattern already
+  // stored is deleted in the same step. Leaving it would keep matching
+  // the member at check-in after they have said no.
+  await prisma.$transaction(async (tx) => {
+    await tx.member.update({
+      where: { id: memberId },
+      data: { faceEnrolmentDeferred: true, faceEnrolmentDeferredAt: new Date(), consentBiometric: false },
+    });
+    if (hadFaceEnrolment) {
+      await tx.faceEnrolment.deleteMany({ where: { memberId } });
+    }
+    await writeAudit(
+      {
+        actorId: userId,
+        action: "member.face_enrolment_deferred",
+        entity: "Member",
+        entityId: memberId,
+        before: { consentBiometric: member.consentBiometric, faceEnrolmentDeferred: member.faceEnrolmentDeferred, hadFaceEnrolment },
+        after: { consentBiometric: false, faceEnrolmentDeferred: true, hadFaceEnrolment: false },
+      },
+      tx,
+    );
   });
   await markSectionComplete(memberId, userId, "FACE");
-  await writeAudit({
-    actorId: userId,
-    action: "member.face_enrolment_deferred",
-    entity: "Member",
-    entityId: memberId,
-    before,
-    after: { consentBiometric: false, faceEnrolmentDeferred: true },
-  });
 
   // Not /account/face: that route now goes straight to capture for a
   // consenting member and back to this same section otherwise (B1's

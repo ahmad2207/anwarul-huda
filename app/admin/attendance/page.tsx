@@ -22,7 +22,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default async function AttendancePage() {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
-  const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
+  const canSeeAll = canViewAllWings(user);
 
   const [gatherings, wings, branches] = await Promise.all([
     prisma.gathering.findMany({

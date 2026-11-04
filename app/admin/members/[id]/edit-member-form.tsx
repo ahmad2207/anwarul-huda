@@ -168,10 +168,9 @@ export function EditMemberForm({
           <input type="checkbox" name="consentComms" defaultChecked={member.consentComms} />
           Consents to communications
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="consentBiometric" defaultChecked={member.consentBiometric} />
-          Consents to biometric enrolment
-        </label>
+        {/* Face check-in consent is not edited here. It is given by the
+            member on its own in their record, or in person at enrolment,
+            never bundled into a general form (SPEC-ADDENDUM 4.1). */}
       </fieldset>
 
       <div>

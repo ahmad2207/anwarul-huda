@@ -188,4 +188,29 @@ describe("issueLoginForMember", () => {
     const user = await prisma.user.findUnique({ where: { memberId: member.id } });
     expect(user).toBeNull();
   });
+
+  it("signs out every existing session on reissue by moving the session version on", async () => {
+    const member = await makeMember("0090", true);
+    const before = member.user!.sessionVersion;
+
+    await prisma.$transaction((tx) => issueLoginForMember(tx, member, actorId));
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { memberId: member.id } });
+    expect(user.sessionVersion).toBe(before + 1);
+  });
+
+  it("refuses to reissue a login for a deceased member, leaving their account switched off", async () => {
+    const member = await makeMember("0091", true);
+    await prisma.member.update({ where: { id: member.id }, data: { status: "DECEASED" } });
+    await prisma.user.update({ where: { id: member.user!.id }, data: { isActive: false } });
+    const deceased = await prisma.member.findUniqueOrThrow({ where: { id: member.id }, include: { user: true } });
+
+    await expect(prisma.$transaction((tx) => issueLoginForMember(tx, deceased, actorId))).rejects.toThrow(
+      IssueLoginError,
+    );
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: member.user!.id } });
+    expect(user.isActive).toBe(false);
+    expect(user.passwordHash).toBe(member.user!.passwordHash);
+  });
 });

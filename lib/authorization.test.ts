@@ -8,6 +8,7 @@ import {
   canViewMember,
   canViewCharityHistory,
   canViewMemberActivity,
+  gatheringCheckInScope,
   hasAnyRole,
   staffHomePath,
 } from "./authorization";
@@ -211,5 +212,29 @@ describe("staffHomePath", () => {
   it("has no staff home for an account with no staff role", () => {
     expect(staffHomePath({ roles: [] })).toBeNull();
     expect(staffHomePath({ roles: ["MEMBER"] })).toBeNull();
+  });
+});
+
+describe("gatheringCheckInScope", () => {
+  const officer = { roles: ["ATTENDANCE_OFFICER" as const], wingIds: ["men"] };
+  const wingAdmin = { roles: ["WING_ADMIN" as const], wingIds: ["men"] };
+
+  it("gives a super admin every wing at an all-wings gathering, and just that wing at a wing gathering", () => {
+    expect(gatheringCheckInScope({ roles: ["SUPER_ADMIN"], wingIds: [] }, null)).toBe("all");
+    expect(gatheringCheckInScope({ roles: ["SUPER_ADMIN"], wingIds: [] }, "women")).toEqual(["women"]);
+  });
+
+  it("keeps an attendance officer to their own wing, never another wing's gathering", () => {
+    expect(gatheringCheckInScope(officer, "men")).toEqual(["men"]);
+    expect(gatheringCheckInScope(officer, "women")).toBeNull();
+  });
+
+  it("lets an attendance officer run an all-wings gathering for their own wing's members only", () => {
+    expect(gatheringCheckInScope(officer, null)).toEqual(["men"]);
+  });
+
+  it("refuses an all-wings gathering to a wing admin and to an officer with no wing", () => {
+    expect(gatheringCheckInScope(wingAdmin, null)).toBeNull();
+    expect(gatheringCheckInScope({ roles: ["ATTENDANCE_OFFICER"], wingIds: [] }, null)).toBeNull();
   });
 });

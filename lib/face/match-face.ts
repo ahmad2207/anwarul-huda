@@ -93,6 +93,7 @@ export async function matchFaceForCheckIn(
     JOIN members m ON m.id = fe.member_id
     WHERE fe.is_active = true
       AND m.status = 'ACTIVE'
+      AND m.consent_biometric = true
       AND m.face_check_in_excluded = false
       ${wingFilter}
     ORDER BY fe.embedding <=> ${vectorLiteral}::vector ASC

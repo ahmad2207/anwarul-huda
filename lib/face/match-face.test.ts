@@ -42,7 +42,7 @@ describe("matchFaceForCheckIn", () => {
     suffix: string,
     wingId: string,
     embedding: number[],
-    options: { isActive?: boolean; memberStatus?: "ACTIVE" | "INACTIVE" } = {},
+    options: { isActive?: boolean; memberStatus?: "ACTIVE" | "INACTIVE"; consentBiometric?: boolean } = {},
   ): Promise<string> {
     const member = await prisma.member.create({
       data: {
@@ -52,6 +52,7 @@ describe("matchFaceForCheckIn", () => {
         status: options.memberStatus ?? "ACTIVE",
         source: "ADMIN_ENTRY",
         wingId,
+        consentBiometric: options.consentBiometric ?? true,
       },
     });
     memberIds.push(member.id);
@@ -96,6 +97,15 @@ describe("matchFaceForCheckIn", () => {
   it("does not match an inactive (withdrawn) enrolment", async () => {
     const embedding = embeddingWithSpikeAt(40);
     await makeEnrolledMember("Withdrawn", mensWingId, embedding, { isActive: false });
+
+    const match = await matchFaceForCheckIn(embedding, mensWingId);
+
+    expect(match).toEqual({ kind: "none" });
+  });
+
+  it("does not match a member whose consent is no longer recorded, even with an embedding still on file", async () => {
+    const embedding = embeddingWithSpikeAt(45);
+    await makeEnrolledMember("NoConsent", mensWingId, embedding, { consentBiometric: false });
 
     const match = await matchFaceForCheckIn(embedding, mensWingId);
 

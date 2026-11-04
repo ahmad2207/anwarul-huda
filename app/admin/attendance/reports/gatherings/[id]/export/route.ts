@@ -15,7 +15,7 @@ async function handleGet(_request: Request, { params }: { params: Promise<{ id: 
     return new Response("That gathering could not be found.", { status: 404 });
   }
 
-  const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
+  const canSeeAll = canViewAllWings(user);
   if (!canSeeAll && (!gathering.wingId || !user.wingIds.includes(gathering.wingId))) {
     return new Response("That gathering could not be found.", { status: 404 });
   }

@@ -89,7 +89,6 @@ export async function updateMember(
           consentRecords: data.consentRecords,
           consentDirectory: data.consentDirectory,
           consentComms: data.consentComms,
-          consentBiometric: data.consentBiometric,
           serviceAreas: {
             deleteMany: {},
             create: data.serviceAreaIds.map((serviceAreaId) => ({ serviceAreaId })),

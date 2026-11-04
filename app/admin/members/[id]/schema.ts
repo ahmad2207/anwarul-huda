@@ -44,7 +44,6 @@ export const memberEditSchema = z.object({
   consentRecords: z.boolean(),
   consentDirectory: z.boolean(),
   consentComms: z.boolean(),
-  consentBiometric: z.boolean(),
   serviceAreaIds: z.array(z.string()),
 });
 
@@ -87,7 +86,6 @@ export function memberFormDataToRaw(formData: FormData) {
     consentRecords: formData.get("consentRecords") === "on",
     consentDirectory: formData.get("consentDirectory") === "on",
     consentComms: formData.get("consentComms") === "on",
-    consentBiometric: formData.get("consentBiometric") === "on",
     serviceAreaIds: formData.getAll("serviceAreaIds"),
   };
 }

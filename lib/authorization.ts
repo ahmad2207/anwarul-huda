@@ -84,6 +84,28 @@ export function canEnrolMemberFace(user: { roles: RoleName[]; wingIds: string[] 
 }
 
 /**
+ * Whose members this user may see and check in at a gathering: "all" for
+ * every wing, a list of wing ids, or null for no access at all.
+ *
+ * Attendance officers and wing administrators cover their own wing only
+ * (SPEC.md section 4). A gathering open to all wings, such as a general
+ * Jumu'ah, is still run by attendance officers, but each one sees and
+ * checks in only the members of the wings they are assigned to.
+ */
+export function gatheringCheckInScope(
+  user: { roles: RoleName[]; wingIds: string[] },
+  gatheringWingId: string | null,
+): "all" | string[] | null {
+  if (canViewAllWings(user)) {
+    return gatheringWingId ? [gatheringWingId] : "all";
+  }
+  if (gatheringWingId) {
+    return user.wingIds.includes(gatheringWingId) ? [gatheringWingId] : null;
+  }
+  return user.roles.includes("ATTENDANCE_OFFICER") && user.wingIds.length > 0 ? user.wingIds : null;
+}
+
+/**
  * Whether this user may see and decide a face match case between two
  * members (MEMBER-HOME-AND-ADMIN-VIEW.md 3.5): super admins always, and
  * attendance officers only when both members are in wings they are

@@ -26,11 +26,11 @@ export class AuthorizationError extends Error {
   }
 }
 
-// Thrown by requireRole and requireWingAccess, never by getCurrentUser
-// itself: app/change-password/actions.ts calls getCurrentUser directly,
-// specifically so a forced-change account can still load itself and
-// change its own password. Every other mutation goes through one of the
-// two functions below, so gating there is what makes "every route,
+// Thrown by requireRole, requireWingAccess and requireMember, never by
+// getCurrentUser itself: app/change-password/actions.ts calls
+// getCurrentUser directly, specifically so a forced-change account can
+// still load itself and change its own password. Every other mutation
+// goes through one of the functions below, so gating there is what makes "every route,
 // including any API route" (MEMBER-INTERFACE.md 2 / point 6 of the
 // credential issue prompt) hold for every action this app has today and
 // every one it adds later, not only the page layouts that redirect a
@@ -59,8 +59,9 @@ export interface CurrentUser {
  * wing assignment change takes effect immediately, not only when the
  * session token is next reissued.
  *
- * Throws AuthenticationError if nobody is signed in, or if the account has
- * been deactivated since the session was issued.
+ * Throws AuthenticationError if nobody is signed in, if the account has
+ * been deactivated since the session was issued, or if its password has
+ * been written since then (User.sessionVersion).
  */
 export async function getCurrentUser(): Promise<CurrentUser> {
   const session = await auth();
@@ -80,6 +81,12 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
   if (!user || !user.isActive) {
     throw new AuthenticationError("Your account is no longer active");
+  }
+
+  // The password has been reset, reissued or changed since this session
+  // was issued, so the session no longer speaks for whoever holds it.
+  if ((session.user.sessionVersion ?? 0) !== user.sessionVersion) {
+    throw new AuthenticationError("Your password was changed. Sign in again.");
   }
 
   return {
@@ -112,6 +119,26 @@ export async function requireRole(roles: RoleName[]): Promise<CurrentUser> {
   }
 
   return user;
+}
+
+/**
+ * Requires a signed in member who has completed any forced password
+ * change. Every member facing server action calls this rather than
+ * getCurrentUser, because page layouts do not run for a direct action
+ * request, so the redirect in components/member-shell.tsx alone does not
+ * stop someone holding only a temporary password slip.
+ */
+export async function requireMember(): Promise<CurrentUser & { memberId: string }> {
+  const user = await getCurrentUser();
+
+  if (user.mustChangePassword) {
+    throw new PasswordChangeRequiredError();
+  }
+  if (!user.memberId) {
+    throw new AuthorizationError("This account is not linked to a member record.");
+  }
+
+  return { ...user, memberId: user.memberId };
 }
 
 /**

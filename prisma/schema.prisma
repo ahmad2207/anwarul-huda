@@ -100,6 +100,13 @@ model User {
   temporaryPasswordIssuedById String?   @map("temporary_password_issued_by_id")
   temporaryPasswordIssuedBy   User?     @relation("TemporaryPasswordIssuer", fields: [temporaryPasswordIssuedById], references: [id], onDelete: SetNull)
 
+  // Copied into the session token at sign in and compared on every
+  // request (lib/auth.ts getCurrentUser). Every password write increments
+  // it, so a reset, a reissue or a change of password signs out every
+  // session issued before it. The session that made a self-service
+  // change is refreshed in place (app/change-password/actions.ts).
+  sessionVersion Int @default(0) @map("session_version")
+
   memberId String? @unique @map("member_id")
   member   Member? @relation(fields: [memberId], references: [id])
 

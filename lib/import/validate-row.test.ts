@@ -126,10 +126,32 @@ describe("validateImportRow", () => {
       surname: "Bello",
       firstName: "Amina",
       phone: "+2348012345678",
+      wingId: WING.id,
     };
     const result = validate({}, { existingByPhone: new Map([["+2348012345678", existing]]) });
     expect(result.classification).toBe("clean");
     expect(result.duplicate).toEqual(existing);
+  });
+
+  it("fails a row whose phone belongs to another wing's member, without naming them", () => {
+    const otherWingMember = {
+      id: "member-2",
+      memberNumber: "AHL/M/2025/0002",
+      surname: "Musa",
+      firstName: "Bala",
+      phone: "+2348012345678",
+      wingId: "a-different-wing",
+    };
+    const result = validate(
+      {},
+      {
+        actor: { roles: ["WING_ADMIN"], wingIds: [WING.id] },
+        existingByPhone: new Map([["+2348012345678", otherWingMember]]),
+      },
+    );
+    expect(result.classification).toBe("fail");
+    expect(result.duplicate).toBeNull();
+    expect(result.issues.some((issue) => issue.field === "phone")).toBe(true);
   });
 
   it("fails a row for a wing the importing wing admin cannot access", () => {

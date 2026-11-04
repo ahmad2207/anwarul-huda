@@ -47,7 +47,7 @@ These are not preferences. Breaking them creates real problems for the organisat
 3. **Zakat funds are ring-fenced.** A zakat disbursement must be assigned to one of the eight recipient categories before it can be approved. Zakat can never be applied to operational or running costs. Enforce this in the data layer, not only in the UI.
 4. **Separation of duty on charity.** The user who recommends a disbursement cannot be the user who approves it. Enforce in code.
 5. **Wing scoping.** A wing administrator sees and edits only their own wing. Enforce this on the server in every query, not by hiding buttons in the UI.
-6. **Biometric templates are never stored in this database.** The biometric terminal holds the templates. This system stores only a mapping from device user ID to member ID. If a task appears to require storing a fingerprint or face template, stop and raise it.
+6. **Fingerprint templates are never stored in this database.** A fingerprint terminal holds its own templates; this system stores only a mapping from device user ID to member ID. The one exception is face check-in: `SPEC-ADDENDUM-ACCOUNTS-AND-FACE.md` sections 3 and 4 authorise storing a face embedding in `face_enrolments`, and only under the rules there. Consent is given separately, never bundled. Withdrawal deletes the embedding immediately. Matching uses only members whose consent is recorded. Members under 18 are never enrolled. An inactive or deceased member's embedding is deleted. If a task appears to require storing any other biometric data, stop and raise it.
 7. **Every write to members, payments, disbursements and users is written to the audit log** with actor, action, entity, before and after.
 
 ## Currency and formatting

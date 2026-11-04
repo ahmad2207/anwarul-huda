@@ -56,7 +56,7 @@ export async function computePreview(
     normalizedPhones.size > 0
       ? await prisma.member.findMany({
           where: { phone: { in: Array.from(normalizedPhones) } },
-          select: { id: true, memberNumber: true, surname: true, firstName: true, phone: true },
+          select: { id: true, memberNumber: true, surname: true, firstName: true, phone: true, wingId: true },
         })
       : [];
   // Non-null: the query above only ever matches a row whose phone is in

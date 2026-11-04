@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import { canViewAllWings } from "@/lib/authorization";
+import { gatheringCheckInScope } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { BackLink } from "@/components/back-link";
 import { CheckInClient } from "./check-in-client";
@@ -18,8 +18,7 @@ export default async function GatheringCheckInPage({ params }: { params: Promise
     notFound();
   }
 
-  const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
-  if (!canSeeAll && (!gathering.wingId || !user.wingIds.includes(gathering.wingId))) {
+  if (!gatheringCheckInScope(user, gathering.wingId)) {
     notFound();
   }
 

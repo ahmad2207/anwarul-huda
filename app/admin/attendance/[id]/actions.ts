@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { canViewAllWings } from "@/lib/authorization";
+import { gatheringCheckInScope } from "@/lib/authorization";
 import { writeAudit } from "@/lib/audit";
 import { checkInMember } from "@/lib/attendance/check-in";
 import { formatMemberName } from "@/lib/members/display-name";
@@ -16,11 +16,15 @@ async function requireGatheringAccess(gatheringId: string) {
   if (!gathering) {
     throw new Error("This gathering no longer exists.");
   }
-  const canSeeAll = canViewAllWings(actor) || actor.roles.includes("ATTENDANCE_OFFICER");
-  if (!canSeeAll && (!gathering.wingId || !actor.wingIds.includes(gathering.wingId))) {
+  const scope = gatheringCheckInScope(actor, gathering.wingId);
+  if (!scope) {
     throw new Error("You do not have access to this gathering.");
   }
-  return { actor, gathering };
+  return { actor, gathering, scope };
+}
+
+function memberInScope(scope: "all" | string[], memberWingId: string): boolean {
+  return scope === "all" || scope.includes(memberWingId);
 }
 
 export interface RosterMember {
@@ -48,12 +52,12 @@ const MAX_ROSTER_SIZE = 5000;
  * member to check in would still require one.
  */
 export async function loadCheckInRoster(gatheringId: string): Promise<RosterMember[]> {
-  const { gathering } = await requireGatheringAccess(gatheringId);
+  const { scope } = await requireGatheringAccess(gatheringId);
 
   const members = await prisma.member.findMany({
     where: {
       status: "ACTIVE",
-      ...(gathering.wingId ? { wingId: gathering.wingId } : {}),
+      ...(scope === "all" ? {} : { wingId: { in: scope } }),
     },
     include: { wing: true, attendance: { where: { gatheringId } } },
     orderBy: { surname: "asc" },
@@ -87,14 +91,17 @@ export async function checkInAction(
   memberId: string,
   method: "MANUAL" | "QR_CODE",
 ): Promise<CheckInActionResult> {
-  const { actor, gathering } = await requireGatheringAccess(gatheringId);
+  const { actor, gathering, scope } = await requireGatheringAccess(gatheringId);
 
   if (gathering.isClosed) {
     return { error: "This gathering is closed. No further check-ins are accepted." };
   }
 
+  // Same message for a member outside this gathering's wings as for one
+  // who does not exist, so a member number cannot be used to look up
+  // another wing's member by name.
   const member = await prisma.member.findUnique({ where: { id: memberId } });
-  if (!member || member.status !== "ACTIVE") {
+  if (!member || member.status !== "ACTIVE" || !memberInScope(scope, member.wingId)) {
     return { error: "This member cannot be checked in." };
   }
 
@@ -136,11 +143,11 @@ export async function checkInByMemberNumber(
   gatheringId: string,
   memberNumber: string,
 ): Promise<CheckInActionResult> {
-  await requireGatheringAccess(gatheringId);
+  const { scope } = await requireGatheringAccess(gatheringId);
 
   const member = await prisma.member.findUnique({ where: { memberNumber: memberNumber.trim() } });
-  if (!member) {
-    return { error: `No member found with number ${memberNumber}.` };
+  if (!member || !memberInScope(scope, member.wingId)) {
+    return { error: `No member found with number ${memberNumber} for this gathering.` };
   }
 
   return checkInAction(gatheringId, member.id, "QR_CODE");
@@ -162,7 +169,7 @@ export async function checkInByFace(
   embedding: number[],
   livenessScore: number,
 ): Promise<CheckInActionResult> {
-  const { actor, gathering } = await requireGatheringAccess(gatheringId);
+  const { actor, gathering, scope } = await requireGatheringAccess(gatheringId);
 
   if (gathering.isClosed) {
     return { error: "This gathering is closed. No further check-ins are accepted." };
@@ -192,7 +199,7 @@ export async function checkInByFace(
   }
 
   const member = await prisma.member.findUnique({ where: { id: match.memberId } });
-  if (!member || member.status !== "ACTIVE") {
+  if (!member || member.status !== "ACTIVE" || !memberInScope(scope, member.wingId)) {
     return {};
   }
 
@@ -235,10 +242,13 @@ export async function checkInByFace(
 }
 
 export async function undoCheckIn(gatheringId: string, recordId: string): Promise<void> {
-  const { actor } = await requireGatheringAccess(gatheringId);
+  const { actor, scope } = await requireGatheringAccess(gatheringId);
 
   const record = await prisma.attendanceRecord.findUnique({ where: { id: recordId } });
-  if (!record || record.gatheringId !== gatheringId) {
+  const recordMember = record
+    ? await prisma.member.findUnique({ where: { id: record.memberId }, select: { wingId: true } })
+    : null;
+  if (!record || record.gatheringId !== gatheringId || !recordMember || !memberInScope(scope, recordMember.wingId)) {
     throw new Error("This check-in no longer exists.");
   }
 

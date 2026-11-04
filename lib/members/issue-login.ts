@@ -57,6 +57,12 @@ export async function issueLoginForMember(
       "This member has no member number yet. A member number is issued on approval, before a login can be issued.",
     );
   }
+  // An inactive or deceased member's login was switched off by the status
+  // change (lib/members/status-change.ts). Issuing here would switch it
+  // back on, so only an active member can be given a login.
+  if (member.status !== "ACTIVE") {
+    throw new IssueLoginError("Only an active member can be given a login. Change their status first.");
+  }
 
   const temporaryPassword = generateTemporaryPassword();
   const passwordHash = await bcrypt.hash(temporaryPassword, PASSWORD_HASH_ROUNDS);
@@ -72,6 +78,7 @@ export async function issueLoginForMember(
             passwordHash,
             isActive: true,
             mustChangePassword: true,
+            sessionVersion: { increment: 1 },
             temporaryPasswordIssuedAt: now,
             temporaryPasswordIssuedById: actorId,
           },

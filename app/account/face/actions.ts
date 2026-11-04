@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { ageInYears } from "@/lib/members/age";
 import { saveEnrolmentForMember } from "@/lib/face/save-enrolment";
@@ -37,7 +37,7 @@ export async function saveFaceEnrolment(input: SaveFaceEnrolmentInput): Promise<
     return { ok: false, error: "That could not be saved. Try capturing again." };
   }
 
-  const user = await getCurrentUser();
+  const user = await requireMember();
   if (!user.memberId) {
     return { ok: false, error: "This account is not linked to a member record." };
   }
@@ -82,7 +82,7 @@ export async function saveFaceEnrolment(input: SaveFaceEnrolmentInput): Promise<
  * nothing further to confirm here.
  */
 export async function withdrawFaceEnrolment(): Promise<void> {
-  const user = await getCurrentUser();
+  const user = await requireMember();
   if (!user.memberId) {
     throw new Error("This account is not linked to a member record.");
   }

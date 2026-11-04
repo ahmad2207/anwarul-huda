@@ -14,7 +14,7 @@ import { ConsentSectionForm } from "./consent-form";
 import { FaceSectionForm } from "./face-form";
 
 type HouseholdMemberWithLink = HouseholdMember & {
-  linkedMember: Pick<Member, "id" | "memberNumber" | "surname" | "firstName" | "fullNameAsWritten"> | null;
+  linkedMember: Pick<Member, "id" | "memberNumber"> | null;
 };
 
 type MemberWithRelations = Member & {
@@ -43,7 +43,10 @@ export default async function RecordSectionPage({ params }: { params: Promise<{ 
     where: { id: user.memberId },
     include: {
       wing: true,
-      household: { include: { linkedMember: true } },
+      // Only the number the member typed is sent back, never the linked
+      // person's name or record: member numbers are sequential, so showing
+      // more would let any member read the register one number at a time.
+      household: { include: { linkedMember: { select: { id: true, memberNumber: true } } } },
       serviceAreas: { select: { serviceAreaId: true } },
     },
   });

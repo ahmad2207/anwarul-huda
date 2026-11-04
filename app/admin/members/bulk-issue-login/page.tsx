@@ -1,5 +1,4 @@
 import { requireRole } from "@/lib/auth";
-import { canViewAllWings } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { formatMemberName } from "@/lib/members/display-name";
 import { PageHeader } from "@/components/page-header";
@@ -17,12 +16,13 @@ import { BulkIssueLoginForm } from "./bulk-issue-login-form";
 // is what excludes a row here, not a missing phone.
 export default async function BulkIssueLoginPage() {
   const user = await requireRole(["WING_ADMIN"]);
-  const canSeeAllWings = canViewAllWings(user);
-  const wingScope = canSeeAllWings ? {} : { wingId: { in: user.wingIds } };
+  // Same scope as the actions: only a super admin issues logins across
+  // every wing.
+  const wingScope = user.roles.includes("SUPER_ADMIN") ? {} : { wingId: { in: user.wingIds } };
 
   const [eligible, notYetApproved, alreadyIssuedCount] = await Promise.all([
     prisma.member.findMany({
-      where: { ...wingScope, memberNumber: { not: null }, user: null },
+      where: { ...wingScope, status: "ACTIVE", memberNumber: { not: null }, user: null },
       include: { wing: true },
       orderBy: [{ surname: "asc" }, { firstName: "asc" }],
       take: 500,
@@ -32,7 +32,7 @@ export default async function BulkIssueLoginPage() {
       orderBy: [{ surname: "asc" }, { firstName: "asc" }],
       take: 500,
     }),
-    prisma.member.count({ where: { ...wingScope, user: { isNot: null } } }),
+    prisma.member.count({ where: { ...wingScope, status: "ACTIVE", user: { isNot: null } } }),
   ]);
 
   return (

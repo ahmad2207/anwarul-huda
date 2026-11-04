@@ -21,7 +21,7 @@ export default async function GatheringAttendeeListPage({ params }: { params: Pr
     notFound();
   }
 
-  const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
+  const canSeeAll = canViewAllWings(user);
   if (!canSeeAll && (!gathering.wingId || !user.wingIds.includes(gathering.wingId))) {
     notFound();
   }

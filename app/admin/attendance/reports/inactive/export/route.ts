@@ -12,7 +12,7 @@ const EXPORT_LIMIT = 10000; // matches the "assume ten thousand members" ceiling
 
 async function handleGet(request: NextRequest) {
   const user = await requireRole(["ATTENDANCE_OFFICER", "WING_ADMIN"]);
-  const canSeeAll = canViewAllWings(user) || user.roles.includes("ATTENDANCE_OFFICER");
+  const canSeeAll = canViewAllWings(user);
   const scope: WingScope = canSeeAll ? null : user.wingIds;
 
   const params = request.nextUrl.searchParams;

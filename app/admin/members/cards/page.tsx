@@ -17,10 +17,13 @@ export default async function MemberCardsSheetPage({
 }) {
   const user = await requireRole(["WING_ADMIN", "FINANCE_OFFICER", "ATTENDANCE_OFFICER"]);
   const params = await searchParams;
-  const wingId = typeof params.wingId === "string" ? params.wingId : "";
+  const requestedWingId = typeof params.wingId === "string" ? params.wingId : "";
 
   const wings = await prisma.wing.findMany({ orderBy: { name: "asc" } });
   const visibleWings = canViewAllWings(user) ? wings : wings.filter((w) => user.wingIds.includes(w.id));
+  // A wing from the URL is only honoured when it is one this user can see,
+  // so editing the address cannot widen the scope to another wing.
+  const wingId = visibleWings.some((w) => w.id === requestedWingId) ? requestedWingId : "";
 
   const members = await prisma.member.findMany({
     where: {

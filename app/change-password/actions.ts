@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { unstable_update } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
@@ -43,8 +44,15 @@ export async function changePassword(
     data: {
       passwordHash: newPasswordHash,
       mustChangePassword: false,
+      sessionVersion: { increment: 1 },
     },
   });
+
+  // The increment above signs out every other session on this account,
+  // including one opened with the old or temporary password by somebody
+  // else. This session proved the current password, so it is refreshed
+  // to the new version rather than signed out too.
+  await unstable_update({});
 
   // A successful change is exactly the kind of thing that should clear
   // any accumulated failures against this account: whatever was

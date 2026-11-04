@@ -1,5 +1,5 @@
 import { normalizeNigerianPhone } from "@/lib/phone";
-import { canAccessWing } from "@/lib/authorization";
+import { canAccessWing, canEditMemberRecords } from "@/lib/authorization";
 import type { RoleName } from "@prisma/client";
 import { IMPORT_FIELDS } from "./system-fields";
 
@@ -35,6 +35,8 @@ export interface ExistingMemberRef {
   surname: string | null;
   firstName: string | null;
   phone: string;
+  /** Checked against the importer's wings: another wing's member is never offered for update or shown by name. */
+  wingId: string;
 }
 
 export interface ImportRefData {
@@ -255,7 +257,16 @@ export function validateImportRow(
     }
   }
 
-  const duplicate = phone ? refs.existingByPhone.get(phone) ?? null : null;
+  const phoneMatch = phone ? refs.existingByPhone.get(phone) ?? null : null;
+  // A phone that already belongs to a member in a wing this importer
+  // cannot edit is refused outright (CLAUDE.md rule 5). The row cannot be
+  // created anyway, since phone numbers are unique, and offering it as a
+  // duplicate would show that member's name and let "update" overwrite
+  // their record from another wing.
+  const duplicate = phoneMatch && canEditMemberRecords(refs.actor, phoneMatch.wingId) ? phoneMatch : null;
+  if (phoneMatch && !duplicate) {
+    fail("phone", "This phone number already belongs to a member outside your wing. Ask a super administrator to check it.");
+  }
 
   const classification: RowClassification = issues.some((issue) => issue.severity === "error")
     ? "fail"

@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import { createSignedFileUrl } from "@/lib/storage";
 import { canViewContent } from "@/lib/content/visibility";
 
@@ -23,7 +23,7 @@ export interface RequestFileUrlResult {
  * one download.
  */
 export async function requestContentFileUrl(contentId: string): Promise<RequestFileUrlResult> {
-  const user = await getCurrentUser();
+  const user = await requireMember();
   if (!user.memberId) {
     return { error: "This account is not linked to a member record." };
   }

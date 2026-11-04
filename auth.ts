@@ -27,8 +27,9 @@ assertRequiredEnvVars();
 // strategy. Database sessions rely on the adapter's account linking flow,
 // which credentials login never goes through, so we do not configure a
 // Prisma adapter here. The session itself is a signed JWT, not a database
-// row. Revocation is by deactivating the User (isActive) or rotating
-// AUTH_SECRET, not by deleting a session record.
+// row. Revocation is by deactivating the User (isActive), by any password
+// write (each one increments User.sessionVersion, checked in lib/auth.ts),
+// or by rotating AUTH_SECRET, not by deleting a session record.
 
 // Both rate limiting layers live inside authorize(), not in
 // app/login/actions.ts, even though that is the only place in this app
@@ -86,7 +87,7 @@ async function getClientIpForAuthorize(): Promise<string> {
   }
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -148,15 +149,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           roles,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.userId = user.id;
-        token.roles = (user as { roles: string[] }).roles;
+        token.roles = user.roles;
+        token.sessionVersion = user.sessionVersion;
+      }
+      // Only ever triggered from the server (app/change-password/actions.ts,
+      // after a successful change). The new version is read from the
+      // database, never taken from the update payload, so an update cannot
+      // be used to revive a token that has been revoked.
+      if (trigger === "update" && token.userId) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.userId as string },
+          select: { sessionVersion: true },
+        });
+        if (current) token.sessionVersion = current.sessionVersion;
       }
       return token;
     },
@@ -164,6 +178,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.userId as string;
         session.user.roles = (token.roles as string[]) ?? [];
+        session.user.sessionVersion = (token.sessionVersion as number | undefined) ?? 0;
       }
       return session;
     },

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireWingAccess } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
-import { markSectionComplete } from "@/app/account/record/[section]/actions";
+import { markSectionComplete } from "@/lib/members/mark-section-complete";
 import { completeIncompleteMemberSchema } from "./schema";
 
 export async function completeIncompleteMember(

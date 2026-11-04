@@ -56,6 +56,7 @@ export async function resetStaffPassword(
     data: {
       passwordHash,
       mustChangePassword: true,
+      sessionVersion: { increment: 1 },
       temporaryPasswordIssuedAt: now,
       temporaryPasswordIssuedById: actor.id,
     },

@@ -56,7 +56,7 @@ export const registrationSchema = z
     islamicEducation: optionalText(500),
     otherSkills: optionalText(500),
     availability: z.preprocess(toStringList, z.array(z.string().max(100))),
-    serviceAreaIds: z.array(z.string()),
+    serviceAreaIds: z.array(z.string()).max(50, "Choose fewer service areas."),
     accessNeeds: optionalText(500),
 
     nokName: optionalText(200),
@@ -71,7 +71,7 @@ export const registrationSchema = z
     consentComms: z.boolean(),
     consentBiometric: z.boolean(),
 
-    household: z.preprocess(parseHouseholdJson, z.array(householdRowSchema)),
+    household: z.preprocess(parseHouseholdJson, z.array(householdRowSchema).max(20, "Add up to 20 household members here. The office can add more.")),
 
     // Shared with the forced first change and any later one
     // (app/change-password/schema.ts): one password policy, not a

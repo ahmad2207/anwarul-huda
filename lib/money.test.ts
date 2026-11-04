@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addKobo, formatNaira, nairaToKobo, subtractKobo, sumKobo } from "./money";
+import { addKobo, formatNaira, MAX_KOBO, MoneyError, nairaToKobo, parseNairaText, subtractKobo, sumKobo } from "./money";
 
 describe("money", () => {
   it("adds and subtracts kobo amounts", () => {
@@ -28,5 +28,30 @@ describe("money", () => {
     expect(formatNaira(125000)).toBe("₦1,250.00");
     expect(formatNaira(50)).toBe("₦0.50");
     expect(formatNaira(-125000)).toBe("-₦1,250.00");
+  });
+});
+
+describe("parseNairaText", () => {
+  it("reads whole and two-place Naira amounts straight to kobo", () => {
+    expect(parseNairaText("1250")).toBe(125000);
+    expect(parseNairaText("1,250.5")).toBe(125050);
+    expect(parseNairaText(" 0.01 ")).toBe(1);
+    expect(parseNairaText("19.99")).toBe(1999);
+  });
+
+  it("refuses anything that is not a plain decimal amount", () => {
+    for (const input of ["1e3", "0x10", "-5", "12.345", "", "abc", "Infinity", "1 000"]) {
+      expect(() => parseNairaText(input), input).toThrow(MoneyError);
+    }
+  });
+
+  it("refuses zero unless the caller allows it", () => {
+    expect(() => parseNairaText("0")).toThrow(MoneyError);
+    expect(parseNairaText("0", { allowZero: true })).toBe(0);
+  });
+
+  it("refuses an amount larger than a kobo column can hold", () => {
+    expect(parseNairaText("21474836.47")).toBe(MAX_KOBO);
+    expect(() => parseNairaText("21474836.48")).toThrow(MoneyError);
   });
 });

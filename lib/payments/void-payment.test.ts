@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { recordPayment } from "./record-payment";
-import { applyVoid } from "./void-payment";
+import { applyVoid, PaymentAlreadyVoidedError } from "./void-payment";
 
 // Integration test against the real local Postgres database, matching
 // Phase 3's own accept criterion: a void reverses the contribution
@@ -103,5 +103,37 @@ describe("applyVoid", () => {
 
     const voided = await prisma.$transaction((tx) => applyVoid(tx, payment, "Wrong fund", actorId));
     expect(voided.status).toBe("VOIDED");
+  });
+  it("reverses the money once when the same payment is voided twice at the same moment", async () => {
+    const payment = await prisma.$transaction((tx) =>
+      recordPayment(tx, {
+        memberId,
+        amountKobo: 50000,
+        method: "CASH",
+        reference: null,
+        narration: null,
+        actorId,
+        cashSessionId: null,
+        plan: { id: planId, frequency: "MONTHLY", amountKobo: 50000 },
+        fundId: null,
+      }),
+    );
+    const recordBefore = await prisma.contributionRecord.findUniqueOrThrow({
+      where: { id: payment.contributionRecordId! },
+    });
+
+    const outcomes = await Promise.allSettled([
+      prisma.$transaction((tx) => applyVoid(tx, payment, "Duplicate", actorId)),
+      prisma.$transaction((tx) => applyVoid(tx, payment, "Duplicate", actorId)),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
+    const refused = outcomes.find((outcome) => outcome.status === "rejected");
+    expect(refused && "reason" in refused ? refused.reason : null).toBeInstanceOf(PaymentAlreadyVoidedError);
+
+    const recordAfter = await prisma.contributionRecord.findUniqueOrThrow({
+      where: { id: payment.contributionRecordId! },
+    });
+    expect(recordAfter.amountPaidKobo).toBe(recordBefore.amountPaidKobo - 50000);
   });
 });

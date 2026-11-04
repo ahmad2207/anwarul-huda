@@ -1,4 +1,5 @@
 import { formatNaira } from "@/lib/money";
+import { formatLagos } from "@/lib/timezone";
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -27,7 +28,7 @@ export function formatReceiptText(data: ReceiptData): string {
     `Amount: ${formatNaira(data.amountKobo)}`,
     `For: ${data.purpose}`,
     `Method: ${data.methodLabel}${data.reference ? ` (ref: ${data.reference})` : ""}`,
-    `Date: ${data.paidAt.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}`,
+    `Date: ${formatLagos(data.paidAt, { dateStyle: "medium", timeStyle: "short" })}`,
     `Collected by: ${data.collectedByLabel}`,
   ];
 

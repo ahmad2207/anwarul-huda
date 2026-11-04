@@ -20,7 +20,15 @@ export async function closeSession(
   varianceNote: string | null,
   actorId: string,
 ): Promise<CloseSessionResult> {
-  if (session.status === "CLOSED") {
+  // Locks the session row for the rest of this transaction, the same lock
+  // a cash payment takes before attaching to it (app/admin/payments/new/
+  // actions.ts), then reads the status again under that lock. A payment
+  // in flight either commits before the total below is taken, or waits
+  // and then finds the session closed. A second close at the same moment
+  // finds it closed too, instead of overwriting the first close's count.
+  await tx.$queryRaw`SELECT id FROM cash_sessions WHERE id = ${session.id} FOR UPDATE`;
+  const current = await tx.cashSession.findUnique({ where: { id: session.id } });
+  if (!current || current.status === "CLOSED") {
     return { error: "This cash session is already closed and cannot be reopened." };
   }
 
@@ -28,7 +36,7 @@ export async function closeSession(
     where: { cashSessionId: session.id, method: "CASH", status: "CONFIRMED" },
     _sum: { amountKobo: true },
   });
-  const expectedCashKobo = session.openingFloatKobo + (cashTotal._sum.amountKobo ?? 0);
+  const expectedCashKobo = current.openingFloatKobo + (cashTotal._sum.amountKobo ?? 0);
   const varianceKobo = countedCashKobo - expectedCashKobo;
 
   if (varianceKobo !== 0 && !varianceNote) {
@@ -57,7 +65,7 @@ export async function closeSession(
       action: "cash_session.closed",
       entity: "CashSession",
       entityId: session.id,
-      before: session,
+      before: current,
       after: updated,
     },
     tx,

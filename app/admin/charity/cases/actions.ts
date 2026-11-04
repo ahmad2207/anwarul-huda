@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { MoneyError, nairaToKobo } from "@/lib/money";
+import { MoneyError, parseNairaText } from "@/lib/money";
 import {
   approveCase,
   closeCase,
@@ -26,12 +26,8 @@ export interface ActionState {
 }
 
 function toKobo(value: string): { kobo: number } | { error: string } {
-  const naira = Number(value);
-  if (!Number.isFinite(naira) || naira <= 0) {
-    return { error: "Enter an amount greater than zero." };
-  }
   try {
-    return { kobo: nairaToKobo(naira) };
+    return { kobo: parseNairaText(value) };
   } catch (error) {
     return { error: error instanceof MoneyError ? error.message : "Invalid amount." };
   }

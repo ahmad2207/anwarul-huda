@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { formatNaira } from "@/lib/money";
 import { StatusTag } from "@/components/status-tag";
 import { closeCashSession, openCashSession } from "./actions";
+import { formatLagosDateTime } from "@/lib/timezone";
 
 export function OpenSessionForm() {
   const [state, formAction, isPending] = useActionState(openCashSession, {});
@@ -51,7 +52,7 @@ export function SessionRow({ session }: { session: SessionWithUsers }) {
         <span>
           <span className="font-medium">{session.label}</span> &middot; opened by{" "}
           {session.openedBy.email ?? session.openedBy.phone} &middot;{" "}
-          {session.openedAt.toLocaleString("en-NG")} &middot; float {formatNaira(session.openingFloatKobo)}
+          {formatLagosDateTime(session.openedAt)} &middot; float {formatNaira(session.openingFloatKobo)}
         </span>
         {session.status === "OPEN" ? (
           <div className="flex items-center gap-2">

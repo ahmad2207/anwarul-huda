@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createPayment, searchMembers } from "./actions";
-import type { MemberSearchResult } from "./actions";
+import { createPayment, loadPayablePeriods, searchMembers } from "./actions";
+import type { MemberSearchResult, PayablePeriodOption } from "./actions";
 
 export function PaymentForm({
   plans,
@@ -26,13 +26,40 @@ export function PaymentForm({
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [targetType, setTargetType] = useState<"plan" | "fund">("plan");
+  const [targetId, setTargetId] = useState("");
   const [method, setMethod] = useState<"CASH" | "POS" | "BANK_TRANSFER">("CASH");
+  const [periods, setPeriods] = useState<PayablePeriodOption[]>([]);
+
+  // Only plans for every wing, or for the chosen member's own wing.
+  const availablePlans = selectedMember
+    ? plans.filter((plan) => !plan.wingId || plan.wingId === selectedMember.wingId)
+    : plans;
 
   useEffect(() => {
     if (state.paymentId) {
       router.push(`/admin/payments/${state.paymentId}`);
     }
   }, [state.paymentId, router]);
+
+  // The periods this payment can settle, oldest unpaid first, reloaded
+  // whenever the member or plan changes.
+  useEffect(() => {
+    if (!selectedMember || targetType !== "plan" || !targetId) {
+      setPeriods([]);
+      return;
+    }
+    let cancelled = false;
+    loadPayablePeriods(selectedMember.id, targetId)
+      .then((found) => {
+        if (!cancelled) setPeriods(found);
+      })
+      .catch(() => {
+        if (!cancelled) setPeriods([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMember, targetType, targetId]);
 
   function handleQueryChange(value: string) {
     setQuery(value);
@@ -73,6 +100,7 @@ export function PaymentForm({
                       className="w-full rounded px-2 py-1 text-left text-sm hover:bg-muted"
                       onClick={() => {
                         setSelectedMember(result);
+                        setTargetId("");
                         setResults([]);
                       }}
                     >
@@ -91,7 +119,10 @@ export function PaymentForm({
                 name="targetType"
                 value="plan"
                 checked={targetType === "plan"}
-                onChange={() => setTargetType("plan")}
+                onChange={() => {
+                  setTargetType("plan");
+                  setTargetId("");
+                }}
               />
               Contribution plan
             </label>
@@ -101,27 +132,64 @@ export function PaymentForm({
                 name="targetType"
                 value="fund"
                 checked={targetType === "fund"}
-                onChange={() => setTargetType("fund")}
+                onChange={() => {
+                  setTargetType("fund");
+                  setTargetId("");
+                }}
               />
               Fund donation
             </label>
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">{targetType === "plan" ? "Plan" : "Fund"}</Label>
+            <Label htmlFor="payment-target" className="text-xs">
+              {targetType === "plan" ? "Plan" : "Fund"}
+            </Label>
             <select
+              id="payment-target"
               name="targetId"
               required
+              value={targetId}
+              onChange={(event) => setTargetId(event.target.value)}
               className="h-8 rounded-md border border-input bg-background px-2 text-sm"
             >
               <option value="">Choose...</option>
-              {(targetType === "plan" ? plans : funds).map((item) => (
+              {(targetType === "plan" ? availablePlans : funds).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
               ))}
             </select>
           </div>
+
+          {targetType === "plan" && periods.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="payment-period" className="text-xs">
+                Period this payment is for
+              </Label>
+              {/* Keyed on the list so the default resets to the oldest
+                  unpaid period whenever the member or plan changes. */}
+              <select
+                key={periods.map((period) => period.periodLabel).join("|")}
+                id="payment-period"
+                name="periodLabel"
+                defaultValue={periods[0]?.periodLabel}
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              >
+                {periods.map((period) => (
+                  <option key={period.periodLabel} value={period.periodLabel}>
+                    {period.label}
+                    {period.isCurrent ? " (current)" : ""}, {period.outstanding} outstanding
+                  </option>
+                ))}
+              </select>
+              {periods.length > 1 ? (
+                <p className="text-xs text-muted-foreground">
+                  The oldest unpaid period is chosen first. Change it only if the member asked to pay a different one.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-3">
             <div className="flex flex-col gap-1">

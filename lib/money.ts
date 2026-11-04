@@ -42,6 +42,31 @@ export function nairaToKobo(naira: number): number {
   return kobo;
 }
 
+/** The largest amount a kobo column (Postgres integer) can hold. */
+export const MAX_KOBO = 2_147_483_647;
+
+/**
+ * Parses a Naira amount as typed into a form ("1250", "1,250.50") straight
+ * to kobo, digit by digit, with no float involved. Only plain decimal
+ * input is accepted: "1e3", "0x10", negatives and more than two decimal
+ * places are refused rather than quietly read as some other number.
+ */
+export function parseNairaText(text: string, options: { allowZero?: boolean } = {}): number {
+  const cleaned = text.trim().replace(/,/g, "");
+  const match = /^(\d{1,10})(?:\.(\d{1,2}))?$/.exec(cleaned);
+  if (!match) {
+    throw new MoneyError("Enter the amount in Naira, for example 1250 or 1250.50.");
+  }
+  const kobo = Number(match[1]) * KOBO_PER_NAIRA + Number((match[2] ?? "").padEnd(2, "0"));
+  if (kobo > MAX_KOBO) {
+    throw new MoneyError("That amount is too large. Check it and try again.");
+  }
+  if (kobo === 0 && !options.allowZero) {
+    throw new MoneyError("Enter an amount greater than zero.");
+  }
+  return kobo;
+}
+
 /** Converts kobo to a Naira number, for calculations that need it. Display should use formatNaira instead. */
 export function koboToNaira(kobo: number): number {
   assertInteger(kobo, "kobo");

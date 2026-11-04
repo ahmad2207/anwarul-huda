@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePeriod } from "./period";
+import { computePeriod, describePeriod } from "./period";
 
 // A Lagos-local instant is built as UTC noon on the calendar day, well
 // clear of the UTC+1 boundary, so these tests are not sensitive to
@@ -62,5 +62,15 @@ describe("computePeriod", () => {
     const later = computePeriod("ONE_OFF", lagosNoon(2027, 6, 30));
     expect(first.periodLabel).toBe("ONE-OFF");
     expect(later.periodLabel).toBe("ONE-OFF");
+  });
+});
+
+describe("describePeriod", () => {
+  it("puts each period label into plain words", () => {
+    expect(describePeriod("2026-09")).toBe("September 2026");
+    expect(describePeriod("2026-Q3")).toBe("Quarter 3, 2026");
+    expect(describePeriod("2026-W07")).toBe("Week 7, 2026");
+    expect(describePeriod("2026")).toBe("2026");
+    expect(describePeriod("ONE-OFF")).toBe("One-off");
   });
 });

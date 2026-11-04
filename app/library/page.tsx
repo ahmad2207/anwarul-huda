@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
+import { formatLagosDate, parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
 const PAGE_SIZE = 20;
 
@@ -180,7 +180,7 @@ export default async function LibraryPage({
             </div>
             <p className="text-sm text-muted-foreground">
               {item.author ?? "Unknown"}
-              {item.deliveredOn ? ` · ${item.deliveredOn.toLocaleDateString("en-NG")}` : ""}
+              {item.deliveredOn ? ` · ${formatLagosDate(item.deliveredOn)}` : ""}
             </p>
             {item.summary ? <p className="text-muted-foreground">{item.summary}</p> : null}
             {item.tags.length > 0 ? (

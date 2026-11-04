@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { canViewContent } from "@/lib/content/visibility";
 import { createSignedFileUrl } from "@/lib/storage";
 import { FileButton } from "./file-button";
+import { formatLagosDate } from "@/lib/timezone";
 
 const TYPE_LABELS: Record<string, string> = {
   SERMON: "Sermon",
@@ -45,7 +46,7 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
         <h1 className="text-xl font-semibold">{item.title}</h1>
         <p className="text-base text-muted-foreground">
           {item.author ?? "Unknown"}
-          {item.deliveredOn ? ` · ${item.deliveredOn.toLocaleDateString("en-NG")}` : ""}
+          {item.deliveredOn ? ` · ${formatLagosDate(item.deliveredOn)}` : ""}
         </p>
       </div>
 

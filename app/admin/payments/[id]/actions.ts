@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { applyVoid } from "@/lib/payments/void-payment";
+import { applyVoid, PaymentAlreadyVoidedError } from "@/lib/payments/void-payment";
 import { voidPaymentSchema } from "./schema";
 
 export interface VoidActionState {
@@ -30,7 +30,14 @@ export async function voidPayment(
     return { error: "This payment has already been voided." };
   }
 
-  await prisma.$transaction((tx) => applyVoid(tx, payment, parsed.data.reason, actor.id));
+  try {
+    await prisma.$transaction((tx) => applyVoid(tx, payment, parsed.data.reason, actor.id));
+  } catch (error) {
+    if (error instanceof PaymentAlreadyVoidedError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
 
   revalidatePath(`/admin/payments/${paymentId}`);
   return {};

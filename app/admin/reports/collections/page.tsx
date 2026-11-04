@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
-import { groupCollections, loadCollectionsPayments } from "@/lib/reports/collections";
+import { groupCollections, loadCollectionsPayments, parseCollectionsGroupBy, parsePaymentMethodFilter } from "@/lib/reports/collections";
 import type { CollectionsGroupBy, CollectionsRow } from "@/lib/reports/collections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,12 +30,12 @@ export default async function CollectionsReportPage({
   await requireRole(["FINANCE_OFFICER"]);
   const params = await searchParams;
 
-  const groupBy = (typeof params.groupBy === "string" ? params.groupBy : "period") as CollectionsGroupBy;
+  const groupBy = parseCollectionsGroupBy(params.groupBy);
   const from = parseLagosDayStart(params.from);
   const to = parseLagosDayEnd(params.to);
   const wingId = typeof params.wingId === "string" ? params.wingId : "";
   const planId = typeof params.planId === "string" ? params.planId : "";
-  const method = typeof params.method === "string" ? params.method : "";
+  const method = parsePaymentMethodFilter(params.method) ?? "";
 
   const [wings, plans] = await Promise.all([
     prisma.wing.findMany({ orderBy: { name: "asc" } }),
@@ -47,7 +47,7 @@ export default async function CollectionsReportPage({
     to,
     wingId: wingId || undefined,
     planId: planId || undefined,
-    method: (method || undefined) as "CASH" | "POS" | "BANK_TRANSFER" | undefined,
+    method: method || undefined,
   };
 
   const payments = await loadCollectionsPayments(filter);

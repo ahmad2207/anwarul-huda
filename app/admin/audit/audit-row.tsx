@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { computeAuditDiff } from "@/lib/audit/diff";
+import { formatLagosDateTime } from "@/lib/timezone";
 
 export interface AuditRowData {
   id: string;
@@ -28,7 +29,7 @@ export function AuditRow({ entry }: { entry: AuditRowData }) {
   return (
     <>
       <tr className="border-b last:border-0 hover:bg-muted/30">
-        <td className="p-2 whitespace-nowrap">{new Date(entry.createdAt).toLocaleString("en-NG")}</td>
+        <td className="p-2 whitespace-nowrap">{formatLagosDateTime(new Date(entry.createdAt))}</td>
         <td className="p-2">{entry.actorLabel}</td>
         <td className="p-2">{entry.action}</td>
         <td className="p-2">

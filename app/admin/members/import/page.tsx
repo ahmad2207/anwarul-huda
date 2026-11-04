@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ImportWizard } from "./import-wizard";
 import { RecentImports } from "./recent-imports";
 import type { RecentImportBatch } from "./recent-imports";
+import { formatLagosDateTime } from "@/lib/timezone";
 
 export default async function MembersImportPage() {
   const actor = await requireRole(["WING_ADMIN"]);
@@ -21,7 +22,7 @@ export default async function MembersImportPage() {
     rowCount: batch.rowCount,
     successCount: batch.successCount,
     errorCount: batch.errorCount,
-    createdAt: batch.createdAt.toLocaleString("en-NG"),
+    createdAt: formatLagosDateTime(batch.createdAt),
     uploadedByLabel: batch.uploadedBy.email ?? batch.uploadedBy.phone ?? "Unknown",
   }));
 

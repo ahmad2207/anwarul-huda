@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { getArrearsReport } from "./arrears";
+import { getArrearsReport, getArrearsSummary } from "./arrears";
 
 // Integration test against the real local Postgres database: this is raw
 // SQL (a column-to-column comparison Prisma's query builder cannot
@@ -129,5 +129,52 @@ describe("getArrearsReport", () => {
     const otherWing = await prisma.wing.findUniqueOrThrow({ where: { code: "MENS" } });
     const rows = await getArrearsReport(otherWing.id);
     expect(rows.find((r) => r.memberId === memberInArrearsId)).toBeUndefined();
+  });
+});
+
+describe("getArrearsReport, periods still running", () => {
+  const TAG = "ArrearsRunningFixture";
+  let memberId: string;
+  let planId: string;
+
+  beforeAll(async () => {
+    const wing = await prisma.wing.findUniqueOrThrow({ where: { code: "YOUTH" } });
+    const plan = await prisma.contributionPlan.create({
+      data: { name: `${TAG} plan`, amountKobo: 50000, frequency: "MONTHLY" },
+    });
+    planId = plan.id;
+    const member = await prisma.member.create({
+      data: { surname: TAG, firstName: "Current", gender: "MALE", status: "ACTIVE", source: "ADMIN_ENTRY", wingId: wing.id },
+    });
+    memberId = member.id;
+    await prisma.contributionRecord.create({
+      data: {
+        memberId,
+        planId,
+        periodLabel: `${TAG}-RUNNING`,
+        periodStart: new Date(Date.now() - 86_400_000),
+        periodEnd: new Date(Date.now() + 86_400_000),
+        amountDueKobo: 50000,
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.contributionRecord.deleteMany({ where: { planId } });
+    await prisma.member.deleteMany({ where: { surname: TAG } });
+    await prisma.contributionPlan.delete({ where: { id: planId } });
+    await prisma.$disconnect();
+  });
+
+  it("does not count a period that has not ended yet", async () => {
+    const rows = await getArrearsReport(undefined, { search: TAG });
+    expect(rows.find((row) => row.memberId === memberId)).toBeUndefined();
+  });
+
+  it("counts it once the period has ended", async () => {
+    const later = new Date(Date.now() + 2 * 86_400_000);
+    const rows = await getArrearsReport(undefined, { search: TAG, now: later });
+    expect(rows.find((row) => row.memberId === memberId)?.outstandingKobo).toBe(50000);
+    expect(await getArrearsSummary(undefined, { search: TAG, now: later })).toEqual({ memberCount: 1, outstandingKobo: 50000 });
   });
 });

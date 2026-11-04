@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
+import { formatLagosDateTime } from "@/lib/timezone";
 import { prisma } from "@/lib/prisma";
 import { formatNaira } from "@/lib/money";
 import { formatReceiptText } from "@/lib/receipt-text";
@@ -63,7 +64,7 @@ export default async function PaymentReceiptPage({ params }: { params: Promise<{
 
       {payment.status === "VOIDED" ? (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive">
-          This payment was voided on {payment.voidedAt?.toLocaleString("en-NG")} by{" "}
+          This payment was voided on {payment.voidedAt ? formatLagosDateTime(payment.voidedAt) : ""} by{" "}
           {payment.voidedBy?.email ?? payment.voidedBy?.phone}. Reason: {payment.voidReason}
         </p>
       ) : null}

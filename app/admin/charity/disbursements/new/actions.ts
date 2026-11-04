@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { MoneyError, nairaToKobo } from "@/lib/money";
+import { MoneyError, parseNairaText } from "@/lib/money";
 import { recordDisbursement } from "@/lib/charity/record-disbursement";
 import { uploadFile } from "@/lib/storage";
 import { disbursementSchema } from "./schema";
@@ -29,13 +29,9 @@ export async function createDisbursementAction(
     return { error: parsed.error.issues[0]?.message ?? "Check the values you entered and try again." };
   }
 
-  const naira = Number(parsed.data.amount);
-  if (!Number.isFinite(naira) || naira <= 0) {
-    return { error: "Enter an amount greater than zero." };
-  }
   let amountKobo: number;
   try {
-    amountKobo = nairaToKobo(naira);
+    amountKobo = parseNairaText(parsed.data.amount);
   } catch (error) {
     return { error: error instanceof MoneyError ? error.message : "Invalid amount." };
   }

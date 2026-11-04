@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
-import { MoneyError, nairaToKobo } from "@/lib/money";
+import { MoneyError, parseNairaText } from "@/lib/money";
 import { closeSession } from "@/lib/cash-sessions/close-session";
 import { closeSessionSchema, openSessionSchema } from "./schema";
 
@@ -12,13 +12,10 @@ export interface ActionState {
   error?: string;
 }
 
+// A float or a count can be zero (an empty till), but never negative.
 function nairaStringToKobo(value: string): { amountKobo: number } | { error: string } {
-  const naira = Number(value || "0");
-  if (!Number.isFinite(naira) || naira < 0) {
-    return { error: "Enter a valid amount." };
-  }
   try {
-    return { amountKobo: nairaToKobo(naira) };
+    return { amountKobo: parseNairaText(value || "0", { allowZero: true }) };
   } catch (error) {
     return { error: error instanceof MoneyError ? error.message : "Invalid amount." };
   }
@@ -41,24 +38,41 @@ export async function openCashSession(
   const floatResult = nairaStringToKobo(parsed.data.openingFloat);
   if ("error" in floatResult) return floatResult;
 
-  const session = await prisma.cashSession.create({
-    data: {
-      label: parsed.data.label,
-      openedById: actor.id,
-      openedAt: new Date(),
-      openingFloatKobo: floatResult.amountKobo,
-      status: "OPEN",
-    },
-  });
+  // One open session per officer, so every cash payment has exactly one
+  // till to land in and no session is left open and never reconciled.
+  // The officer's user row is locked first so two opens at the same
+  // moment cannot both pass the check.
+  const opened = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${actor.id} FOR UPDATE`;
+    const existing = await tx.cashSession.findFirst({ where: { openedById: actor.id, status: "OPEN" } });
+    if (existing) {
+      return { error: `You already have an open cash session, "${existing.label}". Close it before opening another.` };
+    }
 
-  await writeAudit({
-    actorId: actor.id,
-    action: "cash_session.opened",
-    entity: "CashSession",
-    entityId: session.id,
-    before: null,
-    after: session,
+    const session = await tx.cashSession.create({
+      data: {
+        label: parsed.data.label,
+        openedById: actor.id,
+        openedAt: new Date(),
+        openingFloatKobo: floatResult.amountKobo,
+        status: "OPEN",
+      },
+    });
+
+    await writeAudit(
+      {
+        actorId: actor.id,
+        action: "cash_session.opened",
+        entity: "CashSession",
+        entityId: session.id,
+        before: null,
+        after: session,
+      },
+      tx,
+    );
+    return {};
   });
+  if ("error" in opened) return opened;
 
   revalidatePath("/admin/cash-sessions");
   return {};

@@ -2,8 +2,7 @@ import { NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { koboToNaira } from "@/lib/money";
 import { toCsvDocument } from "@/lib/csv";
-import { groupCollections, loadCollectionsPayments } from "@/lib/reports/collections";
-import type { CollectionsGroupBy } from "@/lib/reports/collections";
+import { groupCollections, loadCollectionsPayments, parseCollectionsGroupBy, parsePaymentMethodFilter } from "@/lib/reports/collections";
 import { withRouteAuth } from "@/lib/route-auth";
 import { parseLagosDayEnd, parseLagosDayStart } from "@/lib/timezone";
 
@@ -11,12 +10,12 @@ async function handleGet(request: NextRequest) {
   await requireRole(["FINANCE_OFFICER"]);
 
   const params = request.nextUrl.searchParams;
-  const groupBy = (params.get("groupBy") || "period") as CollectionsGroupBy;
+  const groupBy = parseCollectionsGroupBy(params.get("groupBy"));
   const fromParam = params.get("from");
   const toParam = params.get("to");
   const wingId = params.get("wingId") || undefined;
   const planId = params.get("planId") || undefined;
-  const method = (params.get("method") || undefined) as "CASH" | "POS" | "BANK_TRANSFER" | undefined;
+  const method = parsePaymentMethodFilter(params.get("method"));
 
   const payments = await loadCollectionsPayments({
     from: parseLagosDayStart(fromParam),

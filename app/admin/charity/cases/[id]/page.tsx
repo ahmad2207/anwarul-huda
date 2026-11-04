@@ -15,6 +15,7 @@ import {
   RejectForm,
   VerifyButton,
 } from "./case-transition-forms";
+import { formatLagosDate } from "@/lib/timezone";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
@@ -189,7 +190,7 @@ export default async function CharityCaseDetailPage({
                 {disbursement.reference} &middot; {formatNaira(disbursement.amountKobo)} from{" "}
                 {disbursement.fund.name} &middot; paid by{" "}
                 {disbursement.paidBy.email ?? disbursement.paidBy.phone} &middot;{" "}
-                {disbursement.paidAt.toLocaleDateString("en-NG")}
+                {formatLagosDate(disbursement.paidAt)}
               </div>
             ))}
           </CardContent>

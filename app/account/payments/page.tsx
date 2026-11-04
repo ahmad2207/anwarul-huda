@@ -4,6 +4,7 @@ import { formatNaira } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { StatusTag } from "@/components/status-tag";
+import { formatLagosDate } from "@/lib/timezone";
 
 const METHOD_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -78,7 +79,7 @@ export default async function MyContributionsPage() {
               <div>
                 <p className="font-medium">{payment.plan?.name ?? payment.fund?.name ?? "General"}</p>
                 <p className="text-sm text-muted-foreground">
-                  {payment.receiptNumber} &middot; {payment.paidAt.toLocaleDateString("en-NG")} &middot;{" "}
+                  {payment.receiptNumber} &middot; {formatLagosDate(payment.paidAt)} &middot;{" "}
                   {METHOD_LABELS[payment.method] ?? payment.method}
                   {payment.status === "VOIDED" ? (
                     <>

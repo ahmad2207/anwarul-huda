@@ -5,9 +5,10 @@ import { getPreviousPeriod } from "@/lib/charity/period-comparison";
 import { ZAKAT_CATEGORY_LABELS } from "@/lib/charity/zakat-breakdown";
 import { BackLink } from "@/components/back-link";
 import { PrintButton } from "./print-button";
+import { formatLagos } from "@/lib/timezone";
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" });
+  return formatLagos(date, { day: "numeric", month: "long", year: "numeric" });
 }
 
 export default async function CharityPrintReportPage({

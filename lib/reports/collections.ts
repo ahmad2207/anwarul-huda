@@ -1,8 +1,24 @@
 import type { PaymentMethod } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getLagosDateParts } from "@/lib/timezone";
 
-export type CollectionsGroupBy = "period" | "plan" | "wing" | "officer" | "method";
+const groupBySchema = z.enum(["period", "plan", "wing", "officer", "method"]);
+const methodSchema = z.enum(["CASH", "POS", "BANK_TRANSFER"]);
+
+export type CollectionsGroupBy = z.infer<typeof groupBySchema>;
+
+/** A group-by value from the address bar, falling back to "period" for anything unrecognised rather than failing. */
+export function parseCollectionsGroupBy(value: unknown): CollectionsGroupBy {
+  const parsed = groupBySchema.safeParse(value);
+  return parsed.success ? parsed.data : "period";
+}
+
+/** A payment method filter from the address bar, or no filter for anything unrecognised. */
+export function parsePaymentMethodFilter(value: unknown): PaymentMethod | undefined {
+  const parsed = methodSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
 
 export interface CollectionsFilter {
   from?: Date;

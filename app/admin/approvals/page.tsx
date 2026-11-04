@@ -12,6 +12,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { approveMember } from "./actions";
 import { RejectMemberForm } from "./reject-member-form";
+import { formatLagosDate } from "@/lib/timezone";
 
 interface PendingRow {
   member: Member & { wing: Wing };
@@ -59,7 +60,7 @@ export default async function ApprovalsPage() {
     { key: "wing", header: "Wing", cell: ({ member }) => member.wing.name },
     { key: "phone", header: "Phone", cell: ({ member }) => formatNigerianPhoneForDisplay(member.phone) },
     { key: "gender", header: "Gender", cell: ({ member }) => (member.gender === "MALE" ? "Male" : "Female") },
-    { key: "registered", header: "Registered", cell: ({ member }) => member.createdAt.toLocaleDateString("en-NG") },
+    { key: "registered", header: "Registered", cell: ({ member }) => formatLagosDate(member.createdAt) },
     {
       key: "duplicates",
       header: "Duplicates",

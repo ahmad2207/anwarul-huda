@@ -104,3 +104,20 @@ function isoWeekInfo(
     weekStartDay: monday.getUTCDate(),
   };
 }
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** A period label in plain words for officers and members: "2026-09" reads as "September 2026". */
+export function describePeriod(periodLabel: string): string {
+  const monthly = /^(\d{4})-(\d{2})$/.exec(periodLabel);
+  if (monthly) return `${MONTH_NAMES[Number(monthly[2]) - 1] ?? monthly[2]} ${monthly[1]}`;
+  const quarterly = /^(\d{4})-Q([1-4])$/.exec(periodLabel);
+  if (quarterly) return `Quarter ${quarterly[2]}, ${quarterly[1]}`;
+  const weekly = /^(\d{4})-W(\d{2})$/.exec(periodLabel);
+  if (weekly) return `Week ${Number(weekly[2])}, ${weekly[1]}`;
+  if (periodLabel === "ONE-OFF") return "One-off";
+  return periodLabel;
+}

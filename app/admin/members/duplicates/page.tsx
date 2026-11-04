@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { dismissDuplicateFlag } from "./actions";
+import { formatLagosDate } from "@/lib/timezone";
 
 type FlagRow = MemberDuplicateFlag & { memberA: Member; memberB: Member };
 
@@ -44,7 +45,7 @@ export default async function DuplicateFlagsPage() {
       ),
     },
     { key: "reason", header: "Reason", cell: (flag) => <p className="max-w-sm text-xs">{flag.reason}</p> },
-    { key: "flagged", header: "Flagged", cell: (flag) => flag.createdAt.toLocaleDateString("en-NG") },
+    { key: "flagged", header: "Flagged", cell: (flag) => formatLagosDate(flag.createdAt) },
     {
       key: "actions",
       header: "Actions",

@@ -10,6 +10,7 @@ export const paymentSchema = z
     method: z.enum(["CASH", "POS", "BANK_TRANSFER"]),
     reference: optionalText(100),
     narration: optionalText(500),
+    periodLabel: optionalText(20),
   })
   .refine((data) => data.method === "CASH" || Boolean(data.reference), {
     message: "Enter a reference for POS or bank transfer",
@@ -25,5 +26,6 @@ export function paymentFormDataToRaw(formData: FormData) {
     method: formData.get("method"),
     reference: formData.get("reference"),
     narration: formData.get("narration"),
+    periodLabel: formData.get("periodLabel"),
   };
 }

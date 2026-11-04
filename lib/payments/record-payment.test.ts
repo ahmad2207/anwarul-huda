@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { computePeriod } from "@/lib/contributions/period";
-import { recordPayment } from "./record-payment";
+import { recordPayment, RecordPaymentError } from "./record-payment";
+import { listPayablePeriods } from "./payable-periods";
 
 // Integration tests against the real local Postgres database (see
 // vitest.config.mts), matching Phase 3's own accept criterion: a payment
@@ -118,5 +119,67 @@ describe("recordPayment", () => {
 
     expect(payment.contributionRecordId).toBeNull();
     expect(payment.fundId).toBe(fund.id);
+  });
+  it("settles an earlier period in arrears when the officer chooses it, not the current one", async () => {
+    const plan = { id: planId, frequency: "MONTHLY" as const, amountKobo: 50000 };
+    const august = await prisma.contributionRecord.create({
+      data: {
+        memberId,
+        planId,
+        periodLabel: "2001-08",
+        periodStart: new Date("2001-07-31T23:00:00Z"),
+        periodEnd: new Date("2001-08-31T23:00:00Z"),
+        amountDueKobo: 50000,
+      },
+    });
+
+    const offered = await listPayablePeriods(prisma, memberId, plan);
+    expect(offered[0]).toEqual({ periodLabel: "2001-08", outstandingKobo: 50000, isCurrent: false });
+    expect(offered.at(-1)?.isCurrent).toBe(true);
+
+    const payment = await prisma.$transaction((tx) =>
+      recordPayment(tx, {
+        memberId,
+        amountKobo: 50000,
+        method: "BANK_TRANSFER",
+        reference: "ARREARS-1",
+        narration: null,
+        actorId,
+        cashSessionId: null,
+        plan,
+        periodLabel: "2001-08",
+        fundId: null,
+      }),
+    );
+
+    expect(payment.contributionRecordId).toBe(august.id);
+    const settled = await prisma.contributionRecord.findUniqueOrThrow({ where: { id: august.id } });
+    expect(settled.amountPaidKobo).toBe(50000);
+
+    const afterwards = await listPayablePeriods(prisma, memberId, plan);
+    expect(afterwards.some((period) => period.periodLabel === "2001-08")).toBe(false);
+  });
+
+  it("refuses a period that has nothing due, writing no payment", async () => {
+    const before = await prisma.payment.count({ where: { memberId } });
+
+    await expect(
+      prisma.$transaction((tx) =>
+        recordPayment(tx, {
+          memberId,
+          amountKobo: 50000,
+          method: "BANK_TRANSFER",
+          reference: "NOTHING-DUE",
+          narration: null,
+          actorId,
+          cashSessionId: null,
+          plan: { id: planId, frequency: "MONTHLY", amountKobo: 50000 },
+          periodLabel: "1999-01",
+          fundId: null,
+        }),
+      ),
+    ).rejects.toThrow(RecordPaymentError);
+
+    expect(await prisma.payment.count({ where: { memberId } })).toBe(before);
   });
 });

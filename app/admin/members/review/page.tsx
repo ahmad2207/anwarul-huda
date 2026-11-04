@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { markWingReviewDone } from "./actions";
+import { formatLagos } from "@/lib/timezone";
 
 type ReviewRow = Member & { wing: Wing };
 
@@ -51,7 +52,7 @@ export default async function WingReviewPage() {
       header: "When",
       cell: (member) =>
         member.wingReviewRequestedAt
-          ? member.wingReviewRequestedAt.toLocaleDateString("en-NG", { day: "numeric", month: "short" })
+          ? formatLagos(member.wingReviewRequestedAt, { day: "numeric", month: "short" })
           : "",
     },
     {

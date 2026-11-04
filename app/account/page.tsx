@@ -39,7 +39,11 @@ export default async function AccountHomePage() {
     return <NotLinked />;
   }
 
-  const name = firstNameForGreeting(member) ?? "";
+  // The member's own title from their record, such as Alhaji, Mallam or
+  // Dr, goes before their first name: "Alhaji Ewumi".
+  const firstName = firstNameForGreeting(member) ?? "";
+  const title = member.title?.trim() ?? "";
+  const name = firstName && title ? `${title} ${firstName}` : firstName;
 
   if (member.isRecordIncomplete) {
     return <IncompleteHome name={name} completedSections={member.completedSections} />;

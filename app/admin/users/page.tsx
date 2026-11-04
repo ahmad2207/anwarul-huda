@@ -6,6 +6,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";
 import { STAFF_ROLE_LABELS } from "./schema";
 import { CreateStaffUserForm } from "./create-staff-user-form";
+import { ResetStaffPasswordButton } from "./reset-password-button";
 
 interface StaffRow {
   id: string;
@@ -62,6 +63,18 @@ export default async function UsersPage() {
       header: "Status",
       cell: (row) => <StatusTag tone={row.isActive ? "confirmed" : "neutral"}>{row.isActive ? "Active" : "Inactive"}</StatusTag>,
     },
+    // Super admins only, and not on their own row: they change their own
+    // password from their account (lib/staff/reset-staff-password.ts).
+    ...(isSuperAdmin
+      ? [
+          {
+            key: "reset",
+            header: "",
+            cell: (row: StaffRow) =>
+              row.id === actor.id ? null : <ResetStaffPasswordButton userId={row.id} email={row.email} />,
+          },
+        ]
+      : []),
   ];
 
   return (

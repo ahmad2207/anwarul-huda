@@ -9,6 +9,7 @@ import {
   canViewCharityHistory,
   canViewMemberActivity,
   hasAnyRole,
+  staffHomePath,
 } from "./authorization";
 
 describe("canAccessWing", () => {
@@ -186,5 +187,29 @@ describe("canViewMemberActivity", () => {
     ] as const) {
       expect(canViewMemberActivity({ roles: [role] })).toBe(false);
     }
+  });
+});
+
+describe("staffHomePath", () => {
+  it("keeps a super admin on the overview", () => {
+    expect(staffHomePath({ roles: ["SUPER_ADMIN"] })).toBeNull();
+    expect(staffHomePath({ roles: ["SUPER_ADMIN", "FINANCE_OFFICER"] })).toBeNull();
+  });
+
+  it("sends each other role to the page it works from", () => {
+    expect(staffHomePath({ roles: ["WING_ADMIN"] })).toBe("/admin/members");
+    expect(staffHomePath({ roles: ["ATTENDANCE_OFFICER"] })).toBe("/admin/attendance");
+    expect(staffHomePath({ roles: ["FINANCE_OFFICER"] })).toBe("/admin/payments");
+    expect(staffHomePath({ roles: ["CHARITY_OFFICER"] })).toBe("/admin/charity");
+    expect(staffHomePath({ roles: ["CONTENT_EDITOR"] })).toBe("/admin/content");
+  });
+
+  it("uses the first match for someone with several roles", () => {
+    expect(staffHomePath({ roles: ["CONTENT_EDITOR", "WING_ADMIN"] })).toBe("/admin/members");
+  });
+
+  it("has no staff home for an account with no staff role", () => {
+    expect(staffHomePath({ roles: [] })).toBeNull();
+    expect(staffHomePath({ roles: ["MEMBER"] })).toBeNull();
   });
 });

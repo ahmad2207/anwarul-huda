@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getCurrentUser, requireRole } from "@/lib/auth";
+import { staffHomePath } from "@/lib/authorization";
 import { formatNaira } from "@/lib/money";
 import { getAttendanceTrend, getCollectionSummary, getMembershipSummary } from "@/lib/dashboard/executive-summary";
 import { getCharityDashboardData, resolveDashboardPeriod } from "@/lib/charity/dashboard-data";
@@ -12,6 +14,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // Super admin only: every other role's own view is already scoped to its
 // own wing or its own section, and this page deliberately is not.
 export default async function AdminHomePage() {
+  // Every sign-in lands here. Anyone but a super admin is sent on to their
+  // own role's page instead of meeting an authorization error.
+  const home = staffHomePath(await getCurrentUser());
+  if (home) {
+    redirect(home);
+  }
   await requireRole(["SUPER_ADMIN"]);
 
   const [membership, collections, attendanceTrend, funds] = await Promise.all([

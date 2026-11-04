@@ -35,6 +35,26 @@ export function canViewAllWings(user: { roles: RoleName[] }): boolean {
 }
 
 /**
+ * Where a staff member lands on /admin, which every sign-in goes to. The
+ * overview there is the committee's organisation-wide summary, for super
+ * admins only; everyone else is sent to the page their own role works
+ * from, rather than being shown an error. A user holding several roles
+ * lands on the first match in this order. Null for a super admin (stay
+ * on the overview) or an account with no staff role at all.
+ */
+export function staffHomePath(user: { roles: RoleName[] }): string | null {
+  if (user.roles.includes("SUPER_ADMIN")) return null;
+  const homes: Array<[RoleName, string]> = [
+    ["WING_ADMIN", "/admin/members"],
+    ["ATTENDANCE_OFFICER", "/admin/attendance"],
+    ["FINANCE_OFFICER", "/admin/payments"],
+    ["CHARITY_OFFICER", "/admin/charity"],
+    ["CONTENT_EDITOR", "/admin/content"],
+  ];
+  return homes.find(([role]) => user.roles.includes(role))?.[1] ?? null;
+}
+
+/**
  * Whether this user may open a member's record at all: a role that can
  * view the register (SPEC.md section 4), and either all wings or an
  * assignment to the member's own wing. A super admin with no wing

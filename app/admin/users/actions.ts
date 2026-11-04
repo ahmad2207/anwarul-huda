@@ -10,6 +10,7 @@ import {
   WING_SCOPED_ROLES,
   createStaffUser,
 } from "@/lib/staff/create-staff-user";
+import { ResetStaffPasswordError, resetStaffPassword } from "@/lib/staff/reset-staff-password";
 import { createStaffUserSchema } from "./schema";
 
 export interface CreateStaffUserState {
@@ -71,5 +72,29 @@ export async function createStaffUserAction(
     return { result: { email, role, temporaryPassword: result.temporaryPassword } };
   } catch (error) {
     return { error: error instanceof CreateStaffUserError ? error.message : "Could not create this account." };
+  }
+}
+
+export interface ResetStaffPasswordState {
+  error?: string;
+  result?: { email: string | null; temporaryPassword: string };
+}
+
+// Super admin only, checked here and again inside resetStaffPassword.
+// Bound to useActionState for its pending state; the form has no fields.
+/* eslint-disable @typescript-eslint/no-unused-vars */
+export async function resetStaffPasswordAction(
+  targetUserId: string,
+  _previousState: ResetStaffPasswordState,
+): Promise<ResetStaffPasswordState> {
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  const actor = await requireRole(["SUPER_ADMIN"]);
+  try {
+    const result = await prisma.$transaction((tx) => resetStaffPassword(tx, targetUserId, actor));
+    revalidatePath("/admin/users");
+    return { result };
+  } catch (error) {
+    if (error instanceof ResetStaffPasswordError) return { error: error.message };
+    throw error;
   }
 }
